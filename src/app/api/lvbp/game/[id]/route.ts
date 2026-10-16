@@ -27,7 +27,7 @@ export async function GET(
     }
 
     const cacheControl =
-      gameday.status === "LIVE"
+      gameday.status === "IN_PROGRESS"
         ? "public, s-maxage=4, stale-while-revalidate=3"
         : "public, s-maxage=30, stale-while-revalidate=15";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { LeaderCategory, ScheduleGame, StandingRow } from "@/lib/types";
@@ -11,6 +11,7 @@ import { TeamRosterView } from "@/components/TeamRosterView";
 import {
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Tv,
   MapPin,
   Trophy,
@@ -187,10 +188,31 @@ export function EnJuegoPortal({
   const [favoriteTeamCode, setFavoriteTeamCode] = useState<string>("");
   const [copiedGameId, setCopiedGameId] = useState<string>("");
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [teamsDropdownOpen, setTeamsDropdownOpen] = useState(false);
+  const teamsDropdownRef = useRef<HTMLDivElement>(null);
+  const mobileTeamsDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMobileDrawerOpen(false);
+    setTeamsDropdownOpen(false);
   }, [pathname, searchParams]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      const inDesktop = teamsDropdownRef.current?.contains(target);
+      const inMobile = mobileTeamsDropdownRef.current?.contains(target);
+      if (!inDesktop && !inMobile) {
+        setTeamsDropdownOpen(false);
+      }
+    };
+    if (teamsDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [teamsDropdownOpen]);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", "light");
@@ -782,16 +804,16 @@ export function EnJuegoPortal({
       {/* CLEAN EDITORIAL TOPBAR WITH REAL NEXT.JS LINKS */}
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-md shadow-xs">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-3">
-          {/* Brand + Official LVBP Logo */}
+          {/* Brand + Official En Juego Logo */}
           <div className="flex items-center gap-3 shrink-0">
             <Link
               href="/inicio"
               className="flex items-center gap-2.5 text-left cursor-pointer group"
             >
-              <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center p-1 shadow-2xs group-hover:border-amber-400 transition">
+              <div className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center p-1 shadow-2xs group-hover:scale-105 transition">
                 <img
                   src={LVBP_OFFICIAL_LOGO}
-                  alt="LVBP"
+                  alt="En Juego"
                   className="w-full h-full object-contain"
                 />
               </div>
@@ -835,54 +857,230 @@ export function EnJuegoPortal({
             ))}
           </nav>
 
-          {/* Desktop Right Quick Bar: The 8 LVBP Team Logos */}
-          <div className="hidden lg:flex items-center gap-1.5 overflow-x-auto py-1">
-            {Object.values(LVBP_TEAMS).map((team) => {
-              const isSelected = section === "equipos" && selectedTeamCode === team.code;
-              const isFav = favoriteTeamCode === team.code;
-              return (
-                <Link
-                  key={team.code}
-                  href={`/teams?team=${team.slug}`}
-                  title={`${team.name} (/teams?team=${team.slug})`}
-                  className={`relative w-8 h-8 rounded-full p-1 flex items-center justify-center border transition shrink-0 cursor-pointer ${
-                    isSelected
-                      ? "bg-amber-50 border-amber-400 ring-2 ring-amber-400/40 scale-105"
-                      : isFav
-                        ? "bg-amber-50/70 border-amber-400"
-                        : "bg-white border-slate-200 hover:border-amber-400 hover:scale-105"
+          {/* Desktop Right Quick Bar: Equipos Dropdown + Quick Icon Strip */}
+          <div className="hidden lg:flex items-center gap-2" ref={teamsDropdownRef}>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setTeamsDropdownOpen((prev) => !prev)}
+                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-black transition border cursor-pointer ${
+                  teamsDropdownOpen
+                    ? "bg-amber-50 border-amber-400 text-slate-950 ring-2 ring-amber-400/30 shadow-2xs"
+                    : "bg-slate-100 hover:bg-slate-200/80 border-slate-200 text-slate-800"
+                }`}
+                aria-expanded={teamsDropdownOpen}
+                aria-label="Desplegable de equipos de la LVBP"
+              >
+                <img
+                  src={LVBP_TEAMS[selectedTeamCode]?.logoSvg || LVBP_OFFICIAL_LOGO}
+                  alt=""
+                  className="w-4 h-4 object-contain"
+                />
+                <span>{LVBP_TEAMS[selectedTeamCode]?.nick || "Equipos"}</span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-slate-500 transition-transform duration-200 ${
+                    teamsDropdownOpen ? "rotate-180 text-amber-600" : ""
                   }`}
-                >
-                  <img
-                    src={team.logoSvg}
-                    alt={team.shortName}
-                    className="w-full h-full object-contain"
-                  />
-                  {isFav && (
-                    <Star className="absolute -top-1 -right-0.5 w-2.5 h-2.5 text-amber-500 fill-amber-500" />
-                  )}
-                </Link>
-              );
-            })}
+                />
+              </button>
+
+              {/* DESKTOP TEAMS DROPDOWN */}
+              {teamsDropdownOpen && (
+                <div className="absolute right-0 top-full mt-2 w-80 rounded-2xl bg-white border border-slate-200 shadow-xl p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="flex items-center justify-between px-1 pb-2 mb-2 border-b border-slate-100">
+                    <div>
+                      <div className="text-xs font-black text-slate-950 flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-amber-600" /> Equipos LVBP
+                      </div>
+                      <p className="text-[10px] text-slate-400">8 franquicias oficiales</p>
+                    </div>
+                    <Link
+                      href="/teams"
+                      onClick={() => setTeamsDropdownOpen(false)}
+                      className="text-[11px] font-extrabold text-amber-600 hover:text-amber-700 hover:underline"
+                    >
+                      Directorio ›
+                    </Link>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {Object.values(LVBP_TEAMS).map((team) => {
+                      const isSelected = selectedTeamCode === team.code;
+                      const isFav = favoriteTeamCode === team.code;
+                      return (
+                        <Link
+                          key={team.code}
+                          href={`/teams?team=${team.slug}`}
+                          onClick={() => {
+                            setSelectedTeamCode(team.code);
+                            setTeamsDropdownOpen(false);
+                          }}
+                          className={`flex items-center gap-2 p-2 rounded-xl border text-xs transition cursor-pointer group ${
+                            isSelected
+                              ? "bg-amber-50/90 border-amber-400 ring-1 ring-amber-400/40 text-slate-950 font-black shadow-2xs"
+                              : "bg-slate-50/70 hover:bg-slate-100 border-slate-200 text-slate-800 font-bold"
+                          }`}
+                        >
+                          <div
+                            className="w-7 h-7 rounded-full p-1 bg-white border border-slate-200 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition"
+                            style={{ borderColor: isSelected ? team.color : undefined }}
+                          >
+                            <img
+                              src={team.logoSvg}
+                              alt={team.nick}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate leading-tight text-xs font-extrabold">
+                              {team.nick}
+                            </div>
+                            <div className="text-[10px] text-slate-400 truncate font-medium">
+                              {team.city}
+                            </div>
+                          </div>
+                          {isFav && (
+                            <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Quick mini-logos strip */}
+            <div className="flex items-center gap-1">
+              {Object.values(LVBP_TEAMS).map((team) => {
+                const isSelected = section === "equipos" && selectedTeamCode === team.code;
+                const isFav = favoriteTeamCode === team.code;
+                return (
+                  <Link
+                    key={team.code}
+                    href={`/teams?team=${team.slug}`}
+                    title={`${team.name}`}
+                    className={`relative w-7 h-7 rounded-full p-1 flex items-center justify-center border transition shrink-0 cursor-pointer ${
+                      isSelected
+                        ? "bg-amber-50 border-amber-400 ring-2 ring-amber-400/40 scale-105"
+                        : isFav
+                          ? "bg-amber-50/70 border-amber-400"
+                          : "bg-white border-slate-200 hover:border-amber-400 hover:scale-105"
+                    }`}
+                  >
+                    <img
+                      src={team.logoSvg}
+                      alt={team.shortName}
+                      className="w-full h-full object-contain"
+                    />
+                    {isFav && (
+                      <Star className="absolute -top-1 -right-0.5 w-2 h-2 text-amber-500 fill-amber-500" />
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Mobile Right Controls: Teams Shortcut + Hamburger Button */}
-          <div className="flex lg:hidden items-center gap-2">
-            <Link
-              href={`/teams?team=${LVBP_TEAMS[selectedTeamCode]?.slug || "leones"}`}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition border border-slate-200"
-            >
-              <img
-                src={LVBP_TEAMS[selectedTeamCode]?.logoSvg || LVBP_OFFICIAL_LOGO}
-                alt=""
-                className="w-4 h-4 object-contain"
-              />
-              <span className="hidden sm:inline">{LVBP_TEAMS[selectedTeamCode]?.nick || "Equipos"}</span>
-            </Link>
+          {/* Mobile Right Controls: Equipos Dropdown + Hamburger Button */}
+          <div className="flex lg:hidden items-center gap-2" ref={mobileTeamsDropdownRef}>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setTeamsDropdownOpen((prev) => !prev)}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition border cursor-pointer ${
+                  teamsDropdownOpen
+                    ? "bg-amber-50 border-amber-400 text-slate-950 ring-2 ring-amber-400/30 shadow-2xs"
+                    : "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200"
+                }`}
+                aria-expanded={teamsDropdownOpen}
+                aria-label="Desplegable de equipos de la LVBP"
+              >
+                <img
+                  src={LVBP_TEAMS[selectedTeamCode]?.logoSvg || LVBP_OFFICIAL_LOGO}
+                  alt=""
+                  className="w-4 h-4 object-contain"
+                />
+                <span className="font-extrabold">{LVBP_TEAMS[selectedTeamCode]?.nick || "Equipos"}</span>
+                <ChevronDown
+                  className={`w-3 h-3 text-slate-500 transition-transform duration-200 ${
+                    teamsDropdownOpen ? "rotate-180 text-amber-600" : ""
+                  }`}
+                />
+              </button>
+
+              {/* MOBILE TEAMS DROPDOWN */}
+              {teamsDropdownOpen && (
+                <div className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] max-w-xs rounded-2xl bg-white border border-slate-200 shadow-xl p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="flex items-center justify-between px-1 pb-2 mb-2 border-b border-slate-100 text-xs">
+                    <div>
+                      <div className="font-black text-slate-950 flex items-center gap-1.5 text-xs">
+                        <Users className="w-3.5 h-3.5 text-amber-600" /> Equipos LVBP
+                      </div>
+                      <p className="text-[10px] text-slate-400">Toca para filtrar o ver nómina</p>
+                    </div>
+                    <Link
+                      href="/teams"
+                      onClick={() => setTeamsDropdownOpen(false)}
+                      className="text-[11px] font-extrabold text-amber-600 hover:text-amber-700 hover:underline"
+                    >
+                      Directorio ›
+                    </Link>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {Object.values(LVBP_TEAMS).map((team) => {
+                      const isSelected = selectedTeamCode === team.code;
+                      const isFav = favoriteTeamCode === team.code;
+                      return (
+                        <Link
+                          key={team.code}
+                          href={`/teams?team=${team.slug}`}
+                          onClick={() => {
+                            setSelectedTeamCode(team.code);
+                            setTeamsDropdownOpen(false);
+                          }}
+                          className={`flex items-center gap-2 p-2 rounded-xl border text-xs transition cursor-pointer group ${
+                            isSelected
+                              ? "bg-amber-50 border-amber-400 ring-1 ring-amber-400/40 text-slate-950 font-black"
+                              : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800 font-bold"
+                          }`}
+                        >
+                          <div
+                            className="w-7 h-7 rounded-full p-1 bg-white border border-slate-200 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition"
+                            style={{ borderColor: isSelected ? team.color : undefined }}
+                          >
+                            <img
+                              src={team.logoSvg}
+                              alt={team.nick}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-xs font-black leading-tight">
+                              {team.nick}
+                            </div>
+                            <div className="text-[10px] text-slate-400 truncate font-normal">
+                              {team.city}
+                            </div>
+                          </div>
+                          {isFav && (
+                            <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
 
             <button
               type="button"
-              onClick={() => setMobileDrawerOpen(true)}
+              onClick={() => {
+                setTeamsDropdownOpen(false);
+                setMobileDrawerOpen(true);
+              }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition cursor-pointer shadow-2xs"
               aria-label="Abrir Menú Principal"
             >
@@ -937,8 +1135,8 @@ export function EnJuegoPortal({
             {/* Drawer Header */}
             <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center p-1 shadow-2xs">
-                  <img src={LVBP_OFFICIAL_LOGO} alt="LVBP" className="w-full h-full object-contain" />
+                <div className="w-8 h-8 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center p-0.5 shadow-2xs">
+                  <img src={LVBP_OFFICIAL_LOGO} alt="En Juego" className="w-full h-full object-contain" />
                 </div>
                 <div>
                   <span className="text-sm font-black text-slate-950 block leading-tight">EN JUEGO</span>
@@ -2168,7 +2366,9 @@ export function EnJuegoPortal({
         <div className="max-w-7xl mx-auto px-4 space-y-4 text-xs text-slate-500">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
-              <img src={LVBP_OFFICIAL_LOGO} alt="LVBP" className="w-6 h-6 object-contain" />
+              <div className="w-7 h-7 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center p-0.5 shadow-2xs shrink-0">
+                <img src={LVBP_OFFICIAL_LOGO} alt="En Juego" className="w-full h-full object-contain" />
+              </div>
               <span className="font-black text-slate-900">EN JUEGO</span>
               <span>— Marcadores en vivo, jugada a jugada, transmisiones de TV y estadísticas.</span>
             </div>

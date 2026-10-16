@@ -5,6 +5,14 @@ export const metadata: Metadata = {
   title: "En Juego · Béisbol Venezolano — Marcadores, Jugada a Jugada y Estadísticas",
   description:
     "Resultados y marcadores en vivo de la temporada de béisbol venezolano: jugada a jugada, alineaciones, box score, líderes individuales y tabla de posiciones.",
+  icons: {
+    icon: [
+      { url: "/icon.png", type: "image/png" },
+      { url: "/favicon.png", type: "image/png" },
+    ],
+    apple: "/icon.png",
+    shortcut: "/favicon.png",
+  },
 };
 
 export default function RootLayout({

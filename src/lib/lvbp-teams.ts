@@ -20,7 +20,9 @@ export interface LvbpTeamMeta {
   logoSvg: string;
 }
 
-export const LVBP_OFFICIAL_LOGO = "/logos/lvbp.svg";
+export const LVBP_OFFICIAL_LOGO = "/icon.png";
+export const EN_JUEGO_ICON = "/icon.png";
+export const EN_JUEGO_LOGO = "/logo.png";
 
 export const LVBP_TEAMS: Record<string, LvbpTeamMeta> = {
   CAR: {

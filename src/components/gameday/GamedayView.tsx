@@ -939,7 +939,7 @@ export function GamedayView({
               ))}
             </div>
 
-            <div className="p-4 sm:p-5">
+            <div key={tab} className="p-4 sm:p-5 animate-view-enter">
               {/* TAB 1: JUGADA A JUGADA */}
               {tab === "feed" && (
                 <div className="space-y-4">

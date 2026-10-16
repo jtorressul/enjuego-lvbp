@@ -20,6 +20,8 @@ import {
   Newspaper,
   Play,
   RefreshCw,
+  Sun,
+  Moon,
 } from "lucide-react";
 
 type NavSection = "home" | "resultados" | "calendario" | "posiciones" | "equipos" | "juego";
@@ -42,6 +44,7 @@ function formatCompactDay(iso: string): { dayNum: string; monthShort: string; fu
 }
 
 export default function EnJuegoApp() {
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   const [section, setSection] = useState<NavSection>("home");
   const [schedule, setSchedule] = useState<ScheduleGame[]>([]);
   const [standings, setStandings] = useState<StandingRow[]>([]);
@@ -55,6 +58,28 @@ export default function EnJuegoApp() {
   const [selectedTeamCode, setSelectedTeamCode] = useState<string>("CAR");
   const [teamFilter, setTeamFilter] = useState<string>("");
   const [standingsPhase, setStandingsPhase] = useState<"REGULAR" | "ROUND_ROBIN" | "FINAL">("REGULAR");
+
+  useEffect(() => {
+    try {
+      const savedTheme = localStorage.getItem("enjuego_theme");
+      const initial = savedTheme === "dark" ? "dark" : "light";
+      setTheme(initial);
+      document.documentElement.setAttribute("data-theme", initial);
+    } catch {
+      document.documentElement.setAttribute("data-theme", "light");
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const next = theme === "light" ? "dark" : "light";
+    setTheme(next);
+    document.documentElement.setAttribute("data-theme", next);
+    try {
+      localStorage.setItem("enjuego_theme", next);
+    } catch {
+      // ignore storage errors
+    }
+  };
 
   // Mundo Jugadas (Comunidad) state synced with Cloudflare KV (no fake posts)
   const [communityPosts, setCommunityPosts] = useState<
@@ -353,6 +378,24 @@ export default function EnJuegoApp() {
           <div className="flex items-center gap-2">
             <button
               type="button"
+              onClick={toggleTheme}
+              className="inline-flex items-center gap-1.5 px-2.5 py-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white transition cursor-pointer text-xs font-extrabold"
+              title={theme === "light" ? "Cambiar a Modo Oscuro" : "Cambiar a Modo Claro"}
+            >
+              {theme === "light" ? (
+                <>
+                  <Moon className="w-3.5 h-3.5 text-slate-600" />
+                  <span className="hidden sm:inline">Oscuro</span>
+                </>
+              ) : (
+                <>
+                  <Sun className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="hidden sm:inline">Claro</span>
+                </>
+              )}
+            </button>
+            <button
+              type="button"
               onClick={loadAllData}
               className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition cursor-pointer"
               title="Actualizar pizarra"
@@ -497,7 +540,10 @@ export default function EnJuegoApp() {
       </section>
 
       {/* MAIN CONTENT CONTAINER */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
+      <main
+        key={`${section}-${activeDate}-${selectedGameId}-${selectedTeamCode}`}
+        className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 animate-view-enter"
+      >
         {/* SECTION: GAMEDAY (/juego) */}
         {section === "juego" && (
           <GamedayView

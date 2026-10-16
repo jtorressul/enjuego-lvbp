@@ -106,11 +106,15 @@ export function StrikeZoneSvg({ pitches }: { pitches: PitchPoint[] }) {
 
           {/* Pitch markers */}
           {located.length > 0 ? (
-            located.map((pitch) => {
+            located.map((pitch, idx) => {
               const px = gx(pitch.x!).toFixed(1);
               const py = gy(pitch.y!).toFixed(1);
               return (
-                <g key={pitch.n}>
+                <g
+                  key={pitch.n}
+                  className="animate-pop"
+                  style={{ animationDelay: `${idx * 65}ms`, transformOrigin: `${px}px ${py}px` }}
+                >
                   <circle
                     cx={px}
                     cy={py}

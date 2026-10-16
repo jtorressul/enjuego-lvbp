@@ -35,21 +35,28 @@ export type NavSection =
   | "equipos"
   | "juego";
 
+export function getTodayCaracasIso(): string {
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Caracas",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
+
 function formatCompactDay(iso: string): {
   dayNum: string;
   monthShort: string;
   weekdayShort: string;
   fullLabel: string;
 } {
-  if (!iso)
-    return {
-      dayNum: "15",
-      monthShort: "OCT",
-      weekdayShort: "Jue",
-      fullLabel: "jueves, 15 de octubre",
-    };
-  const [y, m, d] = iso.split("-").map(Number);
-  const dt = new Date(Date.UTC(y, (m || 1) - 1, d || 1));
+  const safeIso = iso || getTodayCaracasIso();
+  const [y, m, d] = safeIso.split("-").map(Number);
+  const dt = new Date(Date.UTC(y || 2026, (m || 10) - 1, d || 16));
   const monthShort = new Intl.DateTimeFormat("es-VE", { month: "short", timeZone: "UTC" })
     .format(dt)
     .replace(".", "")
@@ -129,6 +136,7 @@ export function EnJuegoPortal({
   });
   const [loading, setLoading] = useState(true);
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
+  const [userSelectedDateManually, setUserSelectedDateManually] = useState(false);
   const [selectedGameId, setSelectedGameId] = useState<string>(
     initialGameId || searchParams?.get("id") || searchParams?.get("game") || "870098"
   );
@@ -273,11 +281,19 @@ export function EnJuegoPortal({
       const uniqueDates = [...new Set(loadedGames.map((g) => g.date))].sort();
       if (uniqueDates.length > 0) {
         const paramDate = searchParams?.get("fecha") || searchParams?.get("date");
-        const targetIso = paramDate || "2026-10-15";
-        const idx = uniqueDates.findIndex((d) => d >= targetIso);
-        setSelectedDateIndex((prev) =>
-          prev === 0 ? (idx >= 0 ? idx : Math.max(0, uniqueDates.length - 1)) : prev
-        );
+        const todayIso = getTodayCaracasIso();
+        const liveGame = loadedGames.find((g) => g.status === "IN_PROGRESS");
+        // Prioritize: 1. URL parameter, 2. Live game date, 3. Today in Venezuela, 4. Nearest upcoming date
+        const targetIso = paramDate || (liveGame ? liveGame.date : todayIso);
+
+        let idx = uniqueDates.indexOf(targetIso);
+        if (idx === -1) {
+          idx = uniqueDates.findIndex((d) => d >= targetIso);
+        }
+        if (idx === -1) {
+          idx = Math.max(0, uniqueDates.length - 1);
+        }
+        setSelectedDateIndex((prev) => (userSelectedDateManually ? prev : idx));
       }
     } catch {
       // ignore error
@@ -290,14 +306,14 @@ export function EnJuegoPortal({
     loadAllData();
     const interval = setInterval(loadAllData, 20000);
     return () => clearInterval(interval);
-  }, []);
+  }, [userSelectedDateManually]);
 
   const dates = useMemo(
     () => [...new Set(schedule.map((g) => g.date))].sort(),
     [schedule]
   );
 
-  const activeDate = dates[selectedDateIndex] || "2026-10-15";
+  const activeDate = dates[selectedDateIndex] || getTodayCaracasIso();
 
   // Sort gamesOfDay so Favorite Team game is always first!
   const gamesOfDay = useMemo(() => {
@@ -862,7 +878,10 @@ export function EnJuegoPortal({
             <button
               type="button"
               disabled={selectedDateIndex <= 0}
-              onClick={() => setSelectedDateIndex((i) => Math.max(0, i - 1))}
+              onClick={() => {
+                setUserSelectedDateManually(true);
+                setSelectedDateIndex((i) => Math.max(0, i - 1));
+              }}
               className="p-1 rounded-lg hover:bg-slate-100 disabled:opacity-30 text-slate-700 cursor-pointer"
               aria-label="Día anterior"
             >
@@ -880,12 +899,34 @@ export function EnJuegoPortal({
             <button
               type="button"
               disabled={selectedDateIndex >= dates.length - 1}
-              onClick={() => setSelectedDateIndex((i) => Math.min(dates.length - 1, i + 1))}
+              onClick={() => {
+                setUserSelectedDateManually(true);
+                setSelectedDateIndex((i) => Math.min(dates.length - 1, i + 1));
+              }}
               className="p-1 rounded-lg hover:bg-slate-100 disabled:opacity-30 text-slate-700 cursor-pointer"
               aria-label="Día siguiente"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
+
+            {dates.length > 0 &&
+              dates[selectedDateIndex] !== getTodayCaracasIso() &&
+              dates.includes(getTodayCaracasIso()) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const todayIdx = dates.indexOf(getTodayCaracasIso());
+                    if (todayIdx !== -1) {
+                      setSelectedDateIndex(todayIdx);
+                      setUserSelectedDateManually(false);
+                    }
+                  }}
+                  className="ml-1 inline-flex items-center gap-1 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 px-2 py-0.5 text-[10px] font-black uppercase transition cursor-pointer"
+                  title="Ir a los juegos de hoy"
+                >
+                  Hoy
+                </button>
+              )}
           </div>
 
           {/* Horizontal Livebugs Strip with Official Logos & Direct /juego/[id] Links */}

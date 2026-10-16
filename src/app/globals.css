@@ -150,12 +150,23 @@ html[data-theme="light"] .bg-slate-900\/50 {
     0 1px 3px rgba(15, 23, 42, 0.04) !important;
 }
 
-html[data-theme="light"] .from-slate-900 {
+html[data-theme="light"] .from-slate-900,
+html[data-theme="light"] .from-slate-950 {
   --tw-gradient-from: #ffffff !important;
   --tw-gradient-via: #f8fafc !important;
   --tw-gradient-to: #f1f5f9 !important;
   background-image: linear-gradient(to bottom, #ffffff, #f8fafc) !important;
   box-shadow: 0 8px 28px -6px rgba(15, 23, 42, 0.07) !important;
+}
+
+html[data-theme="light"] .to-slate-950,
+html[data-theme="light"] .to-slate-900 {
+  --tw-gradient-to: #ffffff !important;
+}
+
+html[data-theme="light"] .via-slate-900,
+html[data-theme="light"] .via-slate-950 {
+  --tw-gradient-via: #f8fafc !important;
 }
 
 /* Recessed Wells, Inputs & Table Headers */

@@ -59,20 +59,20 @@ function SingleLeaderCard({
         </header>
 
         {/* #1 Leader Hero */}
-        <div className="mt-3.5 flex items-center justify-between gap-3 rounded-xl bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 p-3 border border-slate-800">
+        <div className="mt-3.5 flex items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-amber-50/70 via-white to-white p-3.5 border border-amber-200/80 shadow-2xs">
           <div className="flex items-center gap-3 min-w-0">
             <img
               src={top.photo}
               alt={top.name}
-              className="w-14 h-14 rounded-full object-cover bg-slate-800 border-2 border-amber-400 shrink-0"
+              className="w-14 h-14 rounded-full object-cover bg-amber-100/50 border-2 border-amber-400 shrink-0 shadow-xs"
             />
             <div className="min-w-0">
-              <span className="inline-block rounded bg-amber-400/20 text-amber-300 px-1.5 py-0.5 text-[10px] font-black uppercase">
-                1° Líder LVBP
+              <span className="inline-block rounded-full bg-amber-400 text-slate-950 px-2 py-0.5 text-[10px] font-black uppercase shadow-2xs">
+                ★ 1° Líder LVBP
               </span>
-              <div className="text-sm font-black text-white truncate mt-0.5">{top.name}</div>
-              <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                <img src={top.teamLogo} alt="" className="w-4 h-4" />
+              <div className="text-sm font-black text-slate-900 truncate mt-1">{top.name}</div>
+              <div className="flex items-center gap-1.5 text-xs text-slate-600 mt-0.5">
+                <img src={top.teamLogo} alt="" className="w-4 h-4 object-contain" />
                 <span>
                   {top.teamName} · {top.position}
                 </span>
@@ -81,8 +81,10 @@ function SingleLeaderCard({
           </div>
 
           <div className="text-right shrink-0">
-            <div className="text-2xl font-black text-amber-400 tabular-nums">{top.value}</div>
-            <div className="text-[10px] text-slate-400">{STAT_FULL_NAMES[current.key] || current.label}</div>
+            <div className="text-2xl font-black text-amber-600 tabular-nums">{top.value}</div>
+            <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
+              {STAT_FULL_NAMES[current.key] || current.label}
+            </div>
           </div>
         </div>
 

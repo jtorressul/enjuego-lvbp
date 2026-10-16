@@ -788,28 +788,38 @@ export function GamedayView({
                     {topStars.map(({ row, team, line }, index) => (
                       <article
                         key={row.id}
-                        className={`rounded-xl p-3 border flex flex-col items-center text-center relative ${
+                        className={`rounded-2xl p-4 border flex flex-col items-center text-center relative transition ${
                           index === 0
-                            ? "bg-gradient-to-b from-amber-500/15 to-slate-950 border-amber-500/50"
-                            : "bg-slate-950/70 border-slate-800"
+                            ? "bg-gradient-to-b from-amber-50/90 via-amber-50/40 to-white border-amber-300 shadow-xs ring-1 ring-amber-400/30"
+                            : "bg-white border-slate-200 shadow-2xs"
                         }`}
                       >
                         {index === 0 && (
-                          <span className="mb-1.5 rounded-full bg-amber-400 px-2.5 py-0.5 text-[10px] font-black uppercase text-slate-950">
+                          <span className="mb-2 rounded-full bg-amber-400 px-3 py-0.5 text-[10px] font-black uppercase text-slate-950 shadow-2xs">
                             ★ Jugador del juego
                           </span>
                         )}
                         <img
                           src={playerHeadshot(row.id)}
                           alt={row.name}
-                          className="w-14 h-14 rounded-full object-cover bg-slate-800 border-2 border-slate-700 mb-2"
+                          className={`w-14 h-14 rounded-full object-cover mb-2 ${
+                            index === 0
+                              ? "bg-amber-100/60 border-2 border-amber-400 shadow-xs"
+                              : "bg-slate-100 border border-slate-200"
+                          }`}
                         />
-                        <strong className="text-sm font-bold text-white">{row.name}</strong>
-                        <span className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
-                          <img src={team.logoUrl} alt="" className="w-3.5 h-3.5" />
+                        <strong className="text-sm font-black text-slate-900">{row.name}</strong>
+                        <span className="text-[11px] font-medium text-slate-600 flex items-center gap-1.5 mt-0.5">
+                          <img src={team.logoUrl} alt="" className="w-3.5 h-3.5 object-contain" />
                           {team.nick} · {row.pos}
                         </span>
-                        <p className="mt-2 text-xs font-extrabold text-amber-300 bg-slate-900/90 px-2.5 py-1 rounded-md border border-slate-800">
+                        <p
+                          className={`mt-2.5 text-xs font-extrabold px-3 py-1 rounded-xl border ${
+                            index === 0
+                              ? "text-amber-800 bg-amber-100/70 border-amber-300/70"
+                              : "text-slate-700 bg-slate-50 border-slate-200"
+                          }`}
+                        >
                           {line}
                         </p>
                       </article>

@@ -32,16 +32,16 @@ function shortPlayerName(name = ""): string {
 
 function eventTone(eventType = ""): { badgeBg: string; border: string } {
   if (eventType === "home_run")
-    return { badgeBg: "bg-amber-500 text-slate-950", border: "border-l-4 border-l-amber-400" };
+    return { badgeBg: "bg-amber-400 text-slate-950 font-black shadow-2xs", border: "border-l-4 border-l-amber-500" };
   if (eventType === "double" || eventType === "triple")
-    return { badgeBg: "bg-orange-500 text-white", border: "border-l-4 border-l-orange-500" };
+    return { badgeBg: "bg-orange-500 text-white font-black shadow-2xs", border: "border-l-4 border-l-orange-500" };
   if (eventType === "single")
-    return { badgeBg: "bg-emerald-600 text-white", border: "border-l-4 border-l-emerald-500" };
+    return { badgeBg: "bg-emerald-600 text-white font-black shadow-2xs", border: "border-l-4 border-l-emerald-600" };
   if (["walk", "intent_walk", "hit_by_pitch"].includes(eventType))
-    return { badgeBg: "bg-sky-600 text-white", border: "border-l-4 border-l-sky-500" };
+    return { badgeBg: "bg-sky-600 text-white font-black shadow-2xs", border: "border-l-4 border-l-sky-600" };
   if (String(eventType).startsWith("strikeout"))
-    return { badgeBg: "bg-red-600 text-white", border: "border-l-4 border-l-red-500" };
-  return { badgeBg: "bg-slate-700 text-slate-200", border: "border-l-4 border-l-slate-700" };
+    return { badgeBg: "bg-rose-600 text-white font-black shadow-2xs", border: "border-l-4 border-l-rose-500" };
+  return { badgeBg: "bg-slate-100 text-slate-700 border border-slate-200 font-bold", border: "border-l-4 border-l-slate-300" };
 }
 
 function MiniBases({
@@ -54,35 +54,67 @@ function MiniBases({
   third?: boolean;
 }) {
   return (
-    <svg viewBox="0 0 60 50" className="w-12 h-10 mx-auto" aria-hidden="true">
-      <rect
-        x="-6"
-        y="-6"
-        width="12"
-        height="12"
-        transform="translate(30 12) rotate(45)"
-        className={second ? "fill-amber-400 stroke-amber-200" : "fill-slate-800 stroke-slate-600"}
-        strokeWidth="1.5"
-      />
-      <rect
-        x="-6"
-        y="-6"
-        width="12"
-        height="12"
-        transform="translate(13 29) rotate(45)"
-        className={third ? "fill-amber-400 stroke-amber-200" : "fill-slate-800 stroke-slate-600"}
-        strokeWidth="1.5"
-      />
-      <rect
-        x="-6"
-        y="-6"
-        width="12"
-        height="12"
-        transform="translate(47 29) rotate(45)"
-        className={first ? "fill-amber-400 stroke-amber-200" : "fill-slate-800 stroke-slate-600"}
-        strokeWidth="1.5"
-      />
-    </svg>
+    <div className="relative w-14 h-12 mx-auto my-1 flex items-center justify-center">
+      <svg viewBox="0 0 60 52" className="w-14 h-12" aria-hidden="true">
+        {/* Baseline diamond outline */}
+        <path
+          d="M30 43 L48 25 L30 7 L12 25 Z"
+          fill="none"
+          stroke="#cbd5e1"
+          strokeWidth="1.5"
+          strokeDasharray="2 2"
+        />
+        {/* Second Base (Top) */}
+        <rect
+          x="-5.5"
+          y="-5.5"
+          width="11"
+          height="11"
+          transform="translate(30 7) rotate(45)"
+          className={
+            second
+              ? "fill-amber-400 stroke-amber-500 drop-shadow-xs"
+              : "fill-white stroke-slate-300"
+          }
+          strokeWidth="1.5"
+        />
+        {/* Third Base (Left) */}
+        <rect
+          x="-5.5"
+          y="-5.5"
+          width="11"
+          height="11"
+          transform="translate(12 25) rotate(45)"
+          className={
+            third
+              ? "fill-amber-400 stroke-amber-500 drop-shadow-xs"
+              : "fill-white stroke-slate-300"
+          }
+          strokeWidth="1.5"
+        />
+        {/* First Base (Right) */}
+        <rect
+          x="-5.5"
+          y="-5.5"
+          width="11"
+          height="11"
+          transform="translate(48 25) rotate(45)"
+          className={
+            first
+              ? "fill-amber-400 stroke-amber-500 drop-shadow-xs"
+              : "fill-white stroke-slate-300"
+          }
+          strokeWidth="1.5"
+        />
+        {/* Home Plate (Bottom Pentagon) */}
+        <polygon
+          points="27,42 33,42 34,45 30,48 26,45"
+          fill="#cbd5e1"
+          stroke="#94a3b8"
+          strokeWidth="1"
+        />
+      </svg>
+    </div>
   );
 }
 
@@ -100,8 +132,10 @@ function CountDots({
       {Array.from({ length: total }, (_, idx) => (
         <span
           key={idx}
-          className={`w-2.5 h-2.5 rounded-full border ${
-            idx < value ? `${activeClass} border-transparent` : "bg-slate-800 border-slate-600"
+          className={`w-2.5 h-2.5 rounded-full border transition-all ${
+            idx < value
+              ? `${activeClass} border-transparent shadow-xs scale-110`
+              : "bg-slate-200 border-slate-300"
           }`}
         />
       ))}
@@ -428,38 +462,38 @@ export function GamedayView({
   return (
     <div className="space-y-5">
       {/* Top Action Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-slate-200 rounded-2xl px-4 py-2.5 shadow-2xs">
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-300 hover:text-white transition cursor-pointer"
+          className="inline-flex items-center gap-2 text-xs sm:text-sm font-extrabold text-slate-700 hover:text-amber-600 transition cursor-pointer"
         >
-          <ArrowLeft className="w-4 h-4" /> Volver a la pizarra
+          <ArrowLeft className="w-4 h-4 text-amber-600" /> Volver a la pizarra
         </button>
       </div>
 
       {/* HERO SCOREBOARD + LINESCORE */}
-      <section className="rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900 to-slate-950 p-4 sm:p-6 shadow-xl">
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-xs">
         {/* Top Metadata + Broadcast Channels */}
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 border-b border-slate-800/80 pb-3 mb-4">
-          <div className="flex flex-wrap items-center gap-2.5">
-            <span className="inline-flex items-center gap-1.5 font-semibold text-slate-300">
-              <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" /> {game.venue} · {game.venueCity}
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 border-b border-slate-100 pb-3 mb-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 font-bold text-slate-800">
+              <MapPin className="w-3.5 h-3.5 text-amber-600 shrink-0" /> {game.venue} · {game.venueCity}
             </span>
-            <span className="capitalize">· {game.dateLabel}</span>
+            <span className="capitalize text-slate-500">· {game.dateLabel}</span>
             {(game.tvChannels?.length ? game.tvChannels : game.tv ? [game.tv] : []).map((ch) => (
               <span
                 key={ch}
-                className="inline-flex items-center gap-1 rounded-md bg-slate-800 border border-slate-700 px-2 py-0.5 text-[11px] font-bold text-slate-200"
+                className="inline-flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200/80 px-2 py-0.5 text-[11px] font-extrabold text-amber-900"
               >
-                <Tv className="w-3 h-3 text-amber-400" /> {ch}
+                <Tv className="w-3 h-3 text-amber-600" /> {ch}
               </span>
             ))}
           </div>
-          <span className="inline-flex items-center gap-1.5 text-slate-300 font-semibold">
+          <span className="inline-flex items-center gap-1.5 text-slate-500 font-bold">
             {game.info?.duration ? (
               <>
-                <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" /> Duración: {game.info.duration}
+                <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" /> Duración: {game.info.duration}
               </>
             ) : (
               <>Juego #{game.id}</>
@@ -467,39 +501,45 @@ export function GamedayView({
           </span>
         </div>
 
-        {/* Teams & Main Score */}
-        <div className="grid grid-cols-1 md:grid-cols-11 items-center gap-4">
-          {/* Away Team */}
+        {/* Teams & Main Score Duel */}
+        <div className="grid grid-cols-1 md:grid-cols-11 items-center gap-3 sm:gap-4">
+          {/* Away Team Card */}
           <div
             onClick={() => onSelectTeam?.(game.awayTeam.code)}
-            className="md:col-span-4 flex items-center justify-between bg-slate-900/70 border border-slate-800/90 rounded-xl p-3.5 cursor-pointer hover:border-slate-700 transition"
+            className="md:col-span-4 flex items-center justify-between bg-slate-50/80 hover:bg-slate-100/90 border border-slate-200 rounded-2xl p-4 cursor-pointer transition relative overflow-hidden group shadow-2xs"
           >
-            <div className="flex items-center gap-3 min-w-0">
+            <div
+              className="w-1.5 absolute inset-y-0 left-0 transition-all group-hover:w-2"
+              style={{ backgroundColor: game.awayTeam.color }}
+            />
+            <div className="flex items-center gap-3.5 min-w-0 pl-1">
               <img
                 src={game.awayTeam.logoUrl}
                 alt={game.awayTeam.name}
-                className="w-12 h-12 sm:w-14 sm:h-14 object-contain shrink-0"
+                className="w-12 h-12 sm:w-14 sm:h-14 object-contain shrink-0 drop-shadow-xs"
               />
               <div className="min-w-0">
-                <div className="text-base sm:text-lg font-black text-white truncate">{game.awayTeam.nick}</div>
-                <div className="text-xs text-slate-400 truncate">
+                <div className="text-base sm:text-lg font-black text-slate-950 truncate group-hover:text-amber-600 transition">
+                  {game.awayTeam.nick}
+                </div>
+                <div className="text-xs text-slate-500 truncate">
                   {game.awayTeam.name} · ({game.awayTeam.wins}-{game.awayTeam.losses})
                 </div>
               </div>
             </div>
-            <span className="text-3xl sm:text-4xl font-black text-white tabular-nums ml-3">
+            <span className="text-3xl sm:text-5xl font-black text-slate-950 tabular-nums ml-3">
               {game.awayScore}
             </span>
           </div>
 
           {/* Center Status / Diamond */}
-          <div className="md:col-span-3 flex flex-col items-center justify-center text-center py-1">
+          <div className="md:col-span-3 flex flex-col items-center justify-center text-center py-2">
             {isLive ? (
               <>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/20 border border-red-500/40 px-3 py-0.5 text-xs font-extrabold text-red-400 uppercase tracking-wider">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 border border-red-200 px-3 py-0.5 text-xs font-black text-red-700 uppercase tracking-wider shadow-2xs">
                   <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" /> En vivo
                 </span>
-                <p className="mt-1 text-sm font-extrabold text-amber-400">
+                <p className="mt-1 text-sm font-black text-amber-600">
                   {state.top ? "Alta" : "Baja"} del {state.inning}°
                 </p>
                 <MiniBases
@@ -507,9 +547,9 @@ export function GamedayView({
                   second={Boolean(game.field?.runners?.second)}
                   third={Boolean(game.field?.runners?.third)}
                 />
-                <div className="flex items-center gap-3 text-xs font-bold text-slate-300 mt-1">
+                <div className="flex items-center gap-3 text-xs font-bold text-slate-600 mt-1">
                   <span>
-                    Cuenta: <b className="text-white">{state.balls}-{state.strikes}</b>
+                    Cuenta: <b className="text-slate-950 font-black">{state.balls}-{state.strikes}</b>
                   </span>
                   <span className="flex items-center gap-1">
                     Outs: <CountDots value={state.outs} total={3} activeClass="bg-amber-400" />
@@ -518,33 +558,39 @@ export function GamedayView({
               </>
             ) : (
               <>
-                <span className="inline-flex items-center rounded-full bg-slate-800 border border-slate-700 px-3.5 py-1 text-xs font-extrabold text-slate-200 uppercase tracking-wider">
+                <span className="inline-flex items-center rounded-full bg-slate-100 border border-slate-200 px-3.5 py-1 text-xs font-black text-slate-800 uppercase tracking-wider">
                   {isFinal
                     ? `Final${game.box.innings.length > 9 ? ` / ${game.box.innings.length}` : ""}`
                     : game.time}
                 </span>
-                <p className="mt-1.5 text-xs text-slate-400">{game.venue}</p>
+                <p className="mt-1.5 text-xs font-bold text-slate-500">{game.venue}</p>
               </>
             )}
           </div>
 
-          {/* Home Team */}
+          {/* Home Team Card */}
           <div
             onClick={() => onSelectTeam?.(game.homeTeam.code)}
-            className="md:col-span-4 flex items-center justify-between bg-slate-900/70 border border-slate-800/90 rounded-xl p-3.5 cursor-pointer hover:border-slate-700 transition"
+            className="md:col-span-4 flex items-center justify-between bg-slate-50/80 hover:bg-slate-100/90 border border-slate-200 rounded-2xl p-4 cursor-pointer transition relative overflow-hidden group shadow-2xs"
           >
-            <span className="text-3xl sm:text-4xl font-black text-white tabular-nums mr-3 order-2 md:order-1">
+            <div
+              className="w-1.5 absolute inset-y-0 right-0 transition-all group-hover:w-2"
+              style={{ backgroundColor: game.homeTeam.color }}
+            />
+            <span className="text-3xl sm:text-5xl font-black text-slate-950 tabular-nums mr-3 order-2 md:order-1">
               {game.homeScore}
             </span>
-            <div className="flex items-center gap-3 min-w-0 order-1 md:order-2 md:text-right">
+            <div className="flex items-center gap-3.5 min-w-0 order-1 md:order-2 md:text-right pr-1">
               <img
                 src={game.homeTeam.logoUrl}
                 alt={game.homeTeam.name}
-                className="w-12 h-12 sm:w-14 sm:h-14 object-contain shrink-0 md:order-2"
+                className="w-12 h-12 sm:w-14 sm:h-14 object-contain shrink-0 md:order-2 drop-shadow-xs"
               />
               <div className="min-w-0 md:order-1">
-                <div className="text-base sm:text-lg font-black text-white truncate">{game.homeTeam.nick}</div>
-                <div className="text-xs text-slate-400 truncate">
+                <div className="text-base sm:text-lg font-black text-slate-950 truncate group-hover:text-amber-600 transition">
+                  {game.homeTeam.nick}
+                </div>
+                <div className="text-xs text-slate-500 truncate">
                   {game.homeTeam.name} · ({game.homeTeam.wins}-{game.homeTeam.losses})
                 </div>
               </div>
@@ -554,54 +600,54 @@ export function GamedayView({
 
         {/* Decisions line when Final */}
         {isFinal && game.decisions && (
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-300 bg-slate-900/60 py-2 px-3 rounded-lg border border-slate-800/80">
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-700 bg-slate-50 py-2.5 px-4 rounded-xl border border-slate-200">
             {game.decisions.winner && (
               <span>
-                <b className="inline-block px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 mr-1">G</b>
-                {game.decisions.winner}
+                <b className="inline-block px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-black mr-1">G</b>
+                <span className="font-bold text-slate-900">{game.decisions.winner}</span>
               </span>
             )}
             {game.decisions.loser && (
               <span>
-                <b className="inline-block px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 mr-1">P</b>
-                {game.decisions.loser}
+                <b className="inline-block px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 font-black mr-1">P</b>
+                <span className="font-bold text-slate-900">{game.decisions.loser}</span>
               </span>
             )}
             {game.decisions.save && (
               <span>
-                <b className="inline-block px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-400 mr-1">S</b>
-                {game.decisions.save}
+                <b className="inline-block px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 font-black mr-1">S</b>
+                <span className="font-bold text-slate-900">{game.decisions.save}</span>
               </span>
             )}
           </div>
         )}
 
         {/* INNING BY INNING LINESCORE TABLE */}
-        <div className="mt-4 overflow-x-auto">
+        <div className="mt-5 overflow-x-auto rounded-xl border border-slate-200 bg-white">
           <table className="w-full text-center text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 font-bold">
-                <th className="py-2 px-3 text-left">EQUIPO</th>
+              <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 font-extrabold">
+                <th className="py-2.5 px-3 text-left">EQUIPO</th>
                 {game.box.innings.map((inn) => (
-                  <th key={inn} className="py-2 px-2 min-w-[28px]">
+                  <th key={inn} className="py-2.5 px-2 min-w-[28px]">
                     {inn}
                   </th>
                 ))}
-                <th className="py-2 px-2.5 bg-slate-800/60 text-amber-400 font-black">C</th>
-                <th className="py-2 px-2.5 bg-slate-800/40 text-slate-200 font-extrabold">H</th>
-                <th className="py-2 px-2.5 bg-slate-800/40 text-slate-200 font-extrabold">E</th>
+                <th className="py-2.5 px-3 bg-amber-50 text-amber-900 font-black border-l border-slate-200">C</th>
+                <th className="py-2.5 px-3 bg-slate-100 text-slate-800 font-black">H</th>
+                <th className="py-2.5 px-3 bg-slate-100 text-slate-800 font-black">E</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/70">
+            <tbody className="divide-y divide-slate-100 text-slate-800">
               {(["away", "home"] as const).map((side) => {
                 const team = side === "away" ? game.awayTeam : game.homeTeam;
                 const runs = side === "away" ? game.awayScore : game.homeScore;
                 const hits = side === "away" ? game.awayHits : game.homeHits;
                 const errs = side === "away" ? game.awayErrors : game.homeErrors;
                 return (
-                  <tr key={side} className="hover:bg-slate-900/40">
-                    <th className="py-2.5 px-3 text-left font-bold text-white flex items-center gap-2">
-                      <img src={team.logoUrl} alt="" className="w-5 h-5" />
+                  <tr key={side} className="hover:bg-slate-50/80 transition">
+                    <th className="py-2.5 px-3 text-left font-black text-slate-900 flex items-center gap-2">
+                      <img src={team.logoUrl} alt="" className="w-5 h-5 object-contain" />
                       <span>{team.shortName}</span>
                     </th>
                     {game.box.innings.map((inn, idx) => {
@@ -611,11 +657,11 @@ export function GamedayView({
                       return (
                         <td
                           key={inn}
-                          className={`py-2.5 px-2 tabular-nums ${
+                          className={`py-2.5 px-2 tabular-nums font-bold ${
                             isCurrentCell
-                              ? "bg-amber-500/20 text-amber-300 font-black ring-1 ring-amber-400/50 rounded"
+                              ? "bg-amber-100/90 text-amber-950 font-black ring-1 ring-amber-400 rounded"
                               : val && val > 0
-                                ? "text-white font-bold"
+                                ? "text-slate-950 font-black"
                                 : "text-slate-400"
                           }`}
                         >
@@ -623,13 +669,13 @@ export function GamedayView({
                         </td>
                       );
                     })}
-                    <td className="py-2.5 px-2.5 bg-slate-800/60 font-black text-amber-400 text-sm tabular-nums">
+                    <td className="py-2.5 px-3 bg-amber-50/80 font-black text-amber-600 text-sm tabular-nums border-l border-slate-200">
                       {runs}
                     </td>
-                    <td className="py-2.5 px-2.5 bg-slate-800/30 font-bold text-slate-200 tabular-nums">
+                    <td className="py-2.5 px-3 bg-slate-100/70 font-black text-slate-900 tabular-nums">
                       {hits}
                     </td>
-                    <td className="py-2.5 px-2.5 bg-slate-800/30 font-bold text-slate-300 tabular-nums">
+                    <td className="py-2.5 px-3 bg-slate-100/70 font-black text-slate-600 tabular-nums">
                       {errs}
                     </td>
                   </tr>
@@ -646,82 +692,82 @@ export function GamedayView({
         <div className="lg:col-span-8 space-y-5">
           {/* 1. SITUACIÓN DEL JUEGO (SI ESTÁ EN VIVO) */}
           {isLive && game.matchup && (
-            <section className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 sm:p-5 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <h2 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
-                  <Flame className="w-5 h-5 text-amber-400" /> Situación del juego
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h2 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+                  <Flame className="w-5 h-5 text-amber-500" /> Situación del juego
                 </h2>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/20 px-3 py-0.5 text-xs font-extrabold text-red-400">
-                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200 px-3 py-0.5 text-xs font-black text-rose-600">
+                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
                   {state.top ? "Alta" : "Baja"} del {state.inning}°
                 </span>
               </div>
 
               {lastCompletedPlay && (
-                <div className="rounded-xl bg-slate-950/90 border border-slate-800 px-3.5 py-2.5 text-xs text-slate-200">
-                  <span className="font-extrabold text-amber-400 uppercase mr-2">Última jugada:</span>
+                <div className="rounded-xl bg-slate-50 border border-slate-200 px-3.5 py-2.5 text-xs text-slate-700">
+                  <span className="font-black text-amber-700 uppercase mr-2">Última jugada:</span>
                   <span>{lastCompletedPlay.text}</span>
                 </div>
               )}
 
               {/* Duel Pitcher vs Batter */}
-              <div className="grid grid-cols-1 md:grid-cols-11 gap-3 items-center bg-slate-950/70 rounded-xl p-3.5 border border-slate-800/90">
+              <div className="grid grid-cols-1 md:grid-cols-11 gap-3 items-center bg-slate-50/70 rounded-xl p-3.5 border border-slate-200">
                 {/* Pitcher */}
                 <div className="md:col-span-5 flex items-center gap-3">
                   <img
                     src={playerHeadshot(game.matchup.pitcher.id)}
                     alt={game.matchup.pitcher.name}
-                    className="w-14 h-14 rounded-full object-cover bg-slate-800 border-2 border-slate-700 shrink-0"
+                    className="w-14 h-14 rounded-full object-cover bg-slate-100 border-2 border-slate-200 shrink-0 shadow-2xs"
                   />
                   <div className="min-w-0">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-sky-400">
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-sky-700">
                       Lanzando · {game.matchup.pitcher.hand}
                     </span>
-                    <div className="text-sm font-black text-white truncate">
+                    <div className="text-sm font-black text-slate-900 truncate">
                       {game.matchup.pitcher.name}
                     </div>
-                    <p className="text-xs text-slate-300">
+                    <p className="text-xs text-slate-600">
                       {game.matchup.pitcher.ip} IL · {game.matchup.pitcher.pitches} lanz. ·{" "}
                       {game.matchup.pitcher.k} K · {game.matchup.pitcher.bb} BB
                     </p>
-                    <p className="text-[11px] text-slate-400">EFE {game.matchup.pitcher.era}</p>
+                    <p className="text-[11px] text-slate-500">EFE {game.matchup.pitcher.era}</p>
                   </div>
                 </div>
 
                 {/* Count B-S-O Traffic Light */}
-                <div className="md:col-span-1 flex md:flex-col items-center justify-center gap-3 md:gap-1.5 py-1 border-y md:border-y-0 md:border-x border-slate-800">
-                  <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-slate-400">
+                <div className="md:col-span-1 flex md:flex-col items-center justify-center gap-3 md:gap-1.5 py-1 border-y md:border-y-0 md:border-x border-slate-200">
+                  <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-slate-600">
                     <span>B</span>
                     <CountDots value={game.matchup.balls} total={4} activeClass="bg-emerald-500" />
                   </div>
-                  <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-slate-400">
+                  <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-slate-600">
                     <span>S</span>
-                    <CountDots value={game.matchup.strikes} total={3} activeClass="bg-red-500" />
+                    <CountDots value={game.matchup.strikes} total={3} activeClass="bg-rose-500" />
                   </div>
-                  <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-slate-400">
+                  <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-slate-600">
                     <span>O</span>
-                    <CountDots value={game.matchup.outs} total={3} activeClass="bg-amber-400" />
+                    <CountDots value={game.matchup.outs} total={3} activeClass="bg-amber-500" />
                   </div>
                 </div>
 
                 {/* Batter */}
                 <div className="md:col-span-5 flex items-center justify-end gap-3 text-right">
                   <div className="min-w-0">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400">
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-700">
                       Al bate · {game.matchup.batter.order}° · {game.matchup.batter.pos}
                     </span>
-                    <div className="text-sm font-black text-white truncate">
+                    <div className="text-sm font-black text-slate-900 truncate">
                       {game.matchup.batter.name}
                     </div>
-                    <p className="text-xs text-slate-200 font-semibold">Hoy: {game.matchup.batter.today}</p>
-                    <p className="text-[11px] text-slate-400">
+                    <p className="text-xs text-slate-700 font-semibold">Hoy: {game.matchup.batter.today}</p>
+                    <p className="text-[11px] text-slate-500">
                       AVE {game.matchup.batter.avg} · OPS {game.matchup.batter.ops}
                     </p>
                   </div>
                   <img
                     src={playerHeadshot(game.matchup.batter.id)}
                     alt={game.matchup.batter.name}
-                    className="w-14 h-14 rounded-full object-cover bg-slate-800 border-2 border-amber-500/60 shrink-0"
+                    className="w-14 h-14 rounded-full object-cover bg-amber-50/50 border-2 border-amber-400 shrink-0 shadow-2xs"
                   />
                 </div>
               </div>
@@ -730,8 +776,8 @@ export function GamedayView({
 
           {/* 2. RESUMEN DEL PARTIDO (SI ES FINAL) */}
           {isFinal && (
-            <section className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 sm:p-5 space-y-5">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-3">
                   <img
                     src={
@@ -740,26 +786,26 @@ export function GamedayView({
                         : game.awayTeam.logoUrl
                     }
                     alt=""
-                    className="w-10 h-10"
+                    className="w-10 h-10 object-contain"
                   />
                   <div>
-                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-400">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-amber-600">
                       Resumen del Partido
                     </span>
-                    <h2 className="text-lg font-black text-white">
+                    <h2 className="text-lg font-black text-slate-950">
                       {game.homeScore > game.awayScore
                         ? `${game.homeTeam.nick} ${game.homeScore}, ${game.awayTeam.nick} ${game.awayScore}`
                         : `${game.awayTeam.nick} ${game.awayScore}, ${game.homeTeam.nick} ${game.homeScore}`}
                     </h2>
                   </div>
                 </div>
-                <Trophy className="w-6 h-6 text-amber-400" />
+                <Trophy className="w-6 h-6 text-amber-500" />
               </div>
 
               {/* Figuras del partido (Top 3) */}
               {topStars.length > 0 && (
                 <div>
-                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-2.5">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 mb-2.5">
                     Figuras del partido
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -808,18 +854,18 @@ export function GamedayView({
 
               {/* Cara a Cara (Barras Comparativas) */}
               <div>
-                <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-2.5">
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 mb-2.5">
                   Cara a cara estadístico
                 </h3>
-                <div className="rounded-xl bg-slate-950/80 border border-slate-800 p-3.5 space-y-2.5">
-                  <div className="flex items-center justify-between text-xs font-bold text-white pb-1 border-b border-slate-800">
+                <div className="rounded-xl bg-slate-50 border border-slate-200 p-3.5 space-y-2.5">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-900 pb-1.5 border-b border-slate-200">
                     <span className="flex items-center gap-1.5">
-                      <img src={game.awayTeam.logoUrl} alt="" className="w-4 h-4" />
+                      <img src={game.awayTeam.logoUrl} alt="" className="w-4 h-4 object-contain" />
                       {game.awayTeam.nick}
                     </span>
                     <span className="flex items-center gap-1.5">
                       {game.homeTeam.nick}
-                      <img src={game.homeTeam.logoUrl} alt="" className="w-4 h-4" />
+                      <img src={game.homeTeam.logoUrl} alt="" className="w-4 h-4 object-contain" />
                     </span>
                   </div>
                   {(
@@ -850,11 +896,11 @@ export function GamedayView({
                     return (
                       <div key={label} className="space-y-1">
                         <div className="flex items-center justify-between text-xs">
-                          <b className={a > h ? "text-amber-400 font-black" : "text-slate-400"}>{a}</b>
-                          <span className="text-slate-300 font-medium">{label}</span>
-                          <b className={h > a ? "text-amber-400 font-black" : "text-slate-400"}>{h}</b>
+                          <b className={a > h ? "text-amber-600 font-black" : "text-slate-600"}>{a}</b>
+                          <span className="text-slate-600 font-semibold">{label}</span>
+                          <b className={h > a ? "text-amber-600 font-black" : "text-slate-600"}>{h}</b>
                         </div>
-                        <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden flex">
+                        <div className="h-1.5 w-full rounded-full bg-slate-200 overflow-hidden flex">
                           <div
                             style={{ width: `${leftPct}%`, backgroundColor: game.awayTeam.color }}
                             className="h-full"
@@ -873,7 +919,7 @@ export function GamedayView({
               {/* Anotaciones (Scoring Plays) */}
               {scoringPlays.length > 0 && (
                 <div>
-                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-2.5">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 mb-2.5">
                     Anotaciones ({scoringPlays.length} jugadas de carrera)
                   </h3>
                   <ol className="space-y-2 max-h-64 overflow-y-auto pr-1">
@@ -882,18 +928,18 @@ export function GamedayView({
                       return (
                         <li
                           key={play.i}
-                          className="flex items-start justify-between gap-3 rounded-xl bg-slate-950/75 border border-slate-800 p-3 text-xs"
+                          className="flex items-start justify-between gap-3 rounded-xl bg-slate-50 border border-slate-200 p-3 text-xs"
                         >
                           <div className="flex items-start gap-2.5">
-                            <img src={team.logoUrl} alt="" className="w-5 h-5 mt-0.5 shrink-0" />
+                            <img src={team.logoUrl} alt="" className="w-5 h-5 mt-0.5 shrink-0 object-contain" />
                             <div>
-                              <span className="font-bold text-amber-400 mr-2">
+                              <span className="font-black text-amber-700 mr-2">
                                 {play.top ? "Alta" : "Baja"} {play.inning}°
                               </span>
-                              <span className="text-slate-200">{play.text}</span>
+                              <span className="text-slate-700 font-medium">{play.text}</span>
                             </div>
                           </div>
-                          <span className="shrink-0 rounded bg-slate-800 px-2 py-1 font-bold text-white tabular-nums">
+                          <span className="shrink-0 rounded bg-slate-200/80 px-2 py-1 font-bold text-slate-900 tabular-nums">
                             {game.awayTeam.shortName} {play.away} - {game.homeTeam.shortName} {play.home}
                           </span>
                         </li>
@@ -905,10 +951,10 @@ export function GamedayView({
             </section>
           )}
 
-          {/* 3. LAS 5 PESTAÑAS DE DETALLE (JUGADA A JUGADA, BOX SCORE, MAPA DE BATEO, ALINEACIONES, DETALLES) */}
-          <section className="rounded-2xl border border-slate-800 bg-slate-900/90 overflow-hidden">
+          {/* 3. LAS 4 PESTAÑAS DE DETALLE (JUGADA A JUGADA, BOX SCORE, ALINEACIONES, DETALLES) */}
+          <section className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
             {/* Tab Bar */}
-            <div className="flex overflow-x-auto border-b border-slate-800 bg-slate-950/60">
+            <div className="flex overflow-x-auto border-b border-slate-200 bg-slate-50/70">
               {(
                 [
                   ["feed", "Jugada a jugada"],
@@ -921,10 +967,10 @@ export function GamedayView({
                   key={key}
                   type="button"
                   onClick={() => setTab(key)}
-                  className={`px-4 py-3 text-xs sm:text-sm font-extrabold whitespace-nowrap border-b-2 transition cursor-pointer ${
+                  className={`px-4 py-3 text-xs sm:text-sm font-black whitespace-nowrap border-b-2 transition cursor-pointer ${
                     tab === key
-                      ? "border-amber-400 text-amber-400 bg-slate-900/80"
-                      : "border-transparent text-slate-400 hover:text-white"
+                      ? "border-amber-500 text-amber-800 bg-white shadow-2xs"
+                      : "border-transparent text-slate-500 hover:text-slate-900"
                   }`}
                 >
                   {label}
@@ -950,10 +996,10 @@ export function GamedayView({
                         key={fKey}
                         type="button"
                         onClick={() => setFeedFilter(fKey)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                           feedFilter === fKey
-                            ? "bg-amber-500 text-slate-950"
-                            : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                            ? "bg-amber-500 text-slate-950 font-black shadow-2xs"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200/60"
                         }`}
                       >
                         {fLabel}
@@ -980,34 +1026,34 @@ export function GamedayView({
                       return (
                         <div
                           key={grp.key}
-                          className="rounded-xl border border-slate-800 bg-slate-950/60 overflow-hidden"
+                          className="rounded-xl border border-slate-200 bg-slate-50/40 overflow-hidden"
                         >
                           <button
                             type="button"
                             onClick={() =>
                               setOpenInnings((prev) => ({ ...prev, [grp.key]: !isOpen }))
                             }
-                            className="w-full flex items-center justify-between gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800/80 text-xs transition"
+                            className="w-full flex items-center justify-between gap-2 px-4 py-2.5 bg-slate-50 hover:bg-slate-100/90 text-xs transition cursor-pointer border-b border-slate-200/80"
                           >
                             <div className="flex items-center gap-2.5">
-                              <img src={team.logoUrl} alt="" className="w-5 h-5" />
-                              <b className="text-white font-extrabold">
+                              <img src={team.logoUrl} alt="" className="w-5 h-5 object-contain" />
+                              <b className="text-slate-900 font-black">
                                 {grp.top ? "Alta" : "Baja"} del {grp.inning}°
                               </b>
-                              <span className="text-slate-400">{team.nick} al bate</span>
+                              <span className="text-slate-500 font-medium">{team.nick} al bate</span>
                             </div>
                             <div className="flex items-center gap-3">
                               {grp.runs > 0 && (
-                                <span className="rounded bg-amber-500/20 text-amber-300 px-2 py-0.5 font-bold">
+                                <span className="rounded-full bg-amber-100 text-amber-800 border border-amber-300 px-2.5 py-0.5 text-[11px] font-black">
                                   {grp.runs} {grp.runs === 1 ? "carrera" : "carreras"}
                                 </span>
                               )}
-                              <strong className="text-slate-300 tabular-nums">
+                              <strong className="text-slate-700 font-bold tabular-nums">
                                 {game.awayTeam.shortName} {grp.endAway} · {game.homeTeam.shortName}{" "}
                                 {grp.endHome}
                               </strong>
                               <ChevronDown
-                                className={`w-4 h-4 text-slate-400 transition-transform ${
+                                className={`w-4 h-4 text-slate-500 transition-transform ${
                                   isOpen ? "rotate-180" : ""
                                 }`}
                               />
@@ -1015,7 +1061,7 @@ export function GamedayView({
                           </button>
 
                           {isOpen && (
-                            <div className="divide-y divide-slate-800/70 p-3 space-y-2.5">
+                            <div className="divide-y divide-slate-100 p-3 space-y-2.5 bg-white">
                               {[...plays].reverse().map((play) => {
                                 const tone = eventTone(play.eventType);
                                 return (
@@ -1026,7 +1072,7 @@ export function GamedayView({
                                     {play.actions.map((act, i) => (
                                       <p
                                         key={i}
-                                        className="mb-1.5 text-[11px] text-amber-300/90 bg-amber-500/10 px-2.5 py-1 rounded border border-amber-500/20"
+                                        className="mb-1.5 text-[11px] text-amber-800 bg-amber-50 px-2.5 py-1 rounded border border-amber-200"
                                       >
                                         ⇄ {act}
                                       </p>
@@ -1036,7 +1082,7 @@ export function GamedayView({
                                         <img
                                           src={playerHeadshot(play.batter.id)}
                                           alt={play.batter.name}
-                                          className="w-9 h-9 rounded-full object-cover bg-slate-800 border border-slate-700 shrink-0 mt-0.5"
+                                          className="w-9 h-9 rounded-full object-cover bg-slate-100 border border-slate-200 shrink-0 mt-0.5 shadow-2xs"
                                         />
                                         <div className="space-y-1">
                                           <div className="flex flex-wrap items-center gap-2">
@@ -1045,21 +1091,21 @@ export function GamedayView({
                                             >
                                               {play.complete ? play.event : "Al bate"}
                                             </span>
-                                            <b className="text-xs font-extrabold text-white">
+                                            <b className="text-xs font-black text-slate-900">
                                               {play.batter.name}
                                             </b>
                                             {play.rbi > 0 && (
-                                              <span className="text-[11px] font-bold text-amber-400">
+                                              <span className="text-[11px] font-black text-amber-700">
                                                 +{play.rbi} CI
                                               </span>
                                             )}
                                           </div>
-                                          <p className="text-xs text-slate-200 leading-relaxed">
+                                          <p className="text-xs text-slate-700 leading-relaxed font-medium">
                                             {play.text ||
                                               `Cuenta ${play.balls}-${play.strikes} · ${play.outs} out(s)`}
                                           </p>
                                           <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                                            <span className="text-[11px] text-slate-400">
+                                            <span className="text-[11px] text-slate-500 font-medium">
                                               vs {play.pitcher.name}
                                             </span>
                                             {play.pitches.length > 0 && (
@@ -1072,7 +1118,7 @@ export function GamedayView({
                                                       pt.k === "b"
                                                         ? "bg-emerald-600"
                                                         : pt.k === "s"
-                                                          ? "bg-red-600"
+                                                          ? "bg-rose-600"
                                                           : "bg-blue-600"
                                                     }`}
                                                   >
@@ -1086,7 +1132,7 @@ export function GamedayView({
                                       </div>
 
                                       {play.scoring && (
-                                        <span className="shrink-0 rounded bg-amber-500/20 border border-amber-500/40 px-2 py-1 text-[11px] font-black text-amber-300 tabular-nums">
+                                        <span className="shrink-0 rounded bg-amber-50 border border-amber-300 px-2 py-1 text-[11px] font-black text-amber-800 tabular-nums">
                                           {game.awayTeam.shortName} {play.away} -{" "}
                                           {game.homeTeam.shortName} {play.home}
                                         </span>
@@ -1107,7 +1153,7 @@ export function GamedayView({
               {/* TAB 2: BOX SCORE */}
               {tab === "box" && (
                 <div className="space-y-5">
-                  <div className="inline-flex rounded-xl bg-slate-950 p-1 border border-slate-800">
+                  <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200">
                     {(["away", "home"] as const).map((side) => {
                       const t = side === "away" ? game.awayTeam : game.homeTeam;
                       return (
@@ -1115,13 +1161,13 @@ export function GamedayView({
                           key={side}
                           type="button"
                           onClick={() => setBoxSide(side)}
-                          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-extrabold transition ${
+                          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black transition cursor-pointer ${
                             boxSide === side
-                              ? "bg-slate-800 text-white shadow"
-                              : "text-slate-400 hover:text-white"
+                              ? "bg-white text-slate-900 shadow-xs"
+                              : "text-slate-600 hover:text-slate-900"
                           }`}
                         >
-                          <img src={t.logoUrl} alt="" className="w-4 h-4" />
+                          <img src={t.logoUrl} alt="" className="w-4 h-4 object-contain" />
                           {t.name}
                         </button>
                       );
@@ -1130,13 +1176,13 @@ export function GamedayView({
 
                   {/* Batting Table */}
                   <div>
-                    <h3 className="text-xs font-extrabold uppercase tracking-wider text-amber-400 mb-2">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-amber-700 mb-2">
                       Bateo
                     </h3>
-                    <div className="overflow-x-auto rounded-xl border border-slate-800">
+                    <div className="overflow-x-auto rounded-xl border border-slate-200">
                       <table className="w-full text-xs text-right border-collapse">
                         <thead>
-                          <tr className="bg-slate-950 text-slate-400 border-b border-slate-800">
+                          <tr className="bg-slate-50 text-slate-500 border-b border-slate-200 font-black">
                             <th className="py-2.5 px-3 text-left">Bateador</th>
                             <th className="py-2.5 px-2">VB</th>
                             <th className="py-2.5 px-2">C</th>
@@ -1147,30 +1193,30 @@ export function GamedayView({
                             <th className="py-2.5 px-3">AVE</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-800/60">
+                        <tbody className="divide-y divide-slate-100">
                           {game.boxscore[boxSide].batting.rows.map((r) => (
                             <tr
                               key={`${r.id}-${r.order}`}
-                              className={r.starter ? "text-slate-200" : "text-slate-400 bg-slate-950/30"}
+                              className={r.starter ? "text-slate-900 hover:bg-slate-50/60" : "text-slate-600 bg-slate-50/40 hover:bg-slate-50"}
                             >
                               <td className="py-2 px-3 text-left font-semibold">
-                                {!r.starter && <span className="text-slate-500 mr-1">↳</span>}
+                                {!r.starter && <span className="text-slate-400 mr-1">↳</span>}
                                 {r.starter ? `${Math.floor(r.order / 100)}° ` : ""}
-                                <span className="text-white">{shortPlayerName(r.name)}</span>{" "}
-                                <small className="text-slate-400 ml-1">{r.pos}</small>
+                                <span className="text-slate-900 font-bold">{shortPlayerName(r.name)}</span>{" "}
+                                <small className="text-slate-500 ml-1 font-normal">{r.pos}</small>
                               </td>
                               <td className="py-2 px-2 tabular-nums">{r.ab}</td>
                               <td className="py-2 px-2 tabular-nums">{r.r}</td>
-                              <td className="py-2 px-2 font-bold text-white tabular-nums">{r.h}</td>
+                              <td className="py-2 px-2 font-black text-slate-950 tabular-nums">{r.h}</td>
                               <td className="py-2 px-2 tabular-nums">{r.rbi}</td>
                               <td className="py-2 px-2 tabular-nums">{r.bb}</td>
                               <td className="py-2 px-2 tabular-nums">{r.so}</td>
-                              <td className="py-2 px-3 text-slate-300 tabular-nums">{r.avg}</td>
+                              <td className="py-2 px-3 text-slate-600 tabular-nums font-semibold">{r.avg}</td>
                             </tr>
                           ))}
                         </tbody>
                         <tfoot>
-                          <tr className="bg-slate-950 font-extrabold text-white border-t border-slate-800">
+                          <tr className="bg-slate-50 font-black text-slate-900 border-t-2 border-slate-200">
                             <td className="py-2.5 px-3 text-left">Totales</td>
                             <td className="py-2.5 px-2">{game.boxscore[boxSide].batting.totals.ab}</td>
                             <td className="py-2.5 px-2">{game.boxscore[boxSide].batting.totals.r}</td>
@@ -1187,13 +1233,13 @@ export function GamedayView({
 
                   {/* Pitching Table */}
                   <div>
-                    <h3 className="text-xs font-extrabold uppercase tracking-wider text-sky-400 mb-2">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-sky-700 mb-2">
                       Pitcheo
                     </h3>
-                    <div className="overflow-x-auto rounded-xl border border-slate-800">
+                    <div className="overflow-x-auto rounded-xl border border-slate-200">
                       <table className="w-full text-xs text-right border-collapse">
                         <thead>
-                          <tr className="bg-slate-950 text-slate-400 border-b border-slate-800">
+                          <tr className="bg-slate-50 text-slate-500 border-b border-slate-200 font-black">
                             <th className="py-2.5 px-3 text-left">Lanzador</th>
                             <th className="py-2.5 px-2">IL</th>
                             <th className="py-2.5 px-2">H</th>
@@ -1205,25 +1251,25 @@ export function GamedayView({
                             <th className="py-2.5 px-3">EFE</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-800/60">
+                        <tbody className="divide-y divide-slate-100">
                           {game.boxscore[boxSide].pitching.rows.map((p) => (
-                            <tr key={p.id} className="text-slate-200">
-                              <td className="py-2 px-3 text-left font-semibold text-white">
+                            <tr key={p.id} className="text-slate-800 hover:bg-slate-50/60">
+                              <td className="py-2 px-3 text-left font-bold text-slate-900">
                                 {shortPlayerName(p.name)}
                                 {p.tag && (
-                                  <span className="ml-1.5 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-black text-amber-300">
+                                  <span className="ml-1.5 rounded bg-amber-100 border border-amber-300 px-1.5 py-0.5 text-[10px] font-black text-amber-800">
                                     {p.tag}
                                   </span>
                                 )}
                               </td>
-                              <td className="py-2 px-2 font-bold tabular-nums">{p.ip}</td>
+                              <td className="py-2 px-2 font-black tabular-nums">{p.ip}</td>
                               <td className="py-2 px-2 tabular-nums">{p.h}</td>
                               <td className="py-2 px-2 tabular-nums">{p.r}</td>
                               <td className="py-2 px-2 tabular-nums">{p.er}</td>
                               <td className="py-2 px-2 tabular-nums">{p.bb}</td>
-                              <td className="py-2 px-2 font-bold text-white tabular-nums">{p.k}</td>
+                              <td className="py-2 px-2 font-black text-slate-950 tabular-nums">{p.k}</td>
                               <td className="py-2 px-2 tabular-nums">{p.pitches}</td>
-                              <td className="py-2 px-3 text-slate-300 tabular-nums">{p.era}</td>
+                              <td className="py-2 px-3 text-slate-600 tabular-nums font-semibold">{p.era}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -1242,33 +1288,33 @@ export function GamedayView({
                     return (
                       <div
                         key={side}
-                        className="rounded-xl border border-slate-800 bg-slate-950/60 p-3.5 space-y-2.5"
+                        className="rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 space-y-2.5"
                       >
-                        <h3 className="text-sm font-black text-white flex items-center gap-2 border-b border-slate-800 pb-2">
-                          <img src={team.logoUrl} alt="" className="w-5 h-5" />
+                        <h3 className="text-sm font-black text-slate-900 flex items-center gap-2 border-b border-slate-200 pb-2">
+                          <img src={team.logoUrl} alt="" className="w-5 h-5 object-contain" />
                           {team.name}
                         </h3>
-                        <ol className="divide-y divide-slate-800/60 text-xs">
+                        <ol className="divide-y divide-slate-200/70 text-xs">
                           {rows.map((r) => (
                             <li
                               key={r.id}
                               className="py-2 flex items-center justify-between gap-2"
                             >
                               <div className="flex items-center gap-2.5">
-                                <span className="w-5 text-slate-400 font-bold">{r.order}.</span>
+                                <span className="w-5 text-slate-400 font-black">{r.order}.</span>
                                 <img
                                   src={playerHeadshot(r.id)}
                                   alt=""
-                                  className="w-7 h-7 rounded-full object-cover bg-slate-800"
+                                  className="w-7 h-7 rounded-full object-cover bg-slate-100 border border-slate-200 shadow-2xs"
                                 />
                                 <div>
-                                  <div className="font-bold text-white">{r.name}</div>
-                                  <div className="text-[11px] text-slate-400">Posición: {r.position}</div>
+                                  <div className="font-bold text-slate-900">{r.name}</div>
+                                  <div className="text-[11px] text-slate-500 font-medium">Posición: {r.position}</div>
                                 </div>
                               </div>
-                              <div className="text-right text-[11px] text-slate-300 tabular-nums">
-                                <div>AVE {r.avg}</div>
-                                <div className="text-slate-400">OPS {r.ops}</div>
+                              <div className="text-right text-[11px] text-slate-600 tabular-nums">
+                                <div className="font-semibold">AVE {r.avg}</div>
+                                <div className="text-slate-500">OPS {r.ops}</div>
                               </div>
                             </li>
                           ))}
@@ -1279,7 +1325,7 @@ export function GamedayView({
                 </div>
               )}
 
-              {/* TAB 5: DETALLES */}
+              {/* TAB 4: DETALLES */}
               {tab === "info" && (
                 <div className="space-y-4 text-xs">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1300,24 +1346,24 @@ export function GamedayView({
                     ].map(([k, v]) => (
                       <div
                         key={k}
-                        className="rounded-xl bg-slate-950/70 border border-slate-800 p-3 flex flex-col gap-1"
+                        className="rounded-xl bg-slate-50 border border-slate-200 p-3 flex flex-col gap-1"
                       >
-                        <span className="text-slate-400 font-bold uppercase text-[10px]">{k}</span>
-                        <span className="text-white font-semibold">{v}</span>
+                        <span className="text-slate-500 font-black uppercase text-[10px]">{k}</span>
+                        <span className="text-slate-900 font-bold">{v}</span>
                       </div>
                     ))}
                   </div>
 
                   {game.info.officials.length > 0 && (
-                    <div className="rounded-xl bg-slate-950/70 border border-slate-800 p-3.5">
-                      <h4 className="font-extrabold text-amber-400 uppercase text-[11px] mb-2">
+                    <div className="rounded-xl bg-slate-50 border border-slate-200 p-3.5">
+                      <h4 className="font-black text-amber-800 uppercase text-[11px] mb-2">
                         Cuerpo de Árbitros (Umpires)
                       </h4>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         {game.info.officials.map((u, idx) => (
-                          <div key={idx} className="bg-slate-900 rounded-lg p-2 border border-slate-800">
-                            <span className="text-amber-300 font-black mr-1.5">{u.role}:</span>
-                            <span className="text-slate-200">{u.name}</span>
+                          <div key={idx} className="bg-white rounded-lg p-2 border border-slate-200 shadow-2xs">
+                            <span className="text-amber-700 font-black mr-1.5">{u.role}:</span>
+                            <span className="text-slate-800 font-medium">{u.name}</span>
                           </div>
                         ))}
                       </div>
@@ -1332,17 +1378,17 @@ export function GamedayView({
         {/* Right Sidebar (4 cols): Radio, Quiniela & Live Chat */}
         <aside className="lg:col-span-4 space-y-5">
           {/* 1. CIRCUITO RADIAL EN VIVO */}
-          <section className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 space-y-3">
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                <div className="w-9 h-9 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-700">
                   <Radio className="w-5 h-5" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-400 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" /> Circuito Radial
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" /> Circuito Radial
                   </span>
-                  <h3 className="text-sm font-black text-white">
+                  <h3 className="text-sm font-black text-slate-900">
                     {
                       LVBP_TEAMS[
                         radioTeam === "away" ? game.awayTeam.code : game.homeTeam.code
@@ -1357,8 +1403,8 @@ export function GamedayView({
                 onClick={() => setRadioPlaying((p) => !p)}
                 className={`w-10 h-10 rounded-full flex items-center justify-center transition cursor-pointer ${
                   radioPlaying
-                    ? "bg-amber-400 text-slate-950 shadow-lg shadow-amber-400/25"
-                    : "bg-slate-800 text-white hover:bg-slate-700"
+                    ? "bg-amber-400 text-slate-950 shadow-md shadow-amber-400/25"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200"
                 }`}
                 aria-label="Reproducir o pausar radio"
               >
@@ -1374,13 +1420,13 @@ export function GamedayView({
                     key={side}
                     type="button"
                     onClick={() => setRadioTeam(side)}
-                    className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-bold border transition ${
+                    className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-black border transition cursor-pointer ${
                       radioTeam === side
-                        ? "bg-slate-800 border-amber-400/60 text-white"
-                        : "bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white"
+                        ? "bg-amber-50/80 border-amber-400 text-amber-950 shadow-2xs"
+                        : "bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    <img src={t.logoUrl} alt="" className="w-4 h-4" />
+                    <img src={t.logoUrl} alt="" className="w-4 h-4 object-contain" />
                     {t.nick}
                   </button>
                 );
@@ -1388,23 +1434,23 @@ export function GamedayView({
             </div>
 
             {radioPlaying && (
-              <div className="flex items-center justify-between gap-2 rounded-lg bg-slate-950 px-3 py-2 text-xs text-amber-300 border border-slate-800">
+              <div className="flex items-center justify-between gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 border border-amber-200">
                 <span className="flex items-center gap-1.5 font-semibold">
-                  <Volume2 className="w-4 h-4 animate-bounce" /> Narración de jugadas activa…
+                  <Volume2 className="w-4 h-4 animate-bounce text-amber-600" /> Narración de jugadas activa…
                 </span>
-                <span className="text-[10px] uppercase bg-amber-500/20 px-1.5 py-0.5 rounded">AUDIO</span>
+                <span className="text-[10px] font-black uppercase bg-amber-200/80 px-1.5 py-0.5 rounded text-amber-900">AUDIO</span>
               </div>
             )}
           </section>
 
           {/* 2. QUINIELA DEL JUEGO */}
-          <section className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 space-y-3">
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-black text-white">Quiniela LVBP</h3>
-                <p className="text-xs text-slate-400">¿Quién se lleva la victoria?</p>
+                <h3 className="text-sm font-black text-slate-900">Quiniela LVBP</h3>
+                <p className="text-xs text-slate-500">¿Quién se lleva la victoria?</p>
               </div>
-              <span className="rounded-full bg-slate-800 px-2.5 py-0.5 text-[11px] font-bold text-slate-300">
+              <span className="rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-[11px] font-bold text-slate-600">
                 {totalVotes} {totalVotes === 1 ? "voto" : "votos"}
               </span>
             </div>
@@ -1421,15 +1467,15 @@ export function GamedayView({
                     onClick={() => handleVote(side)}
                     className={`rounded-xl p-3 border text-center transition cursor-pointer ${
                       picked
-                        ? "bg-amber-500/15 border-amber-400 text-white"
-                        : "bg-slate-950/70 border-slate-800 hover:border-slate-700 text-slate-200"
+                        ? "bg-amber-50 border-amber-400 text-slate-950 ring-1 ring-amber-400/40 shadow-xs"
+                        : "bg-slate-50 border-slate-200 hover:bg-slate-100/80 text-slate-800"
                     }`}
                   >
-                    <img src={team.logoUrl} alt="" className="w-9 h-9 mx-auto mb-1.5" />
-                    <div className="text-xs font-extrabold">{team.nick}</div>
-                    <div className="text-lg font-black text-amber-400">{pct}%</div>
+                    <img src={team.logoUrl} alt="" className="w-9 h-9 mx-auto mb-1.5 object-contain" />
+                    <div className="text-xs font-black">{team.nick}</div>
+                    <div className="text-lg font-black text-amber-700">{pct}%</div>
                     {picked && (
-                      <span className="inline-flex items-center justify-center gap-1 mt-1 text-[10px] font-bold text-emerald-400">
+                      <span className="inline-flex items-center justify-center gap-1 mt-1 text-[10px] font-black text-emerald-600">
                         <Check className="w-3 h-3" /> Tu voto
                       </span>
                     )}
@@ -1438,7 +1484,7 @@ export function GamedayView({
               })}
             </div>
 
-            <div className="h-2 w-full rounded-full bg-slate-800 overflow-hidden flex">
+            <div className="h-2 w-full rounded-full bg-slate-100 border border-slate-200/80 overflow-hidden flex">
               <div
                 style={{ width: `${awayVotePct}%`, backgroundColor: game.awayTeam.color }}
                 className="h-full transition-all"
@@ -1451,33 +1497,33 @@ export function GamedayView({
           </section>
 
           {/* 3. CHAT EN VIVO DE LA TRIBUNA */}
-          <section className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 flex flex-col h-[410px]">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5 mb-3">
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs flex flex-col h-[410px]">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 mb-3">
               <div className="flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-amber-400" />
-                <h3 className="text-sm font-black text-white">Comentarios del Juego</h3>
+                <MessageSquare className="w-4 h-4 text-amber-500" />
+                <h3 className="text-sm font-black text-slate-900">Comentarios del Juego</h3>
               </div>
-              <span className="text-[11px] text-slate-400">{chatMessages.length} mensajes</span>
+              <span className="text-[11px] text-slate-500 font-medium">{chatMessages.length} mensajes</span>
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
               {chatMessages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center px-4 text-xs text-slate-400">
-                  <MessageSquare className="w-6 h-6 text-slate-600 mb-2" />
-                  <p className="font-semibold text-slate-300">Aún no hay comentarios en este partido</p>
-                  <p className="mt-1">Escribe el primer mensaje abajo para iniciar la conversación.</p>
+                  <MessageSquare className="w-6 h-6 text-slate-300 mb-2" />
+                  <p className="font-bold text-slate-700">Aún no hay comentarios en este partido</p>
+                  <p className="mt-1 text-slate-500">Escribe el primer mensaje abajo para iniciar la conversación.</p>
                 </div>
               ) : (
                 chatMessages.map((msg) => (
                   <div
                     key={msg.id}
-                    className="rounded-xl bg-slate-950/80 border border-slate-800/90 p-2.5 text-xs"
+                    className="rounded-xl bg-slate-50 border border-slate-200 p-2.5 text-xs shadow-2xs"
                   >
-                    <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
-                      <strong className="text-amber-300">{msg.author}</strong>
-                      <span>{msg.time}</span>
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+                      <strong className="text-amber-800 font-black">{msg.author}</strong>
+                      <span className="text-[10px]">{msg.time}</span>
                     </div>
-                    <p className="text-slate-200">{msg.text}</p>
+                    <p className="text-slate-800 font-medium leading-relaxed">{msg.text}</p>
                   </div>
                 ))
               )}
@@ -1490,7 +1536,7 @@ export function GamedayView({
                 onChange={(e) => setChatUser(e.target.value)}
                 placeholder="Tu nombre o @usuario"
                 maxLength={24}
-                className="w-full rounded-xl bg-slate-950 border border-slate-800 px-3 py-1.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400"
+                className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-amber-400 focus:bg-white transition"
               />
               <div className="flex items-center gap-2">
                 <input
@@ -1499,11 +1545,11 @@ export function GamedayView({
                   onChange={(e) => setChatInput(e.target.value)}
                   placeholder="Escribe un comentario sobre el juego…"
                   maxLength={180}
-                  className="flex-1 rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400"
+                  className="flex-1 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-amber-400 focus:bg-white transition"
                 />
                 <button
                   type="submit"
-                  className="rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 p-2 font-bold transition cursor-pointer"
+                  className="rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 p-2 font-bold transition cursor-pointer shadow-2xs"
                   aria-label="Enviar comentario"
                 >
                   <Send className="w-4 h-4" />

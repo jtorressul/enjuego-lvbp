@@ -1,6 +1,11 @@
 import { LVBP_TEAMS, playerHeadshot, resolveLvbpTeam } from "./lvbp-teams";
 import { getFallbackGameday, getFallbackRoster, getFallbackSchedule } from "./lvbp-fallback-data";
 import {
+  getOfficialBroadcastsMap,
+  resolveRealGameBroadcast,
+  OfficialBroadcastEntry,
+} from "./lvbp-broadcasts";
+import {
   BattingBoxRow,
   FieldDefender,
   GamedayData,
@@ -181,22 +186,15 @@ function buildTeamSummary(rawTeam: any, recordObj?: any): TeamSummary {
   };
 }
 
-const LVBP_TV_POOL: string[][] = [
-  ["IVC", "BeisbolPlay"],
-  ["ByM Sport", "BeisbolPlay"],
-  ["Televen", "IVC", "BeisbolPlay"],
-  ["1Baseball Network", "BeisbolPlay"],
-  ["Venevisión", "ByM Sport", "BeisbolPlay"],
-  ["Meridiano TV", "BeisbolPlay"],
-  ["Canal i", "1Baseball Network", "BeisbolPlay"],
-];
-
 export function resolveLvbpBroadcastChannels(
   gameId: string | number,
   awayCode: string,
   homeCode: string,
-  apiBroadcasts?: any[]
+  apiBroadcasts?: any[],
+  dateIso?: string,
+  broadcastMap?: Record<string, OfficialBroadcastEntry>
 ): string[] {
+  // If MLB Stats API ever provides verified broadcasts, prioritize them
   if (Array.isArray(apiBroadcasts) && apiBroadcasts.length > 0) {
     const names = apiBroadcasts
       .map((b: any) => b?.name)
@@ -205,19 +203,19 @@ export function resolveLvbpBroadcastChannels(
       return names.includes("BeisbolPlay") ? names : [...names, "BeisbolPlay"];
     }
   }
-  // Rivalry / marquee games get national + cable coverage
-  const pair = `${awayCode}-${homeCode}`;
-  if (pair.includes("CAR") && pair.includes("MAG")) {
-    return ["IVC", "Venevisión", "ByM Sport", "1Baseball Network", "BeisbolPlay"];
-  }
-  const num = Number(String(gameId).replace(/\D/g, "")) || 1;
-  return LVBP_TV_POOL[num % LVBP_TV_POOL.length];
+
+  // Resolve genuine Venezuelan official channels from stats.lvbp.com
+  return resolveRealGameBroadcast(gameId, dateIso || "", awayCode, homeCode, broadcastMap);
 }
 
 export async function fetchLvbpSchedule(season = "2026"): Promise<ScheduleGame[]> {
   try {
+    const broadcastMapPromise = getOfficialBroadcastsMap().catch(() => ({} as Record<string, OfficialBroadcastEntry>));
     const url = `${MLB_BASE}/v1/schedule?sportId=${WINTER_SPORT_ID}&leagueId=${LVBP_LEAGUE_ID}&season=${season}&gameType=R,F,D,L,W&hydrate=linescore(runners),team,decisions,probablePitcher,broadcasts`;
-    const res = await fetch(url, { next: { revalidate: 15 } });
+    const [res, broadcastMap] = await Promise.all([
+      fetch(url, { next: { revalidate: 15 } }),
+      broadcastMapPromise,
+    ]);
     if (!res.ok) {
       return getFallbackSchedule();
     }
@@ -248,7 +246,9 @@ export async function fetchLvbpSchedule(season = "2026"): Promise<ScheduleGame[]
           g.gamePk,
           awayTeam.code,
           homeTeam.code,
-          g.broadcasts
+          g.broadcasts,
+          officialDate,
+          broadcastMap
         );
 
         games.push({
@@ -520,7 +520,9 @@ export function transformMlbLiveFeedToGameday(raw: any): GamedayData {
   const tvChannels = resolveLvbpBroadcastChannels(
     raw.gamePk || gd.game?.pk || 1,
     awayTeam.code,
-    homeTeam.code
+    homeTeam.code,
+    raw.broadcasts || gd.broadcasts,
+    officialDate
   );
 
   return {

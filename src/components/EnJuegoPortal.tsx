@@ -1017,36 +1017,6 @@ export function EnJuegoPortal({
             </button>
           </div>
         </div>
-
-        {/* Mobile Subnav: Horizontal Swipeable Pill Strip */}
-        <div className="md:hidden border-t border-slate-800/80 bg-slate-900/95 px-3 py-2 overflow-x-auto flex items-center gap-1.5 shadow-2xs">
-          {(
-            [
-              ["home", "/inicio", "Inicio", Home],
-              ["resultados", "/resultados", "Resultados", Activity],
-              ["calendario", "/calendario", "Calendario", Calendar],
-              ["posiciones", "/posiciones", "Posiciones", Trophy],
-              ["lideres", "/lideres", "Líderes", BarChart3],
-              ["equipos", `/teams?team=${LVBP_TEAMS[selectedTeamCode]?.slug || "leones"}`, "Equipos", Users],
-            ] as const
-          ).map(([key, href, label, Icon]) => {
-            const active = section === key || (section === "juego" && key === "resultados");
-            return (
-              <Link
-                key={key}
-                href={href}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black shrink-0 transition ${
-                  active
-                    ? "bg-amber-400 text-slate-950 shadow-2xs"
-                    : "bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700/60"
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5 shrink-0" />
-                <span>{label}</span>
-              </Link>
-            );
-          })}
-        </div>
       </header>
 
       {/* MOBILE TEAMS SELECTOR MODAL (CENTERED WITH BACKDROP TO PREVENT SCREEN OVERFLOW) */}
@@ -2346,7 +2316,7 @@ export function EnJuegoPortal({
 
       {/* MOBILE BOTTOM NAVIGATION BAR (NATIVE APP STYLE FOR PHONES WITH REAL LINKS) */}
       <nav
-        className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-white/95 backdrop-blur-md border-t border-slate-200 px-1.5 py-1.5 flex items-center justify-around shadow-lg"
+        className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-white/95 backdrop-blur-md border-t border-slate-200 px-3 py-2 flex items-center justify-around shadow-lg"
         aria-label="Navegación Móvil"
       >
         {(
@@ -2354,9 +2324,7 @@ export function EnJuegoPortal({
             ["home", "/inicio", "Inicio", Home],
             ["resultados", "/resultados", "Pizarra", Activity],
             ["calendario", "/calendario", "Calendario", Calendar],
-            ["posiciones", "/posiciones", "Tabla", Trophy],
-            ["lideres", "/lideres", "Líderes", BarChart3],
-            ["equipos", `/teams?team=${LVBP_TEAMS[selectedTeamCode]?.slug || "leones"}`, "Equipos", Users],
+            ["posiciones", "/posiciones", "Posiciones", Trophy],
           ] as const
         ).map(([key, href, label, Icon]) => {
           const active = section === key || (section === "juego" && key === "resultados");
@@ -2364,11 +2332,11 @@ export function EnJuegoPortal({
             <Link
               key={key}
               href={href}
-              className={`flex flex-col items-center justify-center gap-0.5 px-2 py-1 rounded-xl text-[10px] font-extrabold transition cursor-pointer ${
-                active ? "text-amber-600 bg-amber-50" : "text-slate-500 hover:text-slate-900"
+              className={`flex flex-col items-center justify-center gap-1 py-1 px-3.5 rounded-xl text-[11px] font-black transition cursor-pointer ${
+                active ? "text-amber-600 bg-amber-50/80 shadow-2xs" : "text-slate-500 hover:text-slate-900"
               }`}
             >
-              <Icon className={`w-4 h-4 ${active ? "text-amber-600" : "text-slate-500"}`} />
+              <Icon className={`w-5 h-5 ${active ? "text-amber-600 stroke-[2.5]" : "text-slate-400"}`} />
               <span>{label}</span>
             </Link>
           );

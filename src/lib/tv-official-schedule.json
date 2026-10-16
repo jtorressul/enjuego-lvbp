@@ -1,0 +1,553 @@
+{
+  "2026-10-12_LAG_MAG": {
+    "isoDate": "2026-10-12",
+    "awayCode": "LAG",
+    "homeCode": "MAG",
+    "gamePk": "870098",
+    "channels": [
+      "BeisbolPlay"
+    ]
+  },
+  "pk_870098": {
+    "isoDate": "2026-10-12",
+    "awayCode": "LAG",
+    "homeCode": "MAG",
+    "gamePk": "870098",
+    "channels": [
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-13_CAR_ZUL": {
+    "isoDate": "2026-10-13",
+    "awayCode": "CAR",
+    "homeCode": "ZUL",
+    "gamePk": "870090",
+    "channels": [
+      "BeisbolPlay"
+    ]
+  },
+  "pk_870090": {
+    "isoDate": "2026-10-13",
+    "awayCode": "CAR",
+    "homeCode": "ZUL",
+    "gamePk": "870090",
+    "channels": [
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-13_ARA_ANZ": {
+    "isoDate": "2026-10-13",
+    "awayCode": "ARA",
+    "homeCode": "ANZ",
+    "gamePk": "870091",
+    "channels": [
+      "BeisbolPlay"
+    ]
+  },
+  "pk_870091": {
+    "isoDate": "2026-10-13",
+    "awayCode": "ARA",
+    "homeCode": "ANZ",
+    "gamePk": "870091",
+    "channels": [
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-13_MAG_LAG": {
+    "isoDate": "2026-10-13",
+    "awayCode": "MAG",
+    "homeCode": "LAG",
+    "gamePk": "870092",
+    "channels": [
+      "BeisbolPlay"
+    ]
+  },
+  "pk_870092": {
+    "isoDate": "2026-10-13",
+    "awayCode": "MAG",
+    "homeCode": "LAG",
+    "gamePk": "870092",
+    "channels": [
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-14_CAR_ZUL": {
+    "isoDate": "2026-10-14",
+    "awayCode": "CAR",
+    "homeCode": "ZUL",
+    "gamePk": "870093",
+    "channels": [
+      "BeisbolPlay"
+    ]
+  },
+  "pk_870093": {
+    "isoDate": "2026-10-14",
+    "awayCode": "CAR",
+    "homeCode": "ZUL",
+    "gamePk": "870093",
+    "channels": [
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-14_ARA_ANZ": {
+    "isoDate": "2026-10-14",
+    "awayCode": "ARA",
+    "homeCode": "ANZ",
+    "gamePk": "870095",
+    "channels": [
+      "BeisbolPlay"
+    ]
+  },
+  "pk_870095": {
+    "isoDate": "2026-10-14",
+    "awayCode": "ARA",
+    "homeCode": "ANZ",
+    "gamePk": "870095",
+    "channels": [
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-14_BRA_LAR": {
+    "isoDate": "2026-10-14",
+    "awayCode": "BRA",
+    "homeCode": "LAR",
+    "gamePk": "870094",
+    "channels": [
+      "BeisbolPlay"
+    ]
+  },
+  "pk_870094": {
+    "isoDate": "2026-10-14",
+    "awayCode": "BRA",
+    "homeCode": "LAR",
+    "gamePk": "870094",
+    "channels": [
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-15_BRA_CAR": {
+    "isoDate": "2026-10-15",
+    "awayCode": "BRA",
+    "homeCode": "CAR",
+    "gamePk": "870084",
+    "channels": [
+      "BeisbolPlay"
+    ]
+  },
+  "pk_870084": {
+    "isoDate": "2026-10-15",
+    "awayCode": "BRA",
+    "homeCode": "CAR",
+    "gamePk": "870084",
+    "channels": [
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-15_MAG_ARA": {
+    "isoDate": "2026-10-15",
+    "awayCode": "MAG",
+    "homeCode": "ARA",
+    "gamePk": "870085",
+    "channels": [
+      "BeisbolPlay"
+    ]
+  },
+  "pk_870085": {
+    "isoDate": "2026-10-15",
+    "awayCode": "MAG",
+    "homeCode": "ARA",
+    "gamePk": "870085",
+    "channels": [
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-15_LAR_ZUL": {
+    "isoDate": "2026-10-15",
+    "awayCode": "LAR",
+    "homeCode": "ZUL",
+    "gamePk": "870096",
+    "channels": [
+      "BeisbolPlay"
+    ]
+  },
+  "pk_870096": {
+    "isoDate": "2026-10-15",
+    "awayCode": "LAR",
+    "homeCode": "ZUL",
+    "gamePk": "870096",
+    "channels": [
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-15_LAG_ANZ": {
+    "isoDate": "2026-10-15",
+    "awayCode": "LAG",
+    "homeCode": "ANZ",
+    "gamePk": "870097",
+    "channels": [
+      "BeisbolPlay"
+    ]
+  },
+  "pk_870097": {
+    "isoDate": "2026-10-15",
+    "awayCode": "LAG",
+    "homeCode": "ANZ",
+    "gamePk": "870097",
+    "channels": [
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-16_BRA_CAR": {
+    "isoDate": "2026-10-16",
+    "awayCode": "BRA",
+    "homeCode": "CAR",
+    "gamePk": "870087",
+    "channels": [
+      "BeisbolPlay"
+    ]
+  },
+  "pk_870087": {
+    "isoDate": "2026-10-16",
+    "awayCode": "BRA",
+    "homeCode": "CAR",
+    "gamePk": "870087",
+    "channels": [
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-16_LAR_ZUL": {
+    "isoDate": "2026-10-16",
+    "awayCode": "LAR",
+    "homeCode": "ZUL",
+    "gamePk": "870086",
+    "channels": [
+      "Venevisión",
+      "BeisbolPlay"
+    ]
+  },
+  "pk_870086": {
+    "isoDate": "2026-10-16",
+    "awayCode": "LAR",
+    "homeCode": "ZUL",
+    "gamePk": "870086",
+    "channels": [
+      "Venevisión",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-16_LAG_ANZ": {
+    "isoDate": "2026-10-16",
+    "awayCode": "LAG",
+    "homeCode": "ANZ",
+    "gamePk": "870089",
+    "channels": [
+      "1Baseball Network",
+      "Meridiano TV",
+      "BeisbolPlay"
+    ]
+  },
+  "pk_870089": {
+    "isoDate": "2026-10-16",
+    "awayCode": "LAG",
+    "homeCode": "ANZ",
+    "gamePk": "870089",
+    "channels": [
+      "1Baseball Network",
+      "Meridiano TV",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-16_ARA_MAG": {
+    "isoDate": "2026-10-16",
+    "awayCode": "ARA",
+    "homeCode": "MAG",
+    "gamePk": "870088",
+    "channels": [
+      "ByM Sport",
+      "BeisbolPlay"
+    ]
+  },
+  "pk_870088": {
+    "isoDate": "2026-10-16",
+    "awayCode": "ARA",
+    "homeCode": "MAG",
+    "gamePk": "870088",
+    "channels": [
+      "ByM Sport",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-17_MAG_LAR": {
+    "isoDate": "2026-10-17",
+    "awayCode": "MAG",
+    "homeCode": "LAR",
+    "channels": [
+      "IVC",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-17_CAR_ANZ": {
+    "isoDate": "2026-10-17",
+    "awayCode": "CAR",
+    "homeCode": "ANZ",
+    "channels": [
+      "Televen",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-17_ARA_LAG": {
+    "isoDate": "2026-10-17",
+    "awayCode": "ARA",
+    "homeCode": "LAG",
+    "channels": [
+      "1Baseball Network",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-17_BRA_ZUL": {
+    "isoDate": "2026-10-17",
+    "awayCode": "BRA",
+    "homeCode": "ZUL",
+    "channels": [
+      "ByM Sport",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-18_LAG_ARA": {
+    "isoDate": "2026-10-18",
+    "awayCode": "LAG",
+    "homeCode": "ARA",
+    "channels": [
+      "Venevisión",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-18_CAR_ANZ": {
+    "isoDate": "2026-10-18",
+    "awayCode": "CAR",
+    "homeCode": "ANZ",
+    "channels": [
+      "Televen",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-18_BRA_ZUL": {
+    "isoDate": "2026-10-18",
+    "awayCode": "BRA",
+    "homeCode": "ZUL",
+    "channels": [
+      "IVC",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-18_LAR_MAG": {
+    "isoDate": "2026-10-18",
+    "awayCode": "LAR",
+    "homeCode": "MAG",
+    "channels": [
+      "ByM Sport",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-19_MAG_LAR": {
+    "isoDate": "2026-10-19",
+    "awayCode": "MAG",
+    "homeCode": "LAR",
+    "channels": [
+      "YouTube",
+      "1Baseball Network",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-20_CAR_LAG": {
+    "isoDate": "2026-10-20",
+    "awayCode": "CAR",
+    "homeCode": "LAG",
+    "channels": [
+      "IVC",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-20_ANZ_BRA": {
+    "isoDate": "2026-10-20",
+    "awayCode": "ANZ",
+    "homeCode": "BRA",
+    "channels": [
+      "ByM Sport",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-20_ARA_ZUL": {
+    "isoDate": "2026-10-20",
+    "awayCode": "ARA",
+    "homeCode": "ZUL",
+    "channels": [
+      "1Baseball Network",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-21_LAG_MAG": {
+    "isoDate": "2026-10-21",
+    "awayCode": "LAG",
+    "homeCode": "MAG",
+    "channels": [
+      "1Baseball Network",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-21_ANZ_BRA": {
+    "isoDate": "2026-10-21",
+    "awayCode": "ANZ",
+    "homeCode": "BRA",
+    "channels": [
+      "ByM Sport",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-21_ARA_ZUL": {
+    "isoDate": "2026-10-21",
+    "awayCode": "ARA",
+    "homeCode": "ZUL",
+    "channels": [
+      "IVC",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-22_ZUL_LAR": {
+    "isoDate": "2026-10-22",
+    "awayCode": "ZUL",
+    "homeCode": "LAR",
+    "channels": [
+      "IVC",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-22_ANZ_MAG": {
+    "isoDate": "2026-10-22",
+    "awayCode": "ANZ",
+    "homeCode": "MAG",
+    "channels": [
+      "ByM Sport",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-22_LAG_BRA": {
+    "isoDate": "2026-10-22",
+    "awayCode": "LAG",
+    "homeCode": "BRA",
+    "channels": [
+      "1Baseball Network",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-23_ZUL_LAR": {
+    "isoDate": "2026-10-23",
+    "awayCode": "ZUL",
+    "homeCode": "LAR",
+    "channels": [
+      "1Baseball Network",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-23_ANZ_MAG": {
+    "isoDate": "2026-10-23",
+    "awayCode": "ANZ",
+    "homeCode": "MAG",
+    "channels": [
+      "Venevisión",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-23_LAG_BRA": {
+    "isoDate": "2026-10-23",
+    "awayCode": "LAG",
+    "homeCode": "BRA",
+    "channels": [
+      "Meridiano TV",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-23_CAR_ARA": {
+    "isoDate": "2026-10-23",
+    "awayCode": "CAR",
+    "homeCode": "ARA",
+    "channels": [
+      "ByM Sport",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-24_ANZ_LAG": {
+    "isoDate": "2026-10-24",
+    "awayCode": "ANZ",
+    "homeCode": "LAG",
+    "channels": [
+      "ByM Sport",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-24_ZUL_BRA": {
+    "isoDate": "2026-10-24",
+    "awayCode": "ZUL",
+    "homeCode": "BRA",
+    "channels": [
+      "Televen",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-24_LAR_ARA": {
+    "isoDate": "2026-10-24",
+    "awayCode": "LAR",
+    "homeCode": "ARA",
+    "channels": [
+      "1Baseball Network",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-24_MAG_CAR": {
+    "isoDate": "2026-10-24",
+    "awayCode": "MAG",
+    "homeCode": "CAR",
+    "channels": [
+      "1Baseball Network",
+      "Meridiano TV",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-25_ANZ_LAG": {
+    "isoDate": "2026-10-25",
+    "awayCode": "ANZ",
+    "homeCode": "LAG",
+    "channels": [
+      "IVC",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-25_ARA_LAR": {
+    "isoDate": "2026-10-25",
+    "awayCode": "ARA",
+    "homeCode": "LAR",
+    "channels": [
+      "1Baseball Network",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-25_ZUL_BRA": {
+    "isoDate": "2026-10-25",
+    "awayCode": "ZUL",
+    "homeCode": "BRA",
+    "channels": [
+      "Televen",
+      "BeisbolPlay"
+    ]
+  },
+  "2026-10-25_CAR_MAG": {
+    "isoDate": "2026-10-25",
+    "awayCode": "CAR",
+    "homeCode": "MAG",
+    "channels": [
+      "ByM Sport",
+      "Venevisión",
+      "BeisbolPlay"
+    ]
+  }
+}

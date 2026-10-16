@@ -1,6 +1,7 @@
 export interface LvbpTeamMeta {
   id: number;
   code: string;
+  slug: string;
   mlbAbbr: string;
   name: string;
   shortName: string;
@@ -19,27 +20,13 @@ export interface LvbpTeamMeta {
   logoSvg: string;
 }
 
-function makeShieldSvg(bg: string, accent: string, text: string, textColor = "#ffffff"): string {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
-    <defs>
-      <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stop-color="${bg}"/>
-        <stop offset="100%" stop-color="#0f172a"/>
-      </linearGradient>
-    </defs>
-    <path d="M48 6 L84 18 V46 C84 68 68 83 48 90 C28 83 12 68 12 46 V18 Z" fill="url(#g)" stroke="${accent}" stroke-width="4"/>
-    <path d="M48 12 L78 22 V45 C78 63 64 76 48 83 C32 76 18 63 18 45 V22 Z" fill="none" stroke="#ffffff" stroke-opacity="0.18" stroke-width="1.5"/>
-    <text x="48" y="56" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="${text.length > 3 ? 20 : 24}" fill="${textColor}" letter-spacing="1">${text}</text>
-  </svg>`;
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-}
-
 export const LVBP_OFFICIAL_LOGO = "/logos/lvbp.svg";
 
 export const LVBP_TEAMS: Record<string, LvbpTeamMeta> = {
   CAR: {
     id: 695,
     code: "CAR",
+    slug: "leones",
     mlbAbbr: "CAR",
     name: "Leones del Caracas",
     shortName: "CAR",
@@ -61,6 +48,7 @@ export const LVBP_TEAMS: Record<string, LvbpTeamMeta> = {
   MAG: {
     id: 696,
     code: "MAG",
+    slug: "magallanes",
     mlbAbbr: "MAG",
     name: "Navegantes del Magallanes",
     shortName: "MAG",
@@ -82,6 +70,7 @@ export const LVBP_TEAMS: Record<string, LvbpTeamMeta> = {
   LAR: {
     id: 693,
     code: "LAR",
+    slug: "cardenales",
     mlbAbbr: "LAR",
     name: "Cardenales de Lara",
     shortName: "LAR",
@@ -103,6 +92,7 @@ export const LVBP_TEAMS: Record<string, LvbpTeamMeta> = {
   LAG: {
     id: 698,
     code: "LAG",
+    slug: "tiburones",
     mlbAbbr: "LAG",
     name: "Tiburones de La Guaira",
     shortName: "LAG",
@@ -124,6 +114,7 @@ export const LVBP_TEAMS: Record<string, LvbpTeamMeta> = {
   ARA: {
     id: 699,
     code: "ARA",
+    slug: "tigres",
     mlbAbbr: "ARA",
     name: "Tigres de Aragua",
     shortName: "ARA",
@@ -145,6 +136,7 @@ export const LVBP_TEAMS: Record<string, LvbpTeamMeta> = {
   ZUL: {
     id: 692,
     code: "ZUL",
+    slug: "aguilas",
     mlbAbbr: "ZUL",
     name: "Águilas del Zulia",
     shortName: "ZUL",
@@ -166,6 +158,7 @@ export const LVBP_TEAMS: Record<string, LvbpTeamMeta> = {
   MAR: {
     id: 697,
     code: "MAR",
+    slug: "bravos",
     mlbAbbr: "MAR",
     name: "Bravos de Margarita",
     shortName: "MAR",
@@ -187,6 +180,7 @@ export const LVBP_TEAMS: Record<string, LvbpTeamMeta> = {
   ANZ: {
     id: 694,
     code: "ANZ",
+    slug: "caribes",
     mlbAbbr: "ORI",
     name: "Caribes de Anzoátegui",
     shortName: "ANZ",
@@ -219,9 +213,35 @@ export function resolveLvbpTeam(idOrCode?: number | string, fallbackName = "Equi
   if (typeof idOrCode === "number" && TEAM_BY_ID[idOrCode]) {
     return TEAM_BY_ID[idOrCode];
   }
-  const upper = String(idOrCode || "").toUpperCase();
+  const raw = String(idOrCode || "").trim();
+  const upper = raw.toUpperCase();
   if (LVBP_TEAMS[upper]) return LVBP_TEAMS[upper];
   if (upper === "ORI") return LVBP_TEAMS.ANZ;
+
+  const lower = raw
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  const bySlugOrNick = Object.values(LVBP_TEAMS).find(
+    (t) =>
+      t.slug === lower ||
+      t.nick
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") === lower ||
+      t.name
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .includes(lower) ||
+      t.city
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .includes(lower)
+  );
+  if (bySlugOrNick) return bySlugOrNick;
+
   const byName = Object.values(LVBP_TEAMS).find(
     (t) =>
       fallbackName.toLowerCase().includes(t.nick.toLowerCase()) ||

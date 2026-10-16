@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { LVBP_TEAMS } from "@/lib/lvbp-teams";
 import { RosterPlayer, ScheduleGame } from "@/lib/types";
-import { Users, MapPin, Calendar, Shield, Tv } from "lucide-react";
+import { Users, MapPin, Calendar, Shield, Tv, Search, Star } from "lucide-react";
 
 const POS_ORDER = ["P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "OF", "DH"];
 
@@ -12,17 +13,43 @@ export function TeamRosterView({
   onSelectTeam,
   schedule,
   onOpenGame,
+  favoriteTeamCode,
+  onToggleFavoriteTeam,
 }: {
   selectedTeamCode: string;
   onSelectTeam: (code: string) => void;
   schedule: ScheduleGame[];
   onOpenGame: (gameId: string) => void;
+  favoriteTeamCode?: string;
+  onToggleFavoriteTeam?: (code: string) => void;
 }) {
+  const searchParams = useSearchParams();
+  const initialPos = searchParams?.get("pos")?.toUpperCase() || "ALL";
+  const initialTab = searchParams?.get("tab")?.toLowerCase();
+
   const [roster, setRoster] = useState<RosterPlayer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [subTab, setSubTab] = useState<"roster" | "calendar" | "story">("roster");
+  const [subTab, setSubTab] = useState<"roster" | "calendar" | "story">(
+    initialTab === "calendar" || initialTab === "story" ? initialTab : "roster"
+  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [posFilter, setPosFilter] = useState<string>(
+    ["ALL", "P", "C", "INF", "OF"].includes(initialPos) ? initialPos : "ALL"
+  );
+
+  useEffect(() => {
+    const qPos = searchParams?.get("pos")?.toUpperCase();
+    if (qPos && ["ALL", "P", "C", "INF", "OF"].includes(qPos)) {
+      setPosFilter(qPos);
+    }
+    const qTab = searchParams?.get("tab")?.toLowerCase();
+    if (qTab === "calendar" || qTab === "story" || qTab === "roster") {
+      setSubTab(qTab);
+    }
+  }, [searchParams]);
 
   const currentTeam = LVBP_TEAMS[selectedTeamCode] || LVBP_TEAMS.CAR;
+  const isFavorite = favoriteTeamCode === currentTeam.code;
 
   useEffect(() => {
     let active = true;
@@ -41,9 +68,26 @@ export function TeamRosterView({
     };
   }, [currentTeam.code]);
 
+  // Filter roster by searchQuery and posFilter
+  const filteredRoster = roster.filter((p) => {
+    if (posFilter === "P" && p.position !== "P") return false;
+    if (posFilter === "C" && p.position !== "C") return false;
+    if (posFilter === "INF" && !["1B", "2B", "3B", "SS"].includes(p.position)) return false;
+    if (posFilter === "OF" && !["LF", "CF", "RF", "OF"].includes(p.position)) return false;
+
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      p.name.toLowerCase().includes(q) ||
+      String(p.number).includes(q) ||
+      (p.positionName || "").toLowerCase().includes(q) ||
+      (p.position || "").toLowerCase().includes(q)
+    );
+  });
+
   // Group roster by position
   const grouped = new Map<string, RosterPlayer[]>();
-  for (const p of roster) {
+  for (const p of filteredRoster) {
     const pos = p.position || "P";
     if (!grouped.has(pos)) grouped.set(pos, []);
     grouped.get(pos)!.push(p);
@@ -64,17 +108,26 @@ export function TeamRosterView({
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
         {Object.values(LVBP_TEAMS).map((team) => {
           const isSelected = team.code === currentTeam.code;
+          const isFav = favoriteTeamCode === team.code;
           return (
             <button
               key={team.code}
               type="button"
               onClick={() => onSelectTeam(team.code)}
-              className={`flex flex-col items-center justify-center gap-1.5 rounded-xl p-2.5 border transition cursor-pointer ${
+              className={`relative flex flex-col items-center justify-center gap-1.5 rounded-xl p-2.5 border transition cursor-pointer ${
                 isSelected
                   ? "bg-amber-50 border-amber-400 text-slate-950 ring-2 ring-amber-400/30 shadow-xs"
                   : "bg-white border-slate-200 text-slate-700 hover:text-slate-950 hover:border-amber-400"
               }`}
             >
+              {isFav && (
+                <span
+                  className="absolute top-1.5 right-1.5 text-amber-500 text-xs"
+                  title="Tu Equipo Favorito"
+                >
+                  ★
+                </span>
+              )}
               <img src={team.logoSvg} alt={team.name} className="w-10 h-10 object-contain" />
               <span className="text-xs font-extrabold">{team.nick}</span>
             </button>
@@ -88,7 +141,7 @@ export function TeamRosterView({
           className="h-1.5 w-full absolute top-0 inset-x-0"
           style={{ background: currentTeam.color }}
         />
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <img
               src={currentTeam.logoSvg}
@@ -96,10 +149,28 @@ export function TeamRosterView({
               className="w-16 h-16 sm:w-20 sm:h-20 object-contain shrink-0 drop-shadow-xs"
             />
             <div>
-              <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
-                {currentTeam.code} · Temporada 2026-2027
-              </span>
-              <h1 className="text-xl sm:text-2xl font-black text-slate-950">{currentTeam.name}</h1>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
+                  {currentTeam.code} · URL: /equipos/{currentTeam.slug}
+                </span>
+                {onToggleFavoriteTeam && (
+                  <button
+                    type="button"
+                    onClick={() => onToggleFavoriteTeam(currentTeam.code)}
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold border transition cursor-pointer ${
+                      isFavorite
+                        ? "bg-amber-400 text-slate-950 border-amber-400"
+                        : "bg-slate-50 text-slate-600 border-slate-200 hover:border-amber-400"
+                    }`}
+                  >
+                    <Star className={`w-3 h-3 ${isFavorite ? "fill-slate-950" : ""}`} />
+                    {isFavorite ? "Tu Equipo Favorito" : "Elegir como Mi Equipo"}
+                  </button>
+                )}
+              </div>
+              <h1 className="text-xl sm:text-2xl font-black text-slate-950 mt-0.5">
+                {currentTeam.name}
+              </h1>
               <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 mt-1">
                 <span className="inline-flex items-center gap-1">
                   <MapPin className="w-3.5 h-3.5 text-amber-600" /> {currentTeam.venue} (
@@ -111,7 +182,7 @@ export function TeamRosterView({
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 self-start sm:self-center">
+          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 self-start lg:self-center">
             {(
               [
                 ["roster", "Roster Activo", Users],
@@ -136,16 +207,55 @@ export function TeamRosterView({
         </div>
       </section>
 
-      {/* SUBTAB 1: ROSTER ACTIVO */}
+      {/* SUBTAB 1: ROSTER ACTIVO CON BUSCADOR DE PELOTEROS */}
       {subTab === "roster" && (
         <div className="space-y-5 animate-view-enter">
+          {/* Player Search & Position Filter Bar */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={`Buscar pelotero en ${currentTeam.nick} por nombre, # o posición...`}
+                className="w-full rounded-xl bg-slate-50 border border-slate-200 pl-9 pr-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-amber-500"
+              />
+            </div>
+
+            <div className="flex items-center gap-1 overflow-x-auto">
+              {(
+                [
+                  ["ALL", "Todos"],
+                  ["P", "Lanzadores"],
+                  ["C", "Receptores"],
+                  ["INF", "Infielders"],
+                  ["OF", "Jardineros"],
+                ] as const
+              ).map(([pKey, pLabel]) => (
+                <button
+                  key={pKey}
+                  type="button"
+                  onClick={() => setPosFilter(pKey)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer shrink-0 ${
+                    posFilter === pKey
+                      ? "bg-amber-400 text-slate-950"
+                      : "bg-slate-100 text-slate-600 hover:text-slate-950"
+                  }`}
+                >
+                  {pLabel}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {loading ? (
             <div className="py-12 text-center text-sm text-slate-500">
               Cargando roster oficial de {currentTeam.name}…
             </div>
-          ) : roster.length === 0 ? (
+          ) : sortedPositions.length === 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
-              El roster activo se está sincronizando desde MLB Winter Leagues.
+              No se encontraron peloteros con ese filtro en {currentTeam.name}.
             </div>
           ) : (
             sortedPositions.map((pos) => (

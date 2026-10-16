@@ -47,6 +47,7 @@ export interface ScheduleGame {
   venue: string;
   venueCity: string;
   tv?: string;
+  tvChannels?: string[];
   decisions?: {
     winner?: string;
     loser?: string;
@@ -191,6 +192,7 @@ export interface GamedayData {
   venueCity: string;
   venueLines?: string;
   tv?: string;
+  tvChannels?: string[];
   viewers: number;
   awayTeam: TeamSummary;
   homeTeam: TeamSummary;

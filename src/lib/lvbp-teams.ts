@@ -34,6 +34,8 @@ function makeShieldSvg(bg: string, accent: string, text: string, textColor = "#f
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
+export const LVBP_OFFICIAL_LOGO = "/logos/lvbp.svg";
+
 export const LVBP_TEAMS: Record<string, LvbpTeamMeta> = {
   CAR: {
     id: 695,
@@ -54,7 +56,7 @@ export const LVBP_TEAMS: Record<string, LvbpTeamMeta> = {
     story:
       "Los Leones del Caracas son el club más ganador de la historia venezolana. Nacidos en 1942, cargan una tradición de estrellas, títulos inolvidables y una fanaticada que convierte el Monumental de La Rinconada en una fiesta cada noche.",
     radioName: "Circuito Radial Leones",
-    logoSvg: makeShieldSvg("#1e293b", "#eab308", "CAR", "#facc15"),
+    logoSvg: "/logos/695.png",
   },
   MAG: {
     id: 696,
@@ -75,7 +77,7 @@ export const LVBP_TEAMS: Record<string, LvbpTeamMeta> = {
     story:
       "Los Navegantes del Magallanes representan a Valencia y a millones de aficionados en toda Venezuela. La Nave Turca navega con rivalidades eternas, regresos eléctricos y una identidad inconfundible.",
     radioName: "Circuito Radial Magallanes",
-    logoSvg: makeShieldSvg("#1d4e89", "#facc15", "MAG", "#fde047"),
+    logoSvg: "/logos/696.png",
   },
   LAR: {
     id: 693,
@@ -96,7 +98,7 @@ export const LVBP_TEAMS: Record<string, LvbpTeamMeta> = {
     story:
       "Los Cardenales de Lara juegan con el rojo crepuscular de Barquisimeto. Fundados en 1942, viven del calor de la afición en el Antonio Herrera Gutiérrez y de una dinastía de peloteros aguerridos.",
     radioName: "Circuito Cardenales",
-    logoSvg: makeShieldSvg("#8c1d18", "#fca5a5", "LAR"),
+    logoSvg: "/logos/693.png",
   },
   LAG: {
     id: 698,
@@ -117,7 +119,7 @@ export const LVBP_TEAMS: Record<string, LvbpTeamMeta> = {
     story:
       "Los Tiburones de La Guaira juegan al ritmo de la samba y el mar. La Guerrilla dejó huella eterna y hoy el club defiende su historia entre el Universitario y el Fórum de Macuto.",
     radioName: "Circuito Radial Tiburones",
-    logoSvg: makeShieldSvg("#0369a1", "#ef4444", "LAG"),
+    logoSvg: "/logos/698.png",
   },
   ARA: {
     id: 699,
@@ -138,7 +140,7 @@ export const LVBP_TEAMS: Record<string, LvbpTeamMeta> = {
     story:
       "Los Tigres de Aragua rugen en la Ciudad Jardín de Maracay. El José Pérez Colmenares ha visto dinastías, títulos de Serie del Caribe y una tradición bengalí que marca a generaciones.",
     radioName: "Circuito Radial Tigres",
-    logoSvg: makeShieldSvg("#1e3a8a", "#e87722", "ARA", "#fb923c"),
+    logoSvg: "/logos/699.png",
   },
   ZUL: {
     id: 692,
@@ -159,7 +161,7 @@ export const LVBP_TEAMS: Record<string, LvbpTeamMeta> = {
     story:
       "Las Águilas del Zulia llevan el orgullo de Maracaibo. El Luis Aparicio El Grande es su nido: béisbol aguerrido, gaita zuliana y una afición que empuja cada entrada.",
     radioName: "Circuito Radial Águilas",
-    logoSvg: makeShieldSvg("#d97706", "#111827", "ZUL", "#ffffff"),
+    logoSvg: "/logos/692.png",
   },
   MAR: {
     id: 697,
@@ -180,7 +182,7 @@ export const LVBP_TEAMS: Record<string, LvbpTeamMeta> = {
     story:
       "Los Bravos de Margarita llevan la fuerza insular al diamante. El Estadio Nueva Esparta de Guatamare es sinónimo de brisa caribeña y un club que pelea cada serie con carácter.",
     radioName: "Circuito Radial Bravos",
-    logoSvg: makeShieldSvg("#0e7490", "#d7263d", "MAR"),
+    logoSvg: "/logos/697.png",
   },
   ANZ: {
     id: 694,
@@ -201,7 +203,7 @@ export const LVBP_TEAMS: Record<string, LvbpTeamMeta> = {
     story:
       "Los Caribes de Anzoátegui juegan al ritmo del oriente venezolano. La Tribu hace vibrar el Alfonso 'Chico' Carrasquel de Puerto La Cruz con ofensiva explosiva y noches de campeonato.",
     radioName: "Circuito Radial Caribes",
-    logoSvg: makeShieldSvg("#4c1d95", "#f97316", "ANZ", "#fdba74"),
+    logoSvg: "/logos/694.png",
   },
 };
 

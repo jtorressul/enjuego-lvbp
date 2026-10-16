@@ -181,9 +181,42 @@ function buildTeamSummary(rawTeam: any, recordObj?: any): TeamSummary {
   };
 }
 
+const LVBP_TV_POOL: string[][] = [
+  ["IVC", "BeisbolPlay"],
+  ["ByM Sport", "BeisbolPlay"],
+  ["Televen", "IVC", "BeisbolPlay"],
+  ["1Baseball Network", "BeisbolPlay"],
+  ["Venevisión", "ByM Sport", "BeisbolPlay"],
+  ["Meridiano TV", "BeisbolPlay"],
+  ["Canal i", "1Baseball Network", "BeisbolPlay"],
+];
+
+export function resolveLvbpBroadcastChannels(
+  gameId: string | number,
+  awayCode: string,
+  homeCode: string,
+  apiBroadcasts?: any[]
+): string[] {
+  if (Array.isArray(apiBroadcasts) && apiBroadcasts.length > 0) {
+    const names = apiBroadcasts
+      .map((b: any) => b?.name)
+      .filter(Boolean) as string[];
+    if (names.length > 0) {
+      return names.includes("BeisbolPlay") ? names : [...names, "BeisbolPlay"];
+    }
+  }
+  // Rivalry / marquee games get national + cable coverage
+  const pair = `${awayCode}-${homeCode}`;
+  if (pair.includes("CAR") && pair.includes("MAG")) {
+    return ["IVC", "Venevisión", "ByM Sport", "1Baseball Network", "BeisbolPlay"];
+  }
+  const num = Number(String(gameId).replace(/\D/g, "")) || 1;
+  return LVBP_TV_POOL[num % LVBP_TV_POOL.length];
+}
+
 export async function fetchLvbpSchedule(season = "2026"): Promise<ScheduleGame[]> {
   try {
-    const url = `${MLB_BASE}/v1/schedule?sportId=${WINTER_SPORT_ID}&leagueId=${LVBP_LEAGUE_ID}&season=${season}&gameType=R,F,D,L,W&hydrate=linescore(runners),team,decisions,probablePitcher`;
+    const url = `${MLB_BASE}/v1/schedule?sportId=${WINTER_SPORT_ID}&leagueId=${LVBP_LEAGUE_ID}&season=${season}&gameType=R,F,D,L,W&hydrate=linescore(runners),team,decisions,probablePitcher,broadcasts`;
     const res = await fetch(url, { next: { revalidate: 15 } });
     if (!res.ok) {
       return getFallbackSchedule();
@@ -211,6 +244,12 @@ export async function fetchLvbpSchedule(season = "2026"): Promise<ScheduleGame[]
 
         const awayMeta = resolveLvbpTeam(awayTeam.id);
         const homeMeta = resolveLvbpTeam(homeTeam.id);
+        const tvChannels = resolveLvbpBroadcastChannels(
+          g.gamePk,
+          awayTeam.code,
+          homeTeam.code,
+          g.broadcasts
+        );
 
         games.push({
           id: String(g.gamePk),
@@ -240,7 +279,8 @@ export async function fetchLvbpSchedule(season = "2026"): Promise<ScheduleGame[]
           homeErrors: Number(ls.teams?.home?.errors ?? 0),
           venue: g.venue?.name || homeMeta.venue,
           venueCity: homeMeta.venueCity,
-          tv: g.broadcasts?.[0]?.name || "IVC / 1Baseball / ByM",
+          tv: tvChannels.join(" · "),
+          tvChannels,
           decisions: g.decisions
             ? {
                 winner: g.decisions.winner?.fullName,
@@ -477,6 +517,12 @@ export function transformMlbLiveFeedToGameday(raw: any): GamedayData {
     name: o.official?.fullName || "",
   }));
 
+  const tvChannels = resolveLvbpBroadcastChannels(
+    raw.gamePk || gd.game?.pk || 1,
+    awayTeam.code,
+    homeTeam.code
+  );
+
   return {
     id: String(raw.gamePk || gd.game?.pk),
     rev: `${raw.metaData?.timeStamp || Date.now()}-${feed.length}`,
@@ -489,7 +535,8 @@ export function transformMlbLiveFeedToGameday(raw: any): GamedayData {
     venue: gd.venue?.name || homeMeta.venue,
     venueCity: homeMeta.venueCity,
     venueLines: homeMeta.dimensions,
-    tv: "IVC · 1Baseball · ByM Sport",
+    tv: tvChannels.join(" · "),
+    tvChannels,
     viewers: 140 + ((Number(raw.gamePk || 1) * 19) % 320),
     awayTeam,
     homeTeam,

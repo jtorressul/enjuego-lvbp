@@ -462,18 +462,21 @@ export function GamedayView({
 
       {/* HERO SCOREBOARD + LINESCORE */}
       <section className="rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900 to-slate-950 p-4 sm:p-6 shadow-xl">
-        {/* Top Metadata */}
+        {/* Top Metadata + Broadcast Channels */}
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 border-b border-slate-800/80 pb-3 mb-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="font-medium text-slate-300">
-              {game.venue} · {game.venueCity}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="font-semibold text-slate-300">
+              📍 {game.venue} · {game.venueCity}
             </span>
-            {game.tv && (
-              <span className="inline-flex items-center gap-1 rounded bg-slate-800 px-2 py-0.5 text-[11px] text-slate-300">
-                <Tv className="w-3 h-3 text-amber-400" /> {game.tv}
+            <span className="capitalize">· {game.dateLabel}</span>
+            {(game.tvChannels?.length ? game.tvChannels : game.tv ? [game.tv] : []).map((ch) => (
+              <span
+                key={ch}
+                className="inline-flex items-center gap-1 rounded-md bg-slate-800 border border-slate-700 px-2 py-0.5 text-[11px] font-bold text-slate-200"
+              >
+                <Tv className="w-3 h-3 text-amber-400" /> {ch}
               </span>
-            )}
-            <span className="capitalize">{game.dateLabel}</span>
+            ))}
           </div>
           <span className="inline-flex items-center gap-1.5 text-slate-300 font-semibold">
             {game.info?.duration ? `⏱️ Duración: ${game.info.duration}` : `Juego Oficial #${game.id}`}
@@ -488,11 +491,15 @@ export function GamedayView({
             className="md:col-span-4 flex items-center justify-between bg-slate-900/70 border border-slate-800/90 rounded-xl p-3.5 cursor-pointer hover:border-slate-700 transition"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <img src={game.awayTeam.logoUrl} alt={game.awayTeam.name} className="w-12 h-12 sm:w-14 sm:h-14 shrink-0" />
+              <img
+                src={game.awayTeam.logoUrl}
+                alt={game.awayTeam.name}
+                className="w-12 h-12 sm:w-14 sm:h-14 object-contain shrink-0"
+              />
               <div className="min-w-0">
                 <div className="text-base sm:text-lg font-black text-white truncate">{game.awayTeam.nick}</div>
                 <div className="text-xs text-slate-400 truncate">
-                  {game.awayTeam.name} · {game.awayTeam.wins}-{game.awayTeam.losses}
+                  {game.awayTeam.name} · ({game.awayTeam.wins}-{game.awayTeam.losses})
                 </div>
               </div>
             </div>
@@ -549,12 +556,12 @@ export function GamedayView({
               <img
                 src={game.homeTeam.logoUrl}
                 alt={game.homeTeam.name}
-                className="w-12 h-12 sm:w-14 sm:h-14 shrink-0 md:order-2"
+                className="w-12 h-12 sm:w-14 sm:h-14 object-contain shrink-0 md:order-2"
               />
               <div className="min-w-0 md:order-1">
                 <div className="text-base sm:text-lg font-black text-white truncate">{game.homeTeam.nick}</div>
                 <div className="text-xs text-slate-400 truncate">
-                  {game.homeTeam.name} · {game.homeTeam.wins}-{game.homeTeam.losses}
+                  {game.homeTeam.name} · ({game.homeTeam.wins}-{game.homeTeam.losses})
                 </div>
               </div>
             </div>

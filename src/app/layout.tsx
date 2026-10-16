@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "En Juego · LVBP en Vivo — Resultados, Gameday, Box Score y Posiciones",
+  title: "En Juego · Béisbol Venezolano — Marcadores, Jugada a Jugada y Estadísticas",
   description:
-    "Resultados en vivo de la Liga Venezolana de Béisbol Profesional (LVBP): jugada a jugada, terreno 2D, zona de strike, mapa de bateo, box score, líderes y tabla de posiciones.",
+    "Resultados y marcadores en vivo de la temporada de béisbol venezolano: jugada a jugada, alineaciones, box score, líderes individuales y tabla de posiciones.",
 };
 
 export default function RootLayout({

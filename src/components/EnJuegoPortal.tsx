@@ -358,7 +358,7 @@ export function EnJuegoPortal({
     const scoreText = played
       ? `${game.awayTeam.nick} ${game.awayScore} - ${game.homeScore} ${game.homeTeam.nick} (${game.inning})`
       : `${game.awayTeam.nick} vs ${game.homeTeam.nick} (${game.time})`;
-    const text = `⚾ LVBP En Juego: ${scoreText} | Ver pizarra y Gameday 2D en vivo: ${url}`;
+    const text = `LVBP En Juego: ${scoreText} | Marcador y detalles en vivo: ${url}`;
 
     if (typeof navigator !== "undefined" && navigator.share) {
       navigator.share({ title: "En Juego LVBP", text, url }).catch(() => {});
@@ -371,7 +371,7 @@ export function EnJuegoPortal({
     }
   };
 
-  // Generate real game recaps / crónicas directly from official LVBP games
+  // Generate real game recaps / crónicas directly from LVBP games
   const realRecaps = useMemo(() => {
     const finished = schedule.filter((g) => g.status === "FINISHED");
     const source = finished.length > 0 ? finished.slice(-4).reverse() : schedule.slice(0, 4);
@@ -387,7 +387,7 @@ export function EnJuegoPortal({
       if (g.status === "FINISHED") {
         const decisionText = g.decisions?.winner
           ? `Victoria para ${g.decisions.winner}${g.decisions.loser ? ` y revés para ${g.decisions.loser}` : ""}${g.decisions.save ? `, con salvado de ${g.decisions.save}` : ""}.`
-          : `Pizarra oficial registrada en ${g.venue}.`;
+          : `Juego disputado en ${g.venue}.`;
         return {
           id: g.id,
           category: `${winner.nick} · Final`,
@@ -564,14 +564,23 @@ export function EnJuegoPortal({
                   }`}
                 >
                   {isLive && <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />}
-                  {isLive ? `EN VIVO · ${game.inning}` : isFinal ? game.inning : `🕒 ${game.time}`}
+                  {isLive ? (
+                    `EN VIVO · ${game.inning}`
+                  ) : isFinal ? (
+                    game.inning
+                  ) : (
+                    <span className="inline-flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-amber-700" />
+                      {game.time}
+                    </span>
+                  )}
                 </span>
                 {isFavGame && (
                   <span
-                    className="inline-flex items-center gap-0.5 rounded-full bg-amber-400/20 text-amber-800 border border-amber-300 px-2 py-0.5 text-[10px] font-black"
+                    className="inline-flex items-center gap-1 rounded-full bg-amber-400/20 text-amber-800 border border-amber-300 px-2 py-0.5 text-[10px] font-black"
                     title="Partido de tu Equipo Favorito"
                   >
-                    ★ Tu Club
+                    <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" /> Tu Club
                   </span>
                 )}
               </div>
@@ -784,28 +793,10 @@ export function EnJuegoPortal({
                   EN JUEGO
                 </span>
                 <span className="block text-[10px] font-extrabold uppercase tracking-widest text-amber-600 mt-0.5">
-                  LVBP Oficial
+                  Béisbol Venezolano
                 </span>
               </div>
             </Link>
-
-            {liveGames.length > 0 ? (
-              <Link
-                href={`/juego/${liveGames[0].id}`}
-                className="inline-flex items-center gap-1.5 rounded-full bg-red-50 hover:bg-red-100 border border-red-200 px-2.5 py-1 text-[11px] font-extrabold text-red-600 transition cursor-pointer"
-              >
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-                <span>
-                  EN VIVO: {liveGames[0].awayTeam.shortName} {liveGames[0].awayScore}-
-                  {liveGames[0].homeScore} {liveGames[0].homeTeam.shortName}
-                </span>
-              </Link>
-            ) : (
-              <span className="hidden xl:inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-[11px] font-bold text-emerald-800">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                Temporada 2026-27
-              </span>
-            )}
           </div>
 
           {/* Desktop Main Navigation with Real URLs */}
@@ -861,7 +852,7 @@ export function EnJuegoPortal({
                     className="w-full h-full object-contain"
                   />
                   {isFav && (
-                    <span className="absolute -top-1 -right-0.5 text-[9px] text-amber-500">★</span>
+                    <Star className="absolute -top-1 -right-0.5 w-2.5 h-2.5 text-amber-500 fill-amber-500" />
                   )}
                 </Link>
               );
@@ -989,8 +980,8 @@ export function EnJuegoPortal({
                       >
                         {isLive ? "EN VIVO" : game.status === "FINISHED" ? "FINAL" : game.time}
                       </span>
-                      <span className="block text-[9px] font-bold text-slate-500 truncate max-w-[72px]">
-                        📺 {tvList[0]}
+                      <span className="text-[9px] font-bold text-slate-500 truncate max-w-[72px] inline-flex items-center gap-0.5">
+                        <Tv className="w-2.5 h-2.5 text-amber-600 shrink-0" /> {tvList[0]}
                       </span>
                     </div>
                   </Link>
@@ -998,7 +989,7 @@ export function EnJuegoPortal({
               })
             ) : (
               <span className="text-xs text-slate-500 py-2">
-                Cargando cartelera oficial de la LVBP…
+                Cargando cartelera de juegos…
               </span>
             )}
           </div>
@@ -1059,7 +1050,7 @@ export function EnJuegoPortal({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
-                    Pizarra Oficial LVBP · Temporada 2026-2027
+                    Pizarra de Juegos · Temporada 2026-2027
                   </span>
                   <h1 className="text-xl sm:text-2xl font-black text-slate-950 capitalize">
                     {dayFormatted.fullLabel}
@@ -1167,7 +1158,7 @@ export function EnJuegoPortal({
                                   className="w-6 h-6 object-contain"
                                 />
                                 <span>{row.team.nick}</span>
-                                {isFav && <span className="text-amber-500 text-[10px]">★</span>}
+                                {isFav && <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />}
                               </td>
                               <td className="py-2 px-1.5 font-bold text-slate-900">{row.wins}</td>
                               <td className="py-2 px-1.5 text-slate-600">{row.losses}</td>
@@ -1192,7 +1183,7 @@ export function EnJuegoPortal({
               </div>
             </section>
 
-            {/* 3. CRÓNICAS Y RESÚMENES OFICIALES DE LA JORNADA */}
+            {/* 3. CRÓNICAS Y RESÚMENES DE LA JORNADA */}
             <section className="space-y-4">
               <div className="flex items-center gap-2">
                 <Newspaper className="w-5 h-5 text-amber-600" />
@@ -1361,7 +1352,7 @@ export function EnJuegoPortal({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
-                  Pizarras Oficiales C · H · E y Transmisiones TV
+                  Pizarras C · H · E y Transmisiones TV
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-950">
                   Resultados de la LVBP
@@ -1408,7 +1399,7 @@ export function EnJuegoPortal({
                   Temporada 2026-2027 · Señales de TV y Estadios
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-950">
-                  Calendario Oficial de Juegos
+                  Calendario de Juegos
                 </h1>
               </div>
 
@@ -1523,10 +1514,10 @@ export function EnJuegoPortal({
 
                       <div className="flex flex-wrap items-center gap-2 text-xs">
                         <span className="rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-1.5 font-extrabold">
-                          🏠 En Casa: {homeCount} juegos
+                          En Casa: {homeCount} juegos
                         </span>
                         <span className="rounded-xl bg-sky-50 border border-sky-200 text-sky-800 px-3 py-1.5 font-extrabold">
-                          ✈️ Visitante: {awayCount} juegos
+                          Visitante: {awayCount} juegos
                         </span>
                         <Link
                           href={`/equipos/${club.slug}`}
@@ -1578,7 +1569,7 @@ export function EnJuegoPortal({
                                 : "bg-sky-50 text-sky-800 border-sky-200"
                             }`}
                           >
-                            {isHome ? "🏠 EN CASA vs" : "✈️ VISITANTE @"}
+                            {isHome ? "EN CASA vs" : "VISITANTE @"}
                           </span>
 
                           <div className="flex items-center gap-2.5 min-w-0">
@@ -1591,8 +1582,8 @@ export function EnJuegoPortal({
                               <strong className="text-sm font-black text-slate-950 block truncate">
                                 {opponent.name}
                               </strong>
-                              <span className="text-[11px] text-slate-500 block truncate">
-                                📍 {game.venue}
+                              <span className="text-[11px] text-slate-500 inline-flex items-center gap-1 truncate">
+                                <MapPin className="w-3 h-3 text-slate-400 shrink-0" /> {game.venue}
                               </span>
                             </div>
                           </div>
@@ -1632,11 +1623,11 @@ export function EnJuegoPortal({
                             {tvList.map((ch) => (
                               <span
                                 key={ch}
-                                className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-extrabold ${tvChannelBadgeStyle(
+                                className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-extrabold ${tvChannelBadgeStyle(
                                   ch
                                 )}`}
                               >
-                                📺 {ch}
+                                <Tv className="w-2.5 h-2.5 text-amber-600 shrink-0" /> {ch}
                               </span>
                             ))}
                           </div>
@@ -1736,11 +1727,11 @@ export function EnJuegoPortal({
                                   {tvList.map((ch) => (
                                     <span
                                       key={ch}
-                                      className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-extrabold ${tvChannelBadgeStyle(
+                                      className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-extrabold ${tvChannelBadgeStyle(
                                         ch
                                       )}`}
                                     >
-                                      📺 {ch}
+                                      <Tv className="w-2.5 h-2.5 text-amber-600 shrink-0" /> {ch}
                                     </span>
                                   ))}
                                 </div>
@@ -1763,7 +1754,7 @@ export function EnJuegoPortal({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
-                  Clasificación Oficial LVBP · Rumbo al Round Robin
+                  Tabla de Clasificación · Rumbo al Round Robin
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-950">
                   Tabla de Posiciones
@@ -1865,8 +1856,8 @@ export function EnJuegoPortal({
                               />
                               <span>{row.team.name}</span>
                               {isFav && (
-                                <span className="text-amber-500 text-xs" title="Tu Equipo Favorito">
-                                  ★
+                                <span title="Tu Equipo Favorito">
+                                  <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
                                 </span>
                               )}
                             </td>
@@ -1922,7 +1913,7 @@ export function EnJuegoPortal({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
-                  Centro Oficial de Estadísticas LVBP · Temporada 2026-2027
+                  Estadísticas de la Liga · Temporada 2026-2027
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-950">
                   Líderes Individuales de Bateo y Pitcheo
@@ -1985,32 +1976,39 @@ export function EnJuegoPortal({
       </nav>
 
       {/* FOOTER */}
-      <footer className="border-t border-slate-200 bg-white py-6 mt-12">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <div className="flex items-center gap-2.5">
-            <img src={LVBP_OFFICIAL_LOGO} alt="LVBP" className="w-6 h-6 object-contain" />
-            <span className="font-black text-slate-900">EN JUEGO · LVBP</span>
-            <span>— Resultados en vivo, Gameday 2D, Transmisiones TV y Estadísticas.</span>
+      <footer className="border-t border-slate-200 bg-white py-8 mt-12 mb-16 md:mb-0">
+        <div className="max-w-7xl mx-auto px-4 space-y-4 text-xs text-slate-500">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <img src={LVBP_OFFICIAL_LOGO} alt="LVBP" className="w-6 h-6 object-contain" />
+              <span className="font-black text-slate-900">EN JUEGO</span>
+              <span>— Marcadores en vivo, jugada a jugada, transmisiones de TV y estadísticas.</span>
+            </div>
+            <div className="flex flex-wrap gap-4 font-semibold">
+              <Link href="/inicio" className="hover:text-slate-900">
+                Inicio
+              </Link>
+              <Link href="/resultados" className="hover:text-slate-900">
+                Resultados
+              </Link>
+              <Link href="/calendario" className="hover:text-slate-900">
+                Calendario
+              </Link>
+              <Link href="/posiciones" className="hover:text-slate-900">
+                Posiciones
+              </Link>
+              <Link href="/lideres" className="hover:text-slate-900">
+                Líderes
+              </Link>
+              <Link href="/teams?team=leones" className="hover:text-slate-900">
+                Equipos y Roster
+              </Link>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-4 font-semibold">
-            <Link href="/inicio" className="hover:text-slate-900">
-              Inicio
-            </Link>
-            <Link href="/resultados" className="hover:text-slate-900">
-              Resultados
-            </Link>
-            <Link href="/calendario" className="hover:text-slate-900">
-              Calendario
-            </Link>
-            <Link href="/posiciones" className="hover:text-slate-900">
-              Posiciones
-            </Link>
-            <Link href="/lideres" className="hover:text-slate-900">
-              Líderes
-            </Link>
-            <Link href="/teams?team=leones" className="hover:text-slate-900">
-              Equipos y Roster
-            </Link>
+
+          <div className="pt-4 border-t border-slate-100 text-[11px] text-slate-400 leading-relaxed">
+            <strong className="text-slate-600 font-bold">Aviso Legal y Descargo de Responsabilidad: </strong>
+            EnJuego es un portal deportivo independiente desarrollado con fines informativos y periodísticos para los aficionados del béisbol venezolano. No está afiliado, respaldado, autorizado ni patrocinado de manera alguna por la Liga Venezolana de Béisbol Profesional (LVBP), Major League Baseball (MLB) ni por ninguno de sus equipos u organizaciones asociadas. Todos los nombres de equipos, logotipos, emblemas y marcas comerciales exhibidas pertenecen exclusivamente a sus respectivos titulares y se utilizan únicamente para la identificación informativa de los clubes y juegos bajo el principio de uso legítimo (fair use).
           </div>
         </div>
       </footer>

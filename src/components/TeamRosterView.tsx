@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { LVBP_TEAMS } from "@/lib/lvbp-teams";
 import { RosterPlayer, ScheduleGame } from "@/lib/types";
-import { Users, MapPin, Calendar, Shield, Tv, Search, Star } from "lucide-react";
+import { Users, MapPin, Calendar, Shield, Tv, Search, Star, Clock } from "lucide-react";
 
 const POS_ORDER = ["P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "OF", "DH"];
 
@@ -122,10 +122,10 @@ export function TeamRosterView({
             >
               {isFav && (
                 <span
-                  className="absolute top-1.5 right-1.5 text-amber-500 text-xs"
+                  className="absolute top-1.5 right-1.5"
                   title="Tu Equipo Favorito"
                 >
-                  ★
+                  <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
                 </span>
               )}
               <img src={team.logoSvg} alt={team.name} className="w-10 h-10 object-contain" />
@@ -251,7 +251,7 @@ export function TeamRosterView({
 
           {loading ? (
             <div className="py-12 text-center text-sm text-slate-500">
-              Cargando roster oficial de {currentTeam.name}…
+              Cargando roster de {currentTeam.name}…
             </div>
           ) : sortedPositions.length === 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
@@ -347,7 +347,7 @@ export function TeamRosterView({
                           : "bg-sky-50 text-sky-800 border-sky-200"
                       }`}
                     >
-                      {isHome ? "🏠 En Casa vs" : "✈️ Visitante @"}
+                      {isHome ? "En Casa vs" : "Visitante @"}
                     </span>
                   </div>
 
@@ -358,7 +358,9 @@ export function TeamRosterView({
                         <strong className="text-sm font-black text-slate-950 block">
                           {opp.name}
                         </strong>
-                        <span className="text-[11px] text-slate-500">📍 {g.venue}</span>
+                        <span className="text-[11px] text-slate-500 inline-flex items-center gap-1">
+                          <MapPin className="w-3 h-3 text-slate-400 shrink-0" /> {g.venue}
+                        </span>
                       </div>
                     </div>
 
@@ -373,8 +375,8 @@ export function TeamRosterView({
                         {won ? "GANÓ" : "PERDIÓ"} {myScore}-{oppScore}
                       </span>
                     ) : (
-                      <span className="px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs font-extrabold">
-                        🕒 {g.time}
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs font-extrabold">
+                        <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" /> {g.time}
                       </span>
                     )}
                   </div>
@@ -403,11 +405,11 @@ export function TeamRosterView({
               <strong className="text-slate-950 text-sm">{currentTeam.venue}</strong>
             </div>
             <div className="rounded-xl bg-slate-50 p-3 border border-slate-200">
-              <span className="text-slate-500 block">Dimensiones Oficiales</span>
+              <span className="text-slate-500 block">Dimensiones del Estadio</span>
               <strong className="text-slate-950 text-sm">{currentTeam.dimensions}</strong>
             </div>
             <div className="rounded-xl bg-slate-50 p-3 border border-slate-200">
-              <span className="text-slate-500 block">Emisora Oficial</span>
+              <span className="text-slate-500 block">Emisora Radial</span>
               <strong className="text-slate-950 text-sm">{currentTeam.radioName}</strong>
             </div>
           </div>

@@ -67,8 +67,8 @@ function SingleLeaderCard({
               className="w-14 h-14 rounded-full object-cover bg-amber-100/50 border-2 border-amber-400 shrink-0 shadow-xs"
             />
             <div className="min-w-0">
-              <span className="inline-block rounded-full bg-amber-400 text-slate-950 px-2 py-0.5 text-[10px] font-black uppercase shadow-2xs">
-                ★ 1° Líder LVBP
+              <span className="inline-block rounded-full bg-amber-400 text-slate-950 px-2.5 py-0.5 text-[10px] font-black uppercase shadow-2xs">
+                1° Líder de la Liga
               </span>
               <div className="text-sm font-black text-slate-900 truncate mt-1">{top.name}</div>
               <div className="flex items-center gap-1.5 text-xs text-slate-600 mt-0.5">

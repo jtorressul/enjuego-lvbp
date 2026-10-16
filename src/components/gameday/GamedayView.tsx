@@ -3,9 +3,6 @@
 import React, { useEffect, useState } from "react";
 import { GamedayData, PlayByPlayItem } from "@/lib/types";
 import { playerHeadshot, LVBP_TEAMS } from "@/lib/lvbp-teams";
-import { LiveFieldSvg } from "./LiveFieldSvg";
-import { StrikeZoneSvg } from "./StrikeZoneSvg";
-import { SprayChartSvg } from "./SprayChartSvg";
 import {
   Radio,
   Tv,
@@ -20,6 +17,9 @@ import {
   Flame,
   Trophy,
   ChevronDown,
+  MapPin,
+  Clock,
+  Check,
 } from "lucide-react";
 
 const HIT_TYPES = new Set(["single", "double", "triple", "home_run"]);
@@ -120,8 +120,7 @@ export function GamedayView({
 }) {
   const [game, setGame] = useState<GamedayData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"feed" | "box" | "field" | "spray" | "lineup" | "info">("feed");
-  const [selectedPlayIdx, setSelectedPlayIdx] = useState<number>(-1);
+  const [tab, setTab] = useState<"feed" | "box" | "lineup" | "info">("feed");
   const [feedFilter, setFeedFilter] = useState<"all" | "scoring" | "hits" | "changes">("all");
   const [boxSide, setBoxSide] = useState<"away" | "home">("away");
   const [openInnings, setOpenInnings] = useState<Record<string, boolean>>({});
@@ -426,13 +425,6 @@ export function GamedayView({
   const awayVotePct = totalVotes > 0 ? Math.round((votes.away / totalVotes) * 100) : 50;
   const homeVotePct = totalVotes > 0 ? 100 - awayVotePct : 50;
 
-  const playsWithPitches = (game.feed || []).filter((p) => p.pitches && p.pitches.length > 0);
-  const currentTurnIdx =
-    selectedPlayIdx >= 0 && selectedPlayIdx < playsWithPitches.length
-      ? selectedPlayIdx
-      : Math.max(0, playsWithPitches.length - 1);
-  const selectedTurnPlay = playsWithPitches[currentTurnIdx] || lastCompletedPlay;
-
   return (
     <div className="space-y-5">
       {/* Top Action Bar */}
@@ -444,20 +436,6 @@ export function GamedayView({
         >
           <ArrowLeft className="w-4 h-4" /> Volver a la pizarra
         </button>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setTab("field")}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer ${
-              tab === "field"
-                ? "bg-amber-400 text-slate-950"
-                : "bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700"
-            }`}
-          >
-            ⚾ Ver Terreno 2D y Zona de Strike
-          </button>
-        </div>
       </div>
 
       {/* HERO SCOREBOARD + LINESCORE */}
@@ -465,8 +443,8 @@ export function GamedayView({
         {/* Top Metadata + Broadcast Channels */}
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 border-b border-slate-800/80 pb-3 mb-4">
           <div className="flex flex-wrap items-center gap-2.5">
-            <span className="font-semibold text-slate-300">
-              📍 {game.venue} · {game.venueCity}
+            <span className="inline-flex items-center gap-1.5 font-semibold text-slate-300">
+              <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" /> {game.venue} · {game.venueCity}
             </span>
             <span className="capitalize">· {game.dateLabel}</span>
             {(game.tvChannels?.length ? game.tvChannels : game.tv ? [game.tv] : []).map((ch) => (
@@ -479,7 +457,13 @@ export function GamedayView({
             ))}
           </div>
           <span className="inline-flex items-center gap-1.5 text-slate-300 font-semibold">
-            {game.info?.duration ? `⏱️ Duración: ${game.info.duration}` : `Juego Oficial #${game.id}`}
+            {game.info?.duration ? (
+              <>
+                <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" /> Duración: {game.info.duration}
+              </>
+            ) : (
+              <>Juego #{game.id}</>
+            )}
           </span>
         </div>
 
@@ -741,12 +725,6 @@ export function GamedayView({
                   />
                 </div>
               </div>
-
-              {/* 2D Field + Strike Zone Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start pt-1">
-                <LiveFieldSvg game={game} />
-                <StrikeZoneSvg pitches={game.matchup.pitches} />
-              </div>
             </section>
           )}
 
@@ -766,7 +744,7 @@ export function GamedayView({
                   />
                   <div>
                     <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-400">
-                      Resumen Oficial LVBP
+                      Resumen del Partido
                     </span>
                     <h2 className="text-lg font-black text-white">
                       {game.homeScore > game.awayScore
@@ -796,7 +774,7 @@ export function GamedayView({
                       >
                         {index === 0 && (
                           <span className="mb-2 rounded-full bg-amber-400 px-3 py-0.5 text-[10px] font-black uppercase text-slate-950 shadow-2xs">
-                            ★ Jugador del juego
+                            Jugador del juego
                           </span>
                         )}
                         <img
@@ -935,8 +913,6 @@ export function GamedayView({
                 [
                   ["feed", "Jugada a jugada"],
                   ["box", "Box score"],
-                  ["field", "Terreno y Pitcheos"],
-                  ["spray", "Mapa de bateo"],
                   ["lineup", "Alineaciones"],
                   ["info", "Detalles"],
                 ] as const
@@ -1257,68 +1233,7 @@ export function GamedayView({
                 </div>
               )}
 
-              {/* TAB 2.5: TERRENO 2D Y ZONA DE STRIKE POR TURNO */}
-              {tab === "field" && (
-                <div className="space-y-4">
-                  {selectedTurnPlay ? (
-                    <>
-                      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-950/80 border border-slate-800 p-3">
-                        <div className="text-xs">
-                          <span className="font-extrabold text-amber-400 uppercase mr-2">
-                            {selectedTurnPlay.top ? "Alta" : "Baja"} {selectedTurnPlay.inning}° ·{" "}
-                            {selectedTurnPlay.event}
-                          </span>
-                          <span className="text-white font-bold">
-                            {selectedTurnPlay.batter.name} vs {selectedTurnPlay.pitcher.name}
-                          </span>
-                          <p className="text-slate-300 mt-1">{selectedTurnPlay.text}</p>
-                        </div>
-
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            disabled={currentTurnIdx <= 0}
-                            onClick={() => setSelectedPlayIdx(Math.max(0, currentTurnIdx - 1))}
-                            className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-xs font-bold text-white cursor-pointer"
-                          >
-                            ‹ Turno ant.
-                          </button>
-                          <span className="text-[11px] font-bold text-slate-400 px-2 tabular-nums">
-                            {currentTurnIdx + 1} / {playsWithPitches.length}
-                          </span>
-                          <button
-                            type="button"
-                            disabled={currentTurnIdx >= playsWithPitches.length - 1}
-                            onClick={() =>
-                              setSelectedPlayIdx(
-                                Math.min(playsWithPitches.length - 1, currentTurnIdx + 1)
-                              )
-                            }
-                            className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-xs font-bold text-white cursor-pointer"
-                          >
-                            Sig. turno ›
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                        <LiveFieldSvg game={game} />
-                        <StrikeZoneSvg pitches={selectedTurnPlay.pitches} />
-                      </div>
-                    </>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                      <LiveFieldSvg game={game} />
-                      <StrikeZoneSvg pitches={game.matchup?.pitches || []} />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* TAB 3: MAPA DE BATEO (SPRAY CHART) */}
-              {tab === "spray" && <SprayChartSvg game={game} />}
-
-              {/* TAB 4: ALINEACIONES */}
+              {/* TAB 3: ALINEACIONES */}
               {tab === "lineup" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {(["away", "home"] as const).map((side) => {
@@ -1514,8 +1429,8 @@ export function GamedayView({
                     <div className="text-xs font-extrabold">{team.nick}</div>
                     <div className="text-lg font-black text-amber-400">{pct}%</div>
                     {picked && (
-                      <span className="inline-block mt-1 text-[10px] font-bold text-emerald-400">
-                        ✓ Tu voto
+                      <span className="inline-flex items-center justify-center gap-1 mt-1 text-[10px] font-bold text-emerald-400">
+                        <Check className="w-3 h-3" /> Tu voto
                       </span>
                     )}
                   </button>

@@ -111,66 +111,40 @@ function CountDots({
 
 export function GamedayView({
   gameId,
-  initialSimulate = false,
   onBack,
   onSelectTeam,
 }: {
   gameId: string;
-  initialSimulate?: boolean;
   onBack: () => void;
   onSelectTeam?: (teamCode: string) => void;
 }) {
   const [game, setGame] = useState<GamedayData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [simulating, setSimulating] = useState(initialSimulate || gameId === "sim-live");
-  const [simStep, setSimStep] = useState<number>(0);
-  const [tab, setTab] = useState<"feed" | "box" | "spray" | "lineup" | "info">("feed");
+  const [tab, setTab] = useState<"feed" | "box" | "field" | "spray" | "lineup" | "info">("feed");
+  const [selectedPlayIdx, setSelectedPlayIdx] = useState<number>(-1);
   const [feedFilter, setFeedFilter] = useState<"all" | "scoring" | "hits" | "changes">("all");
   const [boxSide, setBoxSide] = useState<"away" | "home">("away");
   const [openInnings, setOpenInnings] = useState<Record<string, boolean>>({});
 
   // Quiniela & Interactive state (synced with Cloudflare KV via /api/lvbp/interactive)
   const [userVote, setUserVote] = useState<"away" | "home" | null>(null);
-  const [votes, setVotes] = useState({ away: 148, home: 172 });
+  const [votes, setVotes] = useState({ away: 0, home: 0 });
   const [liveViewers, setLiveViewers] = useState<number | null>(null);
 
   // Radio & Live Chat state
   const [radioPlaying, setRadioPlaying] = useState(false);
   const [radioTeam, setRadioTeam] = useState<"away" | "home">("home");
-  const [chatUser, setChatUser] = useState("@fanatico_lvbp");
+  const [chatUser, setChatUser] = useState("");
   const [chatMessages, setChatMessages] = useState<
     { id: string | number; author: string; team: string; time: string; text: string }[]
-  >([
-    {
-      id: "1",
-      author: "@beisbolero_ccs",
-      team: "CAR",
-      time: "hace 4m",
-      text: "¡Qué clase de turno se está viviendo en la LVBP! 🔥⚾",
-    },
-    {
-      id: "2",
-      author: "@nave_turca_val",
-      team: "MAG",
-      time: "hace 2m",
-      text: "El pitcheo abridor vino afilado hoy en la esquina de afuera.",
-    },
-    {
-      id: "3",
-      author: "@guarolara",
-      team: "LAR",
-      time: "hace 1m",
-      text: "Tremenda cobertura jugada a jugada con la zona de strike en vivo 👏",
-    },
-  ]);
+  >([]);
   const [chatInput, setChatInput] = useState("");
 
   useEffect(() => {
     let active = true;
     const loadGame = async () => {
       try {
-        const query = simulating ? `?simulate=1&step=${simStep}` : "";
-        const res = await fetch(`/api/lvbp/game/${gameId}${query}`, { cache: "no-store" });
+        const res = await fetch(`/api/lvbp/game/${gameId}`, { cache: "no-store" });
         const data = await res.json();
         if (active && !data.error) {
           setGame(data);
@@ -185,18 +159,16 @@ export function GamedayView({
     loadGame();
 
     const timer = setInterval(() => {
-      if (simulating) {
-        setSimStep((prev) => prev + 1);
-      } else if (game?.status === "IN_PROGRESS") {
+      if (game?.status === "IN_PROGRESS") {
         loadGame();
       }
-    }, 3500);
+    }, 5000);
 
     return () => {
       active = false;
       clearInterval(timer);
     };
-  }, [gameId, simulating, simStep, game?.status]);
+  }, [gameId, game?.status]);
 
   // Sync Quiniela, Live Chat, and Viewer Presence from Cloudflare KV
   useEffect(() => {
@@ -451,17 +423,24 @@ export function GamedayView({
   };
 
   const totalVotes = votes.away + votes.home;
-  const awayVotePct = Math.round((votes.away / totalVotes) * 100);
-  const homeVotePct = 100 - awayVotePct;
+  const awayVotePct = totalVotes > 0 ? Math.round((votes.away / totalVotes) * 100) : 50;
+  const homeVotePct = totalVotes > 0 ? 100 - awayVotePct : 50;
+
+  const playsWithPitches = (game.feed || []).filter((p) => p.pitches && p.pitches.length > 0);
+  const currentTurnIdx =
+    selectedPlayIdx >= 0 && selectedPlayIdx < playsWithPitches.length
+      ? selectedPlayIdx
+      : Math.max(0, playsWithPitches.length - 1);
+  const selectedTurnPlay = playsWithPitches[currentTurnIdx] || lastCompletedPlay;
 
   return (
     <div className="space-y-5">
-      {/* Top Action Bar: Back + Live Simulator Control */}
+      {/* Top Action Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-2.5">
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-300 hover:text-white transition"
+          className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-300 hover:text-white transition cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" /> Volver a la pizarra
         </button>
@@ -469,34 +448,15 @@ export function GamedayView({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setSimulating((s) => !s)}
+            onClick={() => setTab("field")}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer ${
-              simulating
-                ? "bg-red-600 text-white shadow-lg shadow-red-600/30"
-                : "bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30"
+              tab === "field"
+                ? "bg-amber-400 text-slate-950"
+                : "bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700"
             }`}
           >
-            {simulating ? (
-              <>
-                <Pause className="w-3.5 h-3.5" /> Simulando EN VIVO (Pausar / Ver Final)
-              </>
-            ) : (
-              <>
-                <Play className="w-3.5 h-3.5" /> ⚡ Simular este juego EN VIVO pitcheo a pitcheo
-              </>
-            )}
+            ⚾ Ver Terreno 2D y Zona de Strike
           </button>
-
-          {simulating && (
-            <button
-              type="button"
-              onClick={() => setSimStep((s) => s + 1)}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700"
-              title="Avanzar al siguiente lanzamiento"
-            >
-              <SkipForward className="w-3.5 h-3.5" /> Sig. Pitcheo
-            </button>
-          )}
         </div>
       </div>
 
@@ -515,8 +475,8 @@ export function GamedayView({
             )}
             <span className="capitalize">{game.dateLabel}</span>
           </div>
-          <span className="inline-flex items-center gap-1.5 text-emerald-400 font-semibold">
-            <Users className="w-3.5 h-3.5" /> {liveViewers ?? game.viewers} conectados
+          <span className="inline-flex items-center gap-1.5 text-slate-300 font-semibold">
+            {game.info?.duration ? `⏱️ Duración: ${game.info.duration}` : `Juego Oficial #${game.id}`}
           </span>
         </div>
 
@@ -958,6 +918,7 @@ export function GamedayView({
                 [
                   ["feed", "Jugada a jugada"],
                   ["box", "Box score"],
+                  ["field", "Terreno y Pitcheos"],
                   ["spray", "Mapa de bateo"],
                   ["lineup", "Alineaciones"],
                   ["info", "Detalles"],
@@ -1279,6 +1240,64 @@ export function GamedayView({
                 </div>
               )}
 
+              {/* TAB 2.5: TERRENO 2D Y ZONA DE STRIKE POR TURNO */}
+              {tab === "field" && (
+                <div className="space-y-4">
+                  {selectedTurnPlay ? (
+                    <>
+                      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-950/80 border border-slate-800 p-3">
+                        <div className="text-xs">
+                          <span className="font-extrabold text-amber-400 uppercase mr-2">
+                            {selectedTurnPlay.top ? "Alta" : "Baja"} {selectedTurnPlay.inning}° ·{" "}
+                            {selectedTurnPlay.event}
+                          </span>
+                          <span className="text-white font-bold">
+                            {selectedTurnPlay.batter.name} vs {selectedTurnPlay.pitcher.name}
+                          </span>
+                          <p className="text-slate-300 mt-1">{selectedTurnPlay.text}</p>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            disabled={currentTurnIdx <= 0}
+                            onClick={() => setSelectedPlayIdx(Math.max(0, currentTurnIdx - 1))}
+                            className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-xs font-bold text-white cursor-pointer"
+                          >
+                            ‹ Turno ant.
+                          </button>
+                          <span className="text-[11px] font-bold text-slate-400 px-2 tabular-nums">
+                            {currentTurnIdx + 1} / {playsWithPitches.length}
+                          </span>
+                          <button
+                            type="button"
+                            disabled={currentTurnIdx >= playsWithPitches.length - 1}
+                            onClick={() =>
+                              setSelectedPlayIdx(
+                                Math.min(playsWithPitches.length - 1, currentTurnIdx + 1)
+                              )
+                            }
+                            className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-xs font-bold text-white cursor-pointer"
+                          >
+                            Sig. turno ›
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                        <LiveFieldSvg game={game} />
+                        <StrikeZoneSvg pitches={selectedTurnPlay.pitches} />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                      <LiveFieldSvg game={game} />
+                      <StrikeZoneSvg pitches={game.matchup?.pitches || []} />
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* TAB 3: MAPA DE BATEO (SPRAY CHART) */}
               {tab === "spray" && <SprayChartSvg game={game} />}
 
@@ -1439,9 +1458,9 @@ export function GamedayView({
             {radioPlaying && (
               <div className="flex items-center justify-between gap-2 rounded-lg bg-slate-950 px-3 py-2 text-xs text-amber-300 border border-slate-800">
                 <span className="flex items-center gap-1.5 font-semibold">
-                  <Volume2 className="w-4 h-4 animate-bounce" /> Transmitiendo narración en vivo…
+                  <Volume2 className="w-4 h-4 animate-bounce" /> Narración de jugadas activa…
                 </span>
-                <span className="text-[10px] uppercase bg-amber-500/20 px-1.5 py-0.5 rounded">FM</span>
+                <span className="text-[10px] uppercase bg-amber-500/20 px-1.5 py-0.5 rounded">AUDIO</span>
               </div>
             )}
           </section>
@@ -1454,7 +1473,7 @@ export function GamedayView({
                 <p className="text-xs text-slate-400">¿Quién se lleva la victoria?</p>
               </div>
               <span className="rounded-full bg-slate-800 px-2.5 py-0.5 text-[11px] font-bold text-slate-300">
-                {totalVotes} votos
+                {totalVotes} {totalVotes === 1 ? "voto" : "votos"}
               </span>
             </div>
 
@@ -1500,46 +1519,64 @@ export function GamedayView({
           </section>
 
           {/* 3. CHAT EN VIVO DE LA TRIBUNA */}
-          <section className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 flex flex-col h-[390px]">
+          <section className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 flex flex-col h-[410px]">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2.5 mb-3">
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-4 h-4 text-amber-400" />
-                <h3 className="text-sm font-black text-white">La Tribuna en Vivo</h3>
+                <h3 className="text-sm font-black text-white">Comentarios del Juego</h3>
               </div>
-              <span className="text-[11px] text-slate-400">{chatMessages.length} comentarios</span>
+              <span className="text-[11px] text-slate-400">{chatMessages.length} mensajes</span>
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
-              {chatMessages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className="rounded-xl bg-slate-950/80 border border-slate-800/90 p-2.5 text-xs"
-                >
-                  <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
-                    <strong className="text-amber-300">{msg.author}</strong>
-                    <span>{msg.time}</span>
-                  </div>
-                  <p className="text-slate-200">{msg.text}</p>
+              {chatMessages.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center px-4 text-xs text-slate-400">
+                  <MessageSquare className="w-6 h-6 text-slate-600 mb-2" />
+                  <p className="font-semibold text-slate-300">Aún no hay comentarios en este partido</p>
+                  <p className="mt-1">Escribe el primer mensaje abajo para iniciar la conversación.</p>
                 </div>
-              ))}
+              ) : (
+                chatMessages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className="rounded-xl bg-slate-950/80 border border-slate-800/90 p-2.5 text-xs"
+                  >
+                    <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+                      <strong className="text-amber-300">{msg.author}</strong>
+                      <span>{msg.time}</span>
+                    </div>
+                    <p className="text-slate-200">{msg.text}</p>
+                  </div>
+                ))
+              )}
             </div>
 
-            <form onSubmit={handleSendChat} className="mt-3 flex items-center gap-2">
+            <form onSubmit={handleSendChat} className="mt-3 space-y-2">
               <input
                 type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Comenta la jugada en vivo…"
-                maxLength={180}
-                className="flex-1 rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400"
+                value={chatUser}
+                onChange={(e) => setChatUser(e.target.value)}
+                placeholder="Tu nombre o @usuario"
+                maxLength={24}
+                className="w-full rounded-xl bg-slate-950 border border-slate-800 px-3 py-1.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400"
               />
-              <button
-                type="submit"
-                className="rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 p-2 font-bold transition cursor-pointer"
-                aria-label="Enviar comentario"
-              >
-                <Send className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder="Escribe un comentario sobre el juego…"
+                  maxLength={180}
+                  className="flex-1 rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400"
+                />
+                <button
+                  type="submit"
+                  className="rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 p-2 font-bold transition cursor-pointer"
+                  aria-label="Enviar comentario"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
             </form>
           </section>
         </aside>

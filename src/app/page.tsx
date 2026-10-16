@@ -24,54 +24,6 @@ import {
 
 type NavSection = "home" | "resultados" | "calendario" | "posiciones" | "equipos" | "juego";
 
-interface NewsArticle {
-  id: string;
-  category: string;
-  title: string;
-  summary: string;
-  timeAgo: string;
-  readMin: number;
-}
-
-const SAMPLE_NEWS: NewsArticle[] = [
-  {
-    id: "1",
-    category: "Jornada LVBP",
-    title: "Ofensiva explosiva marca el arranque de la temporada 2026-2027 de la LVBP",
-    summary:
-      "Tiburones de La Guaira, Tigres de Aragua y Águilas del Zulia picaron adelante con despliegues de poder y pitcheo hermético en los primeros compromisos.",
-    timeAgo: "hace 25 min",
-    readMin: 3,
-  },
-  {
-    id: "2",
-    category: "Leones del Caracas",
-    title: "Caracas ajusta su rotación para la serie de fin de semana en el Monumental",
-    summary:
-      "El cuerpo técnico melenudo anunció sus brazos abridores para recibir a su eterno rival frente a casa llena en La Rinconada.",
-    timeAgo: "hace 1 h",
-    readMin: 2,
-  },
-  {
-    id: "3",
-    category: "Navegantes del Magallanes",
-    title: "Renato Núñez y Thairo Estrada encabezan el despertar ofensivo en Valencia",
-    summary:
-      "La Nave Turca suma conexiones de largo metraje en el José Bernardo Pérez mientras incorpora nuevos brazos a su bullpen.",
-    timeAgo: "hace 2 h",
-    readMin: 3,
-  },
-  {
-    id: "4",
-    category: "Cardenales de Lara",
-    title: "Barquisimeto se prepara para una nueva serie de alto voltaje en el Antonio Herrera Gutiérrez",
-    summary:
-      "Los pájaros rojos afinan detalles defensivos y anuncian incorporaciones clave para la segunda semana del campeonato.",
-    timeAgo: "hace 3 h",
-    readMin: 2,
-  },
-];
-
 function formatCompactDay(iso: string): { dayNum: string; monthShort: string; fullLabel: string } {
   if (!iso) return { dayNum: "15", monthShort: "OCT", fullLabel: "15 de octubre" };
   const [y, m, d] = iso.split("-").map(Number);
@@ -100,12 +52,11 @@ export default function EnJuegoApp() {
   const [loading, setLoading] = useState(true);
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
   const [selectedGameId, setSelectedGameId] = useState<string>("870098");
-  const [simulateOnOpen, setSimulateOnOpen] = useState<boolean>(false);
   const [selectedTeamCode, setSelectedTeamCode] = useState<string>("CAR");
   const [teamFilter, setTeamFilter] = useState<string>("");
   const [standingsPhase, setStandingsPhase] = useState<"REGULAR" | "ROUND_ROBIN" | "FINAL">("REGULAR");
 
-  // Mundo Jugadas (Comunidad) state synced with Cloudflare KV
+  // Mundo Jugadas (Comunidad) state synced with Cloudflare KV (no fake posts)
   const [communityPosts, setCommunityPosts] = useState<
     {
       id: string | number;
@@ -117,45 +68,24 @@ export default function EnJuegoApp() {
       reactions: { fuego: number; aplauso: number; corazon: number; sorpresa: number };
       myReaction: string;
     }[]
-  >([
-    {
-      id: "p1",
-      author: "Carlos Rodríguez",
-      username: "carlos_lvbp",
-      team: "CAR",
-      time: "hace 8 min",
-      text: "¡Qué nivel tiene la pelota invernal venezolana este año! El Gameday con zona de strike y mapa de bateo está brutal 🔥⚾",
-      reactions: { fuego: 24, aplauso: 12, corazon: 15, sorpresa: 4 },
-      myReaction: "",
-    },
-    {
-      id: "p2",
-      author: "Mariana Gómez",
-      username: "mariana_mag",
-      team: "MAG",
-      time: "hace 19 min",
-      text: "Hoy gana la Nave en Valencia, Renato la saca por el jardín izquierdo 🚀⚓",
-      reactions: { fuego: 18, aplauso: 9, corazon: 21, sorpresa: 3 },
-      myReaction: "",
-    },
-  ]);
+  >([]);
   const [newPostText, setNewPostText] = useState("");
-  const [postAuthor, setPostAuthor] = useState("Fanático LVBP");
+  const [postAuthor, setPostAuthor] = useState("");
   const [postTeam, setPostTeam] = useState("CAR");
 
   const mapServerPosts = (posts: any[]) =>
     posts.map((p: any) => ({
       id: p.id,
-      author: p.user || "Fanático LVBP",
-      username: String(p.handle || "@lvbp_fan").replace(/^@/, ""),
+      author: p.user || "Aficionado LVBP",
+      username: String(p.handle || "@lvbp").replace(/^@/, ""),
       team: p.team || "CAR",
       time: p.time || "reciente",
       text: p.text || "",
       reactions: {
-        fuego: Number(p.fires ?? 1),
+        fuego: Number(p.fires ?? 0),
         aplauso: Number(p.claps ?? 0),
-        corazon: Number(p.likes ?? 1),
-        sorpresa: 2,
+        corazon: Number(p.likes ?? 0),
+        sorpresa: 0,
       },
       myReaction: "",
     }));
@@ -217,9 +147,8 @@ export default function EnJuegoApp() {
     [schedule]
   );
 
-  const openGameGameday = (gameId: string, simulate = false) => {
+  const openGameGameday = (gameId: string) => {
     setSelectedGameId(gameId);
-    setSimulateOnOpen(simulate);
     setSection("juego");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -229,6 +158,44 @@ export default function EnJuegoApp() {
     setSection("equipos");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  // Generate real game recaps / crónicas directly from official LVBP games
+  const realRecaps = useMemo(() => {
+    const finished = schedule.filter((g) => g.status === "FINISHED");
+    const source = finished.length > 0 ? finished.slice(-4).reverse() : schedule.slice(0, 4);
+    return source.map((g) => {
+      const awayWon = g.awayScore > g.homeScore;
+      const winner = awayWon ? g.awayTeam : g.homeTeam;
+      const loser = awayWon ? g.homeTeam : g.awayTeam;
+      const winScore = awayWon ? g.awayScore : g.homeScore;
+      const loseScore = awayWon ? g.homeScore : g.awayScore;
+      const winHits = awayWon ? g.awayHits : g.homeHits;
+      const loseHits = awayWon ? g.homeHits : g.awayHits;
+
+      if (g.status === "FINISHED") {
+        const decisionText = g.decisions?.winner
+          ? `Victoria para ${g.decisions.winner}${g.decisions.loser ? ` y revés para ${g.decisions.loser}` : ""}${g.decisions.save ? `, con salvado de ${g.decisions.save}` : ""}.`
+          : `Pizarra oficial registrada en ${g.venue}.`;
+        return {
+          id: g.id,
+          category: `${winner.nick} · Final`,
+          title: `${winner.name} se impuso ${winScore}-${loseScore} ante ${loser.name} en ${g.venueCity}`,
+          summary: `La ofensiva de ${winner.nick} conectó ${winHits} imparables frente a ${loseHits} de ${loser.nick} en el ${g.venue}. ${decisionText}`,
+          dateLabel: g.date,
+          venue: g.venue,
+        };
+      }
+
+      return {
+        id: g.id,
+        category: `Previa · ${g.time}`,
+        title: `${g.awayTeam.name} visita a ${g.homeTeam.name} en el ${g.venue}`,
+        summary: `Duelo programado en ${g.venueCity} a las ${g.time} (Hora de Venezuela). Transmisión radial y cobertura jugada a jugada disponible en Gameday.`,
+        dateLabel: g.date,
+        venue: g.venue,
+      };
+    });
+  }, [schedule]);
 
   const handleReactPost = async (
     postId: string | number,
@@ -277,15 +244,16 @@ export default function EnJuegoApp() {
     if (!cleanText) return;
     setNewPostText("");
 
+    const authorName = postAuthor.trim() || "Aficionado LVBP";
     const optimistic = {
       id: `opt-${Date.now()}`,
-      author: postAuthor.trim() || "Fanático LVBP",
-      username: (postAuthor.trim() || "fan_enjuego").toLowerCase().replace(/[^a-z0-9]/g, "_"),
+      author: authorName,
+      username: authorName.toLowerCase().replace(/[^a-z0-9]/g, "_") || "lvbp",
       team: postTeam,
       time: "ahora",
       text: cleanText,
-      reactions: { fuego: 1, aplauso: 0, corazon: 1, sorpresa: 0 },
-      myReaction: "fuego",
+      reactions: { fuego: 0, aplauso: 0, corazon: 0, sorpresa: 0 },
+      myReaction: "",
     };
     setCommunityPosts((prev) => [optimistic, ...prev]);
 
@@ -295,7 +263,7 @@ export default function EnJuegoApp() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "post",
-          user: postAuthor.trim() || "Fanático LVBP",
+          user: authorName,
           team: postTeam,
           text: cleanText,
         }),
@@ -313,7 +281,7 @@ export default function EnJuegoApp() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#060a12]">
-      {/* TOPBAR (Idéntico a Jugada en Vivo) */}
+      {/* TOPBAR */}
       <header className="sticky top-0 z-40 border-b border-slate-800/90 bg-[#080d18]/95 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -330,27 +298,29 @@ export default function EnJuegoApp() {
                   EN JUEGO
                 </span>
                 <span className="block text-[10px] font-extrabold uppercase tracking-widest text-amber-400 -mt-1">
-                  LVBP En Vivo
+                  LVBP Oficial
                 </span>
               </div>
             </button>
 
-            {/* Live Pill Button */}
-            <button
-              type="button"
-              onClick={() =>
-                openGameGameday(liveGames[0]?.id || gamesOfDay[0]?.id || "870098", true)
-              }
-              className="inline-flex items-center gap-1.5 rounded-full bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 px-3 py-1 text-xs font-extrabold text-red-400 transition cursor-pointer"
-              title="Ver transmisión Gameday en vivo"
-            >
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-              <span>
-                {liveGames.length > 0
-                  ? `${liveGames[0].awayTeam.shortName} ${liveGames[0].awayScore}-${liveGames[0].homeScore} ${liveGames[0].homeTeam.shortName}`
-                  : "En vivo (Demo Gameday)"}
+            {liveGames.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => openGameGameday(liveGames[0].id)}
+                className="inline-flex items-center gap-1.5 rounded-full bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 px-3 py-1 text-xs font-extrabold text-red-400 transition cursor-pointer"
+              >
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                <span>
+                  EN VIVO: {liveGames[0].awayTeam.shortName} {liveGames[0].awayScore}-
+                  {liveGames[0].homeScore} {liveGames[0].homeTeam.shortName}
+                </span>
+              </button>
+            ) : (
+              <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-slate-900 border border-slate-800 px-3 py-1 text-[11px] font-bold text-slate-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                Temporada 2026-27
               </span>
-            </button>
+            )}
           </div>
 
           {/* Main Navigation */}
@@ -385,18 +355,16 @@ export default function EnJuegoApp() {
               type="button"
               onClick={loadAllData}
               className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition cursor-pointer"
-              title="Actualizar resultados"
+              title="Actualizar pizarra"
             >
               <RefreshCw className="w-4 h-4" />
             </button>
             <button
               type="button"
-              onClick={() =>
-                openGameGameday(gamesOfDay[0]?.id || "870098", true)
-              }
+              onClick={() => setSection("resultados")}
               className="hidden sm:inline-flex items-center gap-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 px-3.5 py-2 text-xs font-black transition cursor-pointer shadow-md shadow-amber-400/15"
             >
-              <Play className="w-3.5 h-3.5 fill-current" /> Gameday En Vivo
+              <Activity className="w-3.5 h-3.5" /> Pizarra del Día
             </button>
           </div>
         </div>
@@ -426,7 +394,7 @@ export default function EnJuegoApp() {
         </div>
       </header>
 
-      {/* SCORE STRIP / TICKER BAR (Siempre visible arriba como en jugadaenvivo.com) */}
+      {/* SCORE STRIP / TICKER BAR */}
       <section className="border-b border-slate-800/90 bg-[#0b1220]">
         <div className="max-w-7xl mx-auto px-4 py-2.5 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           {/* Date Selector Box */}
@@ -470,7 +438,7 @@ export default function EnJuegoApp() {
                   <button
                     key={game.id}
                     type="button"
-                    onClick={() => openGameGameday(game.id, false)}
+                    onClick={() => openGameGameday(game.id)}
                     className={`flex items-center gap-3 rounded-xl px-3 py-2 border text-left shrink-0 transition cursor-pointer ${
                       selectedGameId === game.id && section === "juego"
                         ? "bg-slate-800 border-amber-400"
@@ -513,7 +481,7 @@ export default function EnJuegoApp() {
                         {isLive ? "EN VIVO" : game.status === "FINISHED" ? "FINAL" : game.time}
                       </span>
                       <span className="text-[10px] font-semibold text-slate-400">
-                        {game.status === "FINISHED" ? "Resumen ›" : "Gameday ›"}
+                        {game.status === "FINISHED" ? "Box Score ›" : "Gameday ›"}
                       </span>
                     </div>
                   </button>
@@ -521,7 +489,7 @@ export default function EnJuegoApp() {
               })
             ) : (
               <span className="text-xs text-slate-400 py-2">
-                Cargando cartelera de la LVBP…
+                Cargando cartelera oficial de la LVBP…
               </span>
             )}
           </div>
@@ -534,7 +502,6 @@ export default function EnJuegoApp() {
         {section === "juego" && (
           <GamedayView
             gameId={selectedGameId}
-            initialSimulate={simulateOnOpen}
             onBack={() => setSection("home")}
             onSelectTeam={openTeamPage}
           />
@@ -548,7 +515,7 @@ export default function EnJuegoApp() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <span className="text-xs font-extrabold uppercase tracking-wider text-amber-400">
-                    Pizarra LVBP · Temporada 2026-2027
+                    Pizarra Oficial LVBP · Temporada 2026-2027
                   </span>
                   <h1 className="text-xl sm:text-2xl font-black text-white capitalize">
                     {dayFormatted.fullLabel}
@@ -557,10 +524,10 @@ export default function EnJuegoApp() {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => openGameGameday(gamesOfDay[0]?.id || "870098", true)}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white px-3.5 py-2 text-xs font-black shadow-lg shadow-red-600/25 transition cursor-pointer"
+                    onClick={() => setSection("calendario")}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 px-3.5 py-2 text-xs font-extrabold transition cursor-pointer"
                   >
-                    <Flame className="w-4 h-4" /> Probar Juego En Vivo (Terreno 2D + Zona de Strike)
+                    <Calendar className="w-3.5 h-3.5 text-amber-400" /> Ver calendario completo ›
                   </button>
                 </div>
               </div>
@@ -581,7 +548,8 @@ export default function EnJuegoApp() {
                     return (
                       <article
                         key={game.id}
-                        className="rounded-2xl border border-slate-800 bg-slate-900/90 hover:border-amber-400/60 transition flex flex-col justify-between p-4 shadow-lg"
+                        onClick={() => openGameGameday(game.id)}
+                        className="rounded-2xl border border-slate-800 bg-slate-900/90 hover:border-amber-400/60 transition flex flex-col justify-between p-4 shadow-lg cursor-pointer group"
                       >
                         <div>
                           <div className="flex items-center justify-between text-xs pb-2.5 mb-2.5 border-b border-slate-800">
@@ -656,24 +624,28 @@ export default function EnJuegoApp() {
                         </div>
 
                         <div className="mt-3 pt-2.5 border-t border-slate-800/80 space-y-2">
-                          <p className="text-[11px] text-slate-400 truncate flex items-center gap-1">
-                            <MapPin className="w-3 h-3 text-slate-500 shrink-0" /> {game.venue}
-                          </p>
-                          <div className="grid grid-cols-2 gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => openGameGameday(game.id, false)}
-                              className="rounded-lg bg-slate-800 hover:bg-slate-700 text-white py-1.5 px-2 text-xs font-bold transition cursor-pointer"
-                            >
-                              {game.status === "FINISHED" ? "Resumen / Box" : "Ver Gameday"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => openGameGameday(game.id, true)}
-                              className="rounded-lg bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/40 text-amber-300 py-1.5 px-2 text-xs font-extrabold transition cursor-pointer"
-                            >
-                              ⚡ En Vivo 2D
-                            </button>
+                          {game.decisions?.winner ? (
+                            <p className="text-[11px] text-slate-300 truncate">
+                              <b className="text-emerald-400">G:</b> {game.decisions.winner}
+                              {game.decisions.loser ? (
+                                <>
+                                  {" "}
+                                  · <b className="text-red-400">P:</b> {game.decisions.loser}
+                                </>
+                              ) : null}
+                            </p>
+                          ) : (
+                            <p className="text-[11px] text-slate-400 truncate flex items-center gap-1">
+                              <MapPin className="w-3 h-3 text-slate-500 shrink-0" /> {game.venue}
+                            </p>
+                          )}
+
+                          <div className="w-full rounded-lg bg-slate-800/90 group-hover:bg-amber-400 group-hover:text-slate-950 text-white py-1.5 px-3 text-xs font-extrabold text-center transition">
+                            {game.status === "IN_PROGRESS"
+                              ? "Seguir Gameday en Vivo ›"
+                              : game.status === "FINISHED"
+                                ? "Ver Resumen, Box Score y Jugadas ›"
+                                : "Ver Previa y Alineaciones ›"}
                           </div>
                         </div>
                       </article>
@@ -683,7 +655,7 @@ export default function EnJuegoApp() {
               )}
             </section>
 
-            {/* 2. LÍDERES Y POSICIONES (Idéntico a Jugada en Vivo) */}
+            {/* 2. LÍDERES Y POSICIONES */}
             <section className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg sm:text-xl font-black text-white">
@@ -747,20 +719,21 @@ export default function EnJuegoApp() {
               </div>
             </section>
 
-            {/* 3. ÚLTIMAS NOTICIAS LVBP */}
+            {/* 3. CRÓNICAS Y RESÚMENES OFICIALES DE LA JORNADA */}
             <section className="space-y-4">
               <div className="flex items-center gap-2">
                 <Newspaper className="w-5 h-5 text-amber-400" />
                 <h2 className="text-lg sm:text-xl font-black text-white">
-                  Últimas <em className="text-amber-400 not-italic">noticias</em>
+                  Resúmenes de la <em className="text-amber-400 not-italic">jornada</em>
                 </h2>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {SAMPLE_NEWS.map((item) => (
+                {realRecaps.map((item) => (
                   <article
                     key={item.id}
-                    className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 flex flex-col justify-between hover:border-slate-700 transition"
+                    onClick={() => openGameGameday(item.id)}
+                    className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 flex flex-col justify-between hover:border-amber-400/50 transition cursor-pointer"
                   >
                     <div className="space-y-2">
                       <span className="inline-block rounded bg-amber-400/15 text-amber-300 px-2 py-0.5 text-[10px] font-black uppercase">
@@ -769,9 +742,9 @@ export default function EnJuegoApp() {
                       <h3 className="text-sm font-black text-white leading-snug">{item.title}</h3>
                       <p className="text-xs text-slate-400 leading-relaxed">{item.summary}</p>
                     </div>
-                    <div className="mt-4 pt-2.5 border-t border-slate-800/80 text-[11px] text-slate-500 flex items-center justify-between">
-                      <span>{item.timeAgo}</span>
-                      <span>{item.readMin} min de lectura</span>
+                    <div className="mt-4 pt-2.5 border-t border-slate-800/80 text-[11px] text-slate-400 flex items-center justify-between">
+                      <span>{item.dateLabel}</span>
+                      <span className="text-amber-400 font-bold">Ver Box Score ›</span>
                     </div>
                   </article>
                 ))}
@@ -789,7 +762,7 @@ export default function EnJuegoApp() {
                     Mundo <em className="text-amber-400 not-italic">Jugadas</em>
                   </h2>
                   <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                    La grada interactiva de En Juego. Comparte tu pronóstico del partido, reacciona con la fanaticada y comenta cada batazo en directo.
+                    La grada abierta de En Juego. Comparte tu análisis de la jornada, elige tu equipo y debate con otros aficionados.
                   </p>
                   <form onSubmit={handleCreatePost} className="space-y-2.5 pt-2">
                     <div className="grid grid-cols-2 gap-2">
@@ -816,7 +789,7 @@ export default function EnJuegoApp() {
                     <textarea
                       value={newPostText}
                       onChange={(e) => setNewPostText(e.target.value)}
-                      placeholder="¿Qué opinas de la jornada de hoy en la LVBP?"
+                      placeholder="Escribe tu comentario sobre la jornada de la LVBP…"
                       rows={3}
                       maxLength={280}
                       className="w-full rounded-xl bg-slate-950 border border-slate-800 p-3 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400"
@@ -825,62 +798,73 @@ export default function EnJuegoApp() {
                       type="submit"
                       className="rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 px-4 py-2 text-xs font-black transition cursor-pointer"
                     >
-                      Publicar en La Grada
+                      Publicar comentario
                     </button>
                   </form>
                 </div>
 
                 <div className="lg:col-span-7 space-y-3">
-                  {communityPosts.map((post) => (
-                    <article
-                      key={post.id}
-                      className="rounded-xl border border-slate-800 bg-slate-950/80 p-4 space-y-2.5"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-9 h-9 rounded-full bg-amber-500/20 border border-amber-400/40 flex items-center justify-center font-black text-amber-300 text-xs">
-                            {post.author.slice(0, 2).toUpperCase()}
+                  {communityPosts.length === 0 ? (
+                    <div className="rounded-xl border border-slate-800/80 bg-slate-950/60 p-8 text-center space-y-2">
+                      <p className="text-sm font-bold text-slate-200">
+                        Aún no hay comentarios publicados en esta jornada
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        Sé el primero en compartir tu opinión o pronóstico en La Grada de la LVBP.
+                      </p>
+                    </div>
+                  ) : (
+                    communityPosts.map((post) => (
+                      <article
+                        key={post.id}
+                        className="rounded-xl border border-slate-800 bg-slate-950/80 p-4 space-y-2.5"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-full bg-amber-500/20 border border-amber-400/40 flex items-center justify-center font-black text-amber-300 text-xs">
+                              {post.author.slice(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <strong className="text-xs font-bold text-white block">
+                                {post.author}
+                              </strong>
+                              <span className="text-[11px] text-slate-400">
+                                @{post.username} · {post.time}
+                              </span>
+                            </div>
                           </div>
-                          <div>
-                            <strong className="text-xs font-bold text-white block">
-                              {post.author}
-                            </strong>
-                            <span className="text-[11px] text-slate-400">
-                              @{post.username} · {post.time}
-                            </span>
-                          </div>
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300">
+                            {post.team}
+                          </span>
                         </div>
-                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300">
-                          {post.team}
-                        </span>
-                      </div>
-                      <p className="text-xs sm:text-sm text-slate-200">{post.text}</p>
-                      <div className="flex items-center gap-2 pt-1">
-                        {(
-                          [
-                            ["fuego", "🔥"],
-                            ["aplauso", "👏"],
-                            ["corazon", "❤️"],
-                            ["sorpresa", "😮"],
-                          ] as const
-                        ).map(([rKey, emoji]) => (
-                          <button
-                            key={rKey}
-                            type="button"
-                            onClick={() => handleReactPost(post.id, rKey)}
-                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold border transition cursor-pointer ${
-                              post.myReaction === rKey
-                                ? "bg-amber-500/20 border-amber-400 text-amber-300"
-                                : "bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700"
-                            }`}
-                          >
-                            <span>{emoji}</span>
-                            <b>{post.reactions[rKey]}</b>
-                          </button>
-                        ))}
-                      </div>
-                    </article>
-                  ))}
+                        <p className="text-xs sm:text-sm text-slate-200">{post.text}</p>
+                        <div className="flex items-center gap-2 pt-1">
+                          {(
+                            [
+                              ["fuego", "🔥"],
+                              ["aplauso", "👏"],
+                              ["corazon", "❤️"],
+                              ["sorpresa", "😮"],
+                            ] as const
+                          ).map(([rKey, emoji]) => (
+                            <button
+                              key={rKey}
+                              type="button"
+                              onClick={() => handleReactPost(post.id, rKey)}
+                              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold border transition cursor-pointer ${
+                                post.myReaction === rKey
+                                  ? "bg-amber-500/20 border-amber-400 text-amber-300"
+                                  : "bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700"
+                              }`}
+                            >
+                              <span>{emoji}</span>
+                              <b>{post.reactions[rKey]}</b>
+                            </button>
+                          ))}
+                        </div>
+                      </article>
+                    ))
+                  )}
                 </div>
               </div>
             </section>
@@ -926,7 +910,7 @@ export default function EnJuegoApp() {
               {gamesOfDay.map((game) => (
                 <article
                   key={game.id}
-                  onClick={() => openGameGameday(game.id, false)}
+                  onClick={() => openGameGameday(game.id)}
                   className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 hover:border-amber-400/60 transition cursor-pointer space-y-3"
                 >
                   <div className="flex items-center justify-between text-xs font-bold text-amber-400 border-b border-slate-800 pb-2">
@@ -1002,7 +986,7 @@ export default function EnJuegoApp() {
                 .map((game) => (
                   <div
                     key={game.id}
-                    onClick={() => openGameGameday(game.id, false)}
+                    onClick={() => openGameGameday(game.id)}
                     className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900/90 p-3.5 hover:border-amber-400/60 transition cursor-pointer"
                   >
                     <div className="flex items-center gap-4">
@@ -1160,7 +1144,7 @@ export default function EnJuegoApp() {
             selectedTeamCode={selectedTeamCode}
             onSelectTeam={setSelectedTeamCode}
             schedule={schedule}
-            onOpenGame={(id) => openGameGameday(id, false)}
+            onOpenGame={(id) => openGameGameday(id)}
           />
         )}
       </main>

@@ -22,6 +22,7 @@ import {
   Search,
   ShieldCheck,
   Smartphone,
+  Sparkles,
   Trash2,
   Upload,
   Users,
@@ -35,6 +36,7 @@ import {
   type LiveSession,
 } from "@/lib/admin-store";
 import type { UserProfile } from "@/lib/user-auth";
+import { SocialCardGenerator } from "@/components/admin/SocialCardGenerator";
 
 type EnrichedCampaign = AdCampaign & { live?: boolean };
 
@@ -96,7 +98,9 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
-  const [activeTab, setActiveTab] = useState<"ads" | "users" | "system">("ads");
+  const [activeTab, setActiveTab] = useState<
+    "ads" | "generator" | "users" | "system"
+  >("ads");
   const [autoRefresh, setAutoRefresh] = useState(true);
 
   // Dashboard Data
@@ -714,6 +718,19 @@ export default function AdminDashboardPage() {
 
           <button
             type="button"
+            onClick={() => setActiveTab("generator")}
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer ${
+              activeTab === "generator"
+                ? "bg-rose-600 text-white shadow-sm"
+                : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+            }`}
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Generador de Artes (PNG)</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActiveTab("users")}
             className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer ${
               activeTab === "users"
@@ -747,6 +764,13 @@ export default function AdminDashboardPage() {
             <CheckCircle2 className="w-4.5 h-4.5 text-emerald-600 shrink-0" />
             <span>{statusMessage}</span>
           </div>
+        )}
+
+        {/* ===================================================================
+            TAB: GENERADOR DE ARTES DEPORTIVOS (RESULTADO FINAL / JUEGOS DE HOY)
+           =================================================================== */}
+        {activeTab === "generator" && (
+          <SocialCardGenerator campaigns={campaigns} />
         )}
 
         {/* ===================================================================

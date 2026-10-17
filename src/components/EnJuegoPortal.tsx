@@ -293,39 +293,6 @@ export function EnJuegoPortal({
     }
   };
 
-const DEFAULT_COMMUNITY_POSTS = [
-  {
-    id: "def-1",
-    author: "Carlos Caraquista",
-    username: "carlos_caracas",
-    team: "CAR",
-    time: "hace 15m",
-    text: "¡Hoy la ofensiva de los Leones se hace sentir en el Monumental! Con esa alineación no hay quien nos pare 🔥🦁",
-    reactions: { fuego: 8, aplauso: 5, corazon: 12, sorpresa: 1 },
-    myReaction: "",
-  },
-  {
-    id: "def-2",
-    author: "Navegante Fiel",
-    username: "magallanes_fans",
-    team: "MAG",
-    time: "hace 40m",
-    text: "Tremendo relevo en los últimos episodios en Valencia. La nave turca va con todo por la victoria esta noche ⚓⚾",
-    reactions: { fuego: 6, aplauso: 11, corazon: 9, sorpresa: 0 },
-    myReaction: "",
-  },
-  {
-    id: "def-3",
-    author: "Samba Guaira",
-    username: "tiburones_fan",
-    team: "LAG",
-    time: "hace 1h",
-    text: "¿Vieron ese batazo de La Guaira? La samba está sonando con fuerza en Macuto. ¡Vamos por el triunfo!",
-    reactions: { fuego: 14, aplauso: 8, corazon: 10, sorpresa: 3 },
-    myReaction: "",
-  },
-];
-
   // Mundo Jugadas (Comunidad) state synced with Cloudflare KV
   const [communityPosts, setCommunityPosts] = useState<
     {
@@ -338,7 +305,7 @@ const DEFAULT_COMMUNITY_POSTS = [
       reactions: { fuego: number; aplauso: number; corazon: number; sorpresa: number };
       myReaction: string;
     }[]
-  >(DEFAULT_COMMUNITY_POSTS);
+  >([]);
   const [newPostText, setNewPostText] = useState("");
   const [postAuthor, setPostAuthor] = useState("");
   const [postTeam, setPostTeam] = useState("CAR");
@@ -388,7 +355,7 @@ const DEFAULT_COMMUNITY_POSTS = [
       setSchedule(loadedGames);
       setStandings(stdData.standings || []);
       setLeaders(stdData.leaders || { hitting: [], pitching: [] });
-      if (Array.isArray(commData?.posts) && commData.posts.length > 0) {
+      if (Array.isArray(commData?.posts)) {
         setCommunityPosts(mapServerPosts(commData.posts));
       }
 
@@ -568,13 +535,18 @@ const DEFAULT_COMMUNITY_POSTS = [
 
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser) {
+      setAuthModalTab("quick");
+      setAuthModalOpen(true);
+      return;
+    }
     const cleanText = newPostText.trim();
     if (!cleanText) return;
     setNewPostText("");
 
-    const authorName = currentUser?.name || postAuthor.trim() || "Aficionado LVBP";
-    const authorTeam = currentUser?.favoriteTeam || postTeam || "CAR";
-    const authorHandle = currentUser?.handle
+    const authorName = currentUser.name || "Aficionado LVBP";
+    const authorTeam = currentUser.favoriteTeam || postTeam || "CAR";
+    const authorHandle = currentUser.handle
       ? currentUser.handle.replace(/^@/, "")
       : authorName.toLowerCase().replace(/[^a-z0-9]/g, "_") || "lvbp";
 
@@ -883,8 +855,13 @@ const DEFAULT_COMMUNITY_POSTS = [
       {/* CLEAN EDITORIAL TOPBAR WITH REAL NEXT.JS LINKS */}
       {/* TOPBAR WITH BRAND HORIZONTAL LOGO (AS REQUESTED) */}
       <header
-        className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950 text-white shadow-md transition-all"
-        style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+        className="portal-header sticky top-0 z-40 border-b text-white shadow-md transition-all"
+        style={{
+          backgroundColor: "#060a12",
+          borderColor: "#1e293b",
+          color: "#ffffff",
+          paddingTop: "env(safe-area-inset-top, 0px)",
+        }}
       >
         <div className="max-w-7xl mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-3">
           {/* Brand Horizontal Logo */}
@@ -904,7 +881,8 @@ const DEFAULT_COMMUNITY_POSTS = [
 
           {/* Desktop Main Navigation with Real URLs */}
           <nav
-            className="hidden md:flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-slate-800"
+            className="hidden md:flex items-center gap-1 p-1 rounded-xl border border-slate-800"
+            style={{ backgroundColor: "#0f172a", borderColor: "#1e293b" }}
             aria-label="Navegación Principal"
           >
             {(
@@ -923,7 +901,7 @@ const DEFAULT_COMMUNITY_POSTS = [
                 className={`px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer ${
                   section === key
                     ? "bg-amber-400 text-slate-950 shadow-2xs"
-                    : "text-slate-300 hover:text-white hover:bg-slate-800/80"
+                    : "text-slate-300 hover:text-white hover:bg-slate-800"
                 }`}
               >
                 {label}
@@ -940,8 +918,13 @@ const DEFAULT_COMMUNITY_POSTS = [
                 className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-black transition border cursor-pointer ${
                   teamsDropdownOpen
                     ? "bg-amber-400 text-slate-950 border-amber-400 shadow-2xs"
-                    : "bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-200"
+                    : "text-slate-200 hover:text-white"
                 }`}
+                style={
+                  teamsDropdownOpen
+                    ? undefined
+                    : { backgroundColor: "#0f172a", borderColor: "#1e293b" }
+                }
                 aria-expanded={teamsDropdownOpen}
                 aria-label="Desplegable de equipos de la LVBP"
               >
@@ -1080,8 +1063,13 @@ const DEFAULT_COMMUNITY_POSTS = [
               className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition border cursor-pointer ${
                 teamsDropdownOpen
                   ? "bg-amber-400 text-slate-950 border-amber-400 shadow-2xs font-black"
-                  : "bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-800"
+                  : "text-slate-200 hover:text-white"
               }`}
+              style={
+                teamsDropdownOpen
+                  ? undefined
+                  : { backgroundColor: "#0f172a", borderColor: "#1e293b", color: "#e2e8f0" }
+              }
               aria-expanded={teamsDropdownOpen}
               aria-label="Desplegable de equipos de la LVBP"
             >
@@ -1825,10 +1813,9 @@ const DEFAULT_COMMUNITY_POSTS = [
                   <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                     Comenta la jornada en tiempo real con fanáticos de los 8 equipos de la LVBP.
                   </p>
-
-                  <form onSubmit={handleCreatePost} className="space-y-3 pt-1">
-                    {/* User Identity Banner or Inputs */}
-                    {currentUser ? (
+                  {/* User Identity Banner or Inputs */}
+                  {currentUser ? (
+                    <form onSubmit={handleCreatePost} className="space-y-3 pt-1">
                       <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-900 border border-slate-800 text-white shadow-xs">
                         <div className="flex items-center gap-2.5 min-w-0">
                           <div
@@ -1859,69 +1846,69 @@ const DEFAULT_COMMUNITY_POSTS = [
                           Cambiar
                         </button>
                       </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          <input
-                            type="text"
-                            value={postAuthor}
-                            onChange={(e) => setPostAuthor(e.target.value)}
-                            placeholder="Tu nombre o apodo..."
-                            maxLength={30}
-                            className="rounded-xl bg-slate-50 border border-slate-200 px-3.5 py-2.5 text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-white"
-                          />
-                          <select
-                            value={postTeam}
-                            onChange={(e) => setPostTeam(e.target.value)}
-                            className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-white"
-                          >
-                            {Object.values(LVBP_TEAMS).map((t) => (
-                              <option key={t.code} value={t.code}>
-                                Fan de {t.nick}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="flex items-center justify-between text-[11px] px-1 text-slate-500">
-                          <span>Comentar como aficionado</span>
+
+                      <div>
+                        <textarea
+                          rows={3}
+                          value={newPostText}
+                          onChange={(e) => setNewPostText(e.target.value)}
+                          placeholder="Escribe tu comentario sobre los juegos de hoy, pronósticos o jugadas..."
+                          maxLength={220}
+                          className="w-full rounded-2xl bg-slate-50 border border-slate-200 p-3 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-white resize-none"
+                        />
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            {220 - newPostText.length} caracteres
+                          </span>
                           <button
-                            type="button"
-                            onClick={() => {
-                              setAuthModalTab("quick");
-                              setAuthModalOpen(true);
-                            }}
-                            className="font-extrabold text-amber-600 hover:underline flex items-center gap-1 cursor-pointer"
+                            type="submit"
+                            disabled={!newPostText.trim()}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 disabled:opacity-40 text-slate-950 font-black text-xs py-2 px-4 transition cursor-pointer shadow-2xs hover:scale-102 active:scale-95"
                           >
-                            <Sparkles className="w-3 h-3 text-amber-500" /> Pase Fan Oficial
+                            <Send className="w-3.5 h-3.5" />
+                            <span>Publicar comentario</span>
                           </button>
                         </div>
                       </div>
-                    )}
-
-                    <div>
-                      <textarea
-                        rows={3}
-                        value={newPostText}
-                        onChange={(e) => setNewPostText(e.target.value)}
-                        placeholder="Escribe tu comentario sobre los juegos de hoy, pronósticos o jugadas..."
-                        maxLength={220}
-                        className="w-full rounded-2xl bg-slate-50 border border-slate-200 p-3 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-white resize-none"
-                      />
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="text-[10px] text-slate-400 font-medium">
-                          {220 - newPostText.length} caracteres
-                        </span>
+                    </form>
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-amber-300/80 bg-amber-50/50 p-5 text-center space-y-3 pt-4">
+                      <div className="w-10 h-10 mx-auto rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black shadow-xs">
+                        <User className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-xs font-black uppercase tracking-wider text-slate-950">
+                          Comenta con tu cuenta de fanático
+                        </h3>
+                        <p className="text-xs text-slate-600 max-w-xs mx-auto mt-1 leading-relaxed">
+                          Para publicar en La Grada en vivo y compartir tus opiniones sobre los juegos necesitas una cuenta activa.
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
                         <button
-                          type="submit"
-                          disabled={!newPostText.trim()}
-                          className="inline-flex items-center gap-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 disabled:opacity-40 text-slate-950 font-black text-xs py-2 px-4 transition cursor-pointer shadow-2xs hover:scale-102 active:scale-95"
+                          type="button"
+                          onClick={() => {
+                            setAuthModalTab("quick");
+                            setAuthModalOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs transition cursor-pointer shadow-2xs active:scale-95"
                         >
-                          <Send className="w-3.5 h-3.5" />
-                          <span>Publicar comentario</span>
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Crear Cuenta Fan</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAuthModalTab("login");
+                            setAuthModalOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 font-bold text-xs transition cursor-pointer active:scale-95"
+                        >
+                          <span>Iniciar Sesión</span>
                         </button>
                       </div>
                     </div>
-                  </form>
+                  )}
                 </div>
 
                 {/* Right Column: Feed of Comments */}
@@ -1936,66 +1923,80 @@ const DEFAULT_COMMUNITY_POSTS = [
                   </div>
 
                   <div className="space-y-3 max-h-[460px] overflow-y-auto pr-1">
-                    {communityPosts.map((post) => {
-                      const club = LVBP_TEAMS[post.team] || LVBP_TEAMS.CAR;
-                      return (
-                        <article
-                          key={post.id}
-                          className="rounded-2xl border border-slate-200/90 bg-slate-50/70 hover:bg-white p-3.5 sm:p-4 space-y-2.5 transition shadow-2xs"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2.5">
-                              <img
-                                src={club.logoSvg}
-                                alt={club.nick}
-                                className="w-8 h-8 object-contain shrink-0"
-                              />
-                              <div>
-                                <strong className="text-xs font-bold text-slate-950 block">
-                                  {post.author}
-                                </strong>
-                                <span className="text-[10px] text-slate-500">
-                                  @{post.username} · {post.time}
-                                </span>
+                    {communityPosts.length > 0 ? (
+                      communityPosts.map((post) => {
+                        const club = LVBP_TEAMS[post.team] || LVBP_TEAMS.CAR;
+                        return (
+                          <article
+                            key={post.id}
+                            className="rounded-2xl border border-slate-200/90 bg-slate-50/70 hover:bg-white p-3.5 sm:p-4 space-y-2.5 transition shadow-2xs"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2.5">
+                                <img
+                                  src={club.logoSvg}
+                                  alt={club.nick}
+                                  className="w-8 h-8 object-contain shrink-0"
+                                />
+                                <div>
+                                  <strong className="text-xs font-bold text-slate-950 block">
+                                    {post.author}
+                                  </strong>
+                                  <span className="text-[10px] text-slate-500">
+                                    @{post.username} · {post.time}
+                                  </span>
+                                </div>
                               </div>
-                            </div>
-                            <span
-                              className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg border text-white shadow-2xs"
-                              style={{ backgroundColor: club.color, borderColor: club.color }}
-                            >
-                              {club.nick}
-                            </span>
-                          </div>
-                          <p className="text-xs sm:text-sm text-slate-800 leading-relaxed font-normal">
-                            {post.text}
-                          </p>
-                          <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
-                            {(
-                              [
-                                ["fuego", "🔥"],
-                                ["aplauso", "👏"],
-                                ["corazon", "❤️"],
-                                ["sorpresa", "😮"],
-                              ] as const
-                            ).map(([rKey, emoji]) => (
-                              <button
-                                key={rKey}
-                                type="button"
-                                onClick={() => handleReactPost(post.id, rKey)}
-                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold border transition cursor-pointer ${
-                                  post.myReaction === rKey
-                                    ? "bg-amber-50 border-amber-400 text-amber-800 shadow-2xs"
-                                    : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
-                                }`}
+                              <span
+                                className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg border text-white shadow-2xs"
+                                style={{ backgroundColor: club.color, borderColor: club.color }}
                               >
-                                <span>{emoji}</span>
-                                <b>{post.reactions[rKey]}</b>
-                              </button>
-                            ))}
-                          </div>
-                        </article>
-                      );
-                    })}
+                                {club.nick}
+                              </span>
+                            </div>
+                            <p className="text-xs sm:text-sm text-slate-800 leading-relaxed font-normal">
+                              {post.text}
+                            </p>
+                            <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+                              {(
+                                [
+                                  ["fuego", "🔥"],
+                                  ["aplauso", "👏"],
+                                  ["corazon", "❤️"],
+                                  ["sorpresa", "😮"],
+                                ] as const
+                              ).map(([rKey, emoji]) => (
+                                <button
+                                  key={rKey}
+                                  type="button"
+                                  onClick={() => handleReactPost(post.id, rKey)}
+                                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold border transition cursor-pointer ${
+                                    post.myReaction === rKey
+                                      ? "bg-amber-50 border-amber-400 text-amber-800 shadow-2xs"
+                                      : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
+                                  }`}
+                                >
+                                  <span>{emoji}</span>
+                                  <b>{post.reactions[rKey]}</b>
+                                </button>
+                              ))}
+                            </div>
+                          </article>
+                        );
+                      })
+                    ) : (
+                      <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-8 text-center space-y-2">
+                        <div className="w-10 h-10 rounded-full bg-white border border-slate-200 text-slate-400 mx-auto flex items-center justify-center shadow-2xs">
+                          <Users className="w-5 h-5 text-amber-500" />
+                        </div>
+                        <p className="text-xs font-bold text-slate-800">
+                          Aún no hay comentarios publicados en esta jornada
+                        </p>
+                        <p className="text-[11px] text-slate-400">
+                          Sé el primero en compartir tu pronóstico o jugada del día con los fanáticos.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

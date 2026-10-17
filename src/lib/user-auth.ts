@@ -1,4 +1,5 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { indexRegisteredUser } from "@/lib/admin-store";
 
 export interface UserProfile {
   id: string;
@@ -69,7 +70,7 @@ export async function quickFanLogin(
   favoriteTeam: string
 ): Promise<{ user: UserProfile; token: string }> {
   const kv = await getKvStore();
-  const cleanName = name.trim().slice(0, 32) || "Fanático LVBP";
+  const cleanName = name.trim().slice(0, 32) || "Fanático";
   const id = `fan_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   const handle = generateFanHandle(cleanName);
 
@@ -78,13 +79,14 @@ export async function quickFanLogin(
     name: cleanName,
     handle,
     favoriteTeam: favoriteTeam.trim().toUpperCase() || "CAR",
-    badge: "Fan Oficial LVBP",
+    badge: "Fan EnJuego",
     quinielaPoints: 0,
     createdAt: Date.now(),
   };
 
   const account: StoredUserAccount = { profile };
   await kv.put(`auth:user:${id}`, JSON.stringify(account), { expirationTtl: 86400 * 365 });
+  await indexRegisteredUser(profile).catch(() => {});
 
   return {
     user: profile,
@@ -114,7 +116,7 @@ export async function registerUser(
     throw new Error("Este correo electrónico ya está registrado. Por favor inicia sesión.");
   }
 
-  const cleanName = name.trim().slice(0, 32) || "Fanático LVBP";
+  const cleanName = name.trim().slice(0, 32) || "Fanático";
   const id = `usr_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   const passwordHash = await hashPassword(password);
   const handle = generateFanHandle(cleanName);
@@ -125,7 +127,7 @@ export async function registerUser(
     email: cleanEmail,
     handle,
     favoriteTeam: favoriteTeam.trim().toUpperCase() || "CAR",
-    badge: "Fan Oficial LVBP",
+    badge: "Cuenta Verificada",
     quinielaPoints: 0,
     createdAt: Date.now(),
   };
@@ -133,6 +135,7 @@ export async function registerUser(
   const account: StoredUserAccount = { profile, passwordHash };
   await kv.put(`auth:user:${id}`, JSON.stringify(account), { expirationTtl: 86400 * 365 });
   await kv.put(`auth:email:${cleanEmail}`, id, { expirationTtl: 86400 * 365 });
+  await indexRegisteredUser(profile).catch(() => {});
 
   return {
     user: profile,
@@ -163,6 +166,8 @@ export async function loginUser(
   if (account.passwordHash && account.passwordHash !== hash) {
     throw new Error("Contraseña incorrecta. Por favor verifica e intenta de nuevo.");
   }
+
+  await indexRegisteredUser(account.profile).catch(() => {});
 
   return {
     user: account.profile,
@@ -202,6 +207,7 @@ export async function updateUserProfile(
 
   account.profile = updatedProfile;
   await kv.put(`auth:user:${id}`, JSON.stringify(account), { expirationTtl: 86400 * 365 });
+  await indexRegisteredUser(updatedProfile).catch(() => {});
 
   return updatedProfile;
 }

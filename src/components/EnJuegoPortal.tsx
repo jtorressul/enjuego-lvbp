@@ -585,6 +585,54 @@ export function EnJuegoPortal({
 
   const dayFormatted = formatCompactDay(activeDate);
 
+  // Real-time visitor presence heartbeat for /admin monitor
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let sessionId = window.sessionStorage.getItem("enjuego_live_sid");
+    if (!sessionId) {
+      sessionId = `sid_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      window.sessionStorage.setItem("enjuego_live_sid", sessionId);
+    }
+
+    const getSectionLabel = () => {
+      if (section === "home") return "Inicio";
+      if (section === "resultados") return "Resultados / Pizarra";
+      if (section === "juego") return `Gameday #${selectedGameId || ""}`;
+      if (section === "calendario") return "Calendario";
+      if (section === "posiciones") return "Tabla de Posiciones";
+      if (section === "lideres") return "Líderes";
+      if (section === "equipos") return `Roster · ${selectedTeamCode}`;
+      return "Inicio";
+    };
+
+    const sendHeartbeat = () => {
+      const isMobile =
+        window.innerWidth < 768 ||
+        /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+
+      fetch("/api/banners", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "heartbeat",
+          sessionId,
+          userId: currentUser?.id,
+          userName: currentUser?.name || "Visitante",
+          userHandle: currentUser?.handle,
+          favoriteTeam: currentUser?.favoriteTeam || favoriteTeamCode || selectedTeamCode,
+          isRegistered: Boolean(currentUser?.id),
+          path: window.location.pathname + window.location.search,
+          sectionLabel: getSectionLabel(),
+          device: isMobile ? "mobile" : "desktop",
+        }),
+      }).catch(() => {});
+    };
+
+    sendHeartbeat();
+    const interval = setInterval(sendHeartbeat, 25_000);
+    return () => clearInterval(interval);
+  }, [section, selectedGameId, selectedTeamCode, currentUser, favoriteTeamCode]);
+
   // Filtered calendar games
   const filteredCalendarGames = useMemo(() => {
     return schedule.filter((g) => {

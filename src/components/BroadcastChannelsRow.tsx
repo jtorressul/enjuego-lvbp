@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Tv, ExternalLink, Info, X } from "lucide-react";
+import { Tv, ExternalLink, Info, X, Play } from "lucide-react";
 import { getChannelInfo, openOfficialBroadcast, BroadcastChannelInfo } from "@/lib/official-broadcast-links";
 
 interface BroadcastChannelsRowProps {
@@ -25,10 +25,13 @@ export function BroadcastChannelsRow({
     e.stopPropagation();
     const info = getChannelInfo(ch);
     if (info.type === "cable_network" && info.dialInfo) {
-      // Show cable dial modal or open site
+      // Show cable dial modal
       setSelectedCableChannel(info);
+    } else if (info.isOpenTv) {
+      // Open TV channel -> opens in floating PiP window!
+      openOfficialBroadcast(ch, gameTitle, "pip");
     } else {
-      openOfficialBroadcast(ch, gameTitle);
+      openOfficialBroadcast(ch, gameTitle, "popout");
     }
   };
 
@@ -55,6 +58,21 @@ export function BroadcastChannelsRow({
     if (norm.includes("meridiano")) {
       return "bg-emerald-600/10 text-emerald-700 hover:bg-emerald-600 hover:text-white border-emerald-200";
     }
+    if (norm.includes("tves") || norm.includes("teves")) {
+      return "bg-rose-600/10 text-rose-700 hover:bg-rose-600 hover:text-white border-rose-200";
+    }
+    if (norm.includes("vtv")) {
+      return "bg-slate-700/10 text-slate-800 hover:bg-slate-800 hover:text-white border-slate-300";
+    }
+    if (norm.includes("canal i") || norm.includes("canali")) {
+      return "bg-indigo-600/10 text-indigo-700 hover:bg-indigo-600 hover:text-white border-indigo-200";
+    }
+    if (norm.includes("tlt")) {
+      return "bg-violet-600/10 text-violet-700 hover:bg-violet-600 hover:text-white border-violet-200";
+    }
+    if (norm.includes("1baseball")) {
+      return "bg-sky-600/10 text-sky-700 hover:bg-sky-600 hover:text-white border-sky-200";
+    }
     return "bg-slate-100 text-slate-700 hover:bg-slate-800 hover:text-white border-slate-200";
   };
 
@@ -67,14 +85,21 @@ export function BroadcastChannelsRow({
 
         {channels.map((ch) => {
           const info = getChannelInfo(ch);
-          const isStream = info.type === "open_stream" || info.type === "digital_stream";
+          const isOpenTv = info.isOpenTv;
+          const isCable = info.type === "cable_network";
 
           return (
             <button
               key={ch}
               type="button"
               onClick={(e) => handleChannelClick(e, ch)}
-              title={`${info.description} · Clic para ${isStream ? "abrir transmisión oficial" : "ver guía de canal"}`}
+              title={
+                isOpenTv
+                  ? `${info.name} (Señal abierta nacional) · Clic para ver transmisión en vivo en ventanita PiP`
+                  : isCable
+                  ? `${info.name} (Por suscripción / cable) · Clic para ver diales en operadoras`
+                  : `${info.description} · Clic para abrir`
+              }
               className={`inline-flex items-center gap-1 rounded-md border font-extrabold transition cursor-pointer select-none ${getStyleForChannel(
                 ch
               )} ${
@@ -84,10 +109,12 @@ export function BroadcastChannelsRow({
               }`}
             >
               <span>{ch}</span>
-              {isStream ? (
-                <ExternalLink className="w-2.5 h-2.5 opacity-70 group-hover:opacity-100 shrink-0" />
-              ) : (
+              {isOpenTv ? (
+                <Play className="w-2.5 h-2.5 fill-current shrink-0" />
+              ) : isCable ? (
                 <Info className="w-2.5 h-2.5 opacity-60 shrink-0" />
+              ) : (
+                <ExternalLink className="w-2.5 h-2.5 opacity-70 group-hover:opacity-100 shrink-0" />
               )}
             </button>
           );
@@ -155,7 +182,7 @@ export function BroadcastChannelsRow({
                   <button
                     type="button"
                     onClick={() => {
-                      openOfficialBroadcast(selectedCableChannel.name, gameTitle);
+                      openOfficialBroadcast(selectedCableChannel.name, gameTitle, "popout");
                       setSelectedCableChannel(null);
                     }}
                     className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition cursor-pointer shadow-2xs"

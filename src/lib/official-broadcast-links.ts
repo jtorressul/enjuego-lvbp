@@ -3,6 +3,7 @@ export interface BroadcastChannelInfo {
   officialUrl?: string;
   badgeLabel: string;
   type: "open_stream" | "digital_stream" | "cable_network";
+  isOpenTv: boolean;
   dialInfo?: string;
   description: string;
 }
@@ -13,41 +14,47 @@ export const OFFICIAL_BROADCAST_CHANNELS: Record<string, BroadcastChannelInfo> =
     officialUrl: "https://www.venevisionplay.com/player/channel/63ebefc9949c830012620602",
     badgeLabel: "Venevisión Play",
     type: "open_stream",
+    isOpenTv: true,
     description: "Señal abierta nacional y streaming oficial gratuito en Venevisión Play.",
   },
   "Televen": {
     name: "Televen",
-    officialUrl: "https://televen.com/en-vivo/",
+    officialUrl: "https://app.televen.com/",
     badgeLabel: "Televen Stream",
     type: "open_stream",
-    description: "Señal abierta nacional y streaming oficial en vivo en Televen Stream.",
+    isOpenTv: true,
+    description: "Señal abierta nacional y streaming oficial en vivo en Televen Stream / Televen MAX.",
   },
   "BeisbolPlay": {
     name: "BeisbolPlay",
     officialUrl: "https://www.beisbolplay.com/lvbp-envivo",
     badgeLabel: "BeisbolPlay",
     type: "digital_stream",
-    description: "Plataforma oficial de streaming con el 100% de los juegos de la LVBP en vivo.",
+    isOpenTv: false,
+    description: "Plataforma oficial de streaming con el 100% de los juegos de la LVBP en vivo por suscripción.",
   },
   "YouTube": {
     name: "YouTube",
     officialUrl: "https://www.youtube.com/@LVBP_Oficial/streams",
     badgeLabel: "YouTube LVBP",
     type: "open_stream",
-    description: "Transmisiones oficiales gratuitas de los lunes de LVBP en su canal de YouTube.",
+    isOpenTv: true,
+    description: "Transmisiones oficiales gratuitas en el canal oficial de YouTube de la LVBP.",
   },
   "Meridiano TV": {
     name: "Meridiano TV",
     officialUrl: "https://meridiano.net/",
     badgeLabel: "Meridiano TV",
     type: "open_stream",
-    description: "Canal especialista en deportes de señal abierta y cable en Venezuela.",
+    isOpenTv: true,
+    description: "Canal especialista en deportes por señal abierta y cable en Venezuela.",
   },
   "IVC": {
     name: "IVC",
     officialUrl: "https://ivcnetworks.com/",
     badgeLabel: "IVC Network",
     type: "cable_network",
+    isOpenTv: false,
     dialInfo: "SimpleTV: 111 / HD 1111 · Inter: 102 / HD 100 · NetUno: 105",
     description: "Cadena deportiva por suscripción con transmisiones exclusivas de la LVBP.",
   },
@@ -56,6 +63,7 @@ export const OFFICIAL_BROADCAST_CHANNELS: Record<string, BroadcastChannelInfo> =
     officialUrl: "https://inter.com.ve/bymsport/",
     badgeLabel: "ByM Sport",
     type: "cable_network",
+    isOpenTv: false,
     dialInfo: "Inter: 100 / HD 189 · SimpleTV: 610 / HD 1610",
     description: "Canal deportivo exclusivo de Inter y SimpleTV para la temporada de béisbol.",
   },
@@ -64,48 +72,95 @@ export const OFFICIAL_BROADCAST_CHANNELS: Record<string, BroadcastChannelInfo> =
     officialUrl: "https://1baseballnetwork.com/",
     badgeLabel: "1Baseball",
     type: "cable_network",
+    isOpenTv: false,
     dialInfo: "SimpleTV: 119 / HD 1119 · Inter: 111",
     description: "Canal temático de béisbol con cobertura de la LVBP en televisión por suscripción.",
   },
   "Canal i": {
     name: "Canal i",
-    officialUrl: "https://canal-i.com/",
+    officialUrl: "https://canal-i.com/en-vivo/",
     badgeLabel: "Canal i",
     type: "open_stream",
+    isOpenTv: true,
     description: "Señal abierta nacional con transmisiones selectas de béisbol profesional.",
   },
   "TVES": {
     name: "TVES",
-    officialUrl: "https://tves.gob.ve/",
+    officialUrl: "https://www.tves.gob.ve/en-vivo/",
     badgeLabel: "TVES",
     type: "open_stream",
+    isOpenTv: true,
     description: "Señal abierta nacional de televisión pública venezolana.",
   },
   "VTV": {
     name: "VTV",
-    officialUrl: "https://vtv.gob.ve/",
+    officialUrl: "https://www.vtv.gob.ve/en-vivo/",
     badgeLabel: "VTV",
     type: "open_stream",
+    isOpenTv: true,
     description: "Señal abierta nacional con encuentros selectos de la LVBP.",
   },
+  "TLT": {
+    name: "TLT",
+    officialUrl: "https://lateletuya.com/",
+    badgeLabel: "TLT La Tele Tuya",
+    type: "open_stream",
+    isOpenTv: true,
+    description: "Señal abierta de televisión venezolana con transmisiones deportivas.",
+  },
 };
+
+export function cleanChannelName(str: string): string {
+  if (!str) return "";
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+export function isOpenTvChannel(channelName: string): boolean {
+  if (!channelName) return false;
+  const clean = cleanChannelName(channelName);
+  return (
+    clean.includes("venevision") ||
+    clean.includes("televen") ||
+    clean.includes("meridiano") ||
+    clean.includes("tves") ||
+    clean.includes("teves") ||
+    clean.includes("vtv") ||
+    clean.includes("canal i") ||
+    clean.includes("canali") ||
+    clean.includes("tlt") ||
+    clean.includes("youtube")
+  );
+}
+
+export function filterOpenTvChannels(channels: string[]): string[] {
+  if (!Array.isArray(channels)) return [];
+  return channels.filter(isOpenTvChannel);
+}
 
 export function getChannelInfo(rawChannel: string): BroadcastChannelInfo {
   const norm = rawChannel.trim();
   if (OFFICIAL_BROADCAST_CHANNELS[norm]) {
     return OFFICIAL_BROADCAST_CHANNELS[norm];
   }
-  // Check partial match
+  const cleanTarget = cleanChannelName(norm);
   for (const [key, val] of Object.entries(OFFICIAL_BROADCAST_CHANNELS)) {
-    if (norm.toLowerCase().includes(key.toLowerCase()) || key.toLowerCase().includes(norm.toLowerCase())) {
+    const cleanKey = cleanChannelName(key);
+    if (cleanTarget.includes(cleanKey) || cleanKey.includes(cleanTarget)) {
       return val;
     }
   }
+
+  const isOpen = isOpenTvChannel(rawChannel);
   return {
     name: norm,
     badgeLabel: norm,
-    type: "digital_stream",
-    officialUrl: "https://www.beisbolplay.com/lvbp-envivo",
+    type: isOpen ? "open_stream" : "digital_stream",
+    isOpenTv: isOpen,
+    officialUrl: isOpen ? undefined : "https://www.beisbolplay.com/lvbp-envivo",
     description: `Transmisión oficial de ${norm} para la LVBP.`,
   };
 }
@@ -152,11 +207,8 @@ export function openOfficialBroadcast(
     "scrollbars=yes",
   ].join(",");
 
-  const popout = window.open(
-    targetUrl,
-    `EnJuego_${info.name.replace(/\s+/g, "_")}`,
-    windowFeatures
-  );
+  const popoutName = `EnJuego_${info.name.replace(/[^a-zA-Z0-9]/g, "_")}`;
+  const popout = window.open(targetUrl, popoutName, windowFeatures);
 
   if (!popout || popout.closed || typeof popout.closed === "undefined") {
     // Popup was blocked by browser, fallback to standard new tab

@@ -4,6 +4,7 @@
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-04-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
   "assets": {
     "binding": "ASSETS",
     "directory": ".open-next/assets"
@@ -11,6 +12,16 @@
   "observability": {
     "enabled": true
   },
+  "routes": [
+    {
+      "pattern": "enjuego.online",
+      "custom_domain": true
+    },
+    {
+      "pattern": "www.enjuego.online",
+      "custom_domain": true
+    }
+  ],
   "kv_namespaces": [
     {
       "binding": "ENJUEGO_KV",

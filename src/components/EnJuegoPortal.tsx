@@ -435,7 +435,7 @@ export function EnJuegoPortal({
     const url =
       typeof window !== "undefined"
         ? `${window.location.origin}/juego/${game.id}`
-        : `https://enjuego-lvbp.panadrive-app.workers.dev/juego/${game.id}`;
+        : `https://enjuego.online/juego/${game.id}`;
     const played = game.status === "IN_PROGRESS" || game.status === "FINISHED";
     const scoreText = played
       ? `${game.awayTeam.nick} ${game.awayScore} - ${game.homeScore} ${game.homeTeam.nick} (${game.inning})`

@@ -9,7 +9,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://enjuego-lvbp.panadrive-app.workers.dev"),
+  metadataBase: new URL("https://enjuego.online"),
   title: "En Juego · Béisbol Venezolano — Marcadores, Jugada a Jugada y Estadísticas",
   description:
     "Resultados y marcadores en vivo de la temporada de béisbol venezolano: jugada a jugada, alineaciones, box score, canales de TV en vivo, líderes individuales y tabla de posiciones.",
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     title: "En Juego · Béisbol Venezolano en Vivo",
     description:
       "Sigue la LVBP en tiempo real: marcadores en vivo, jugada a jugada, estadísticas, transmisiones de televisión y la comunidad de fanáticos.",
-    url: "https://enjuego-lvbp.panadrive-app.workers.dev",
+    url: "https://enjuego.online",
     siteName: "En Juego · Béisbol Venezolano",
     images: [
       {

@@ -201,7 +201,7 @@ export function AuthModal({
   const activeTeamObj = LVBP_TEAMS[selectedTeam] || LVBP_TEAMS["CAR"];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-150">
       <div
         className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden text-slate-900"
         role="dialog"
@@ -210,17 +210,23 @@ export function AuthModal({
       >
         {/* Modal Header */}
         <div
-          className="auth-header p-5 border-b flex items-center justify-between text-white"
+          className="auth-header p-4 sm:p-5 border-b flex items-center justify-between text-white"
           style={{ backgroundColor: "#060a12", borderColor: "#1e293b" }}
         >
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             <img src="/logo.png" alt="En Juego" className="h-6 sm:h-7 w-auto object-contain" />
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-black italic tracking-tight bg-gradient-to-r from-red-950/70 via-slate-900/90 to-slate-900/90 border border-red-500/40 text-white shadow-[0_0_8px_rgba(239,68,68,0.25)] select-none">
-              <span className="text-red-500 font-black text-xs leading-none mr-0.5 drop-shadow-[0_0_6px_rgba(239,68,68,0.8)]">.</span>
-              <span className="text-white font-black tracking-wide">online</span>
-              <span className="ml-1 w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_6px_#ef4444]" />
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black italic tracking-tight shadow-xs select-none"
+              style={{
+                background: "linear-gradient(135deg, #e11d48 0%, #be123c 100%)",
+                color: "#ffffff",
+                border: "1px solid rgba(251, 113, 133, 0.45)",
+              }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse shrink-0" />
+              <span style={{ color: "#ffffff" }}>.online</span>
             </span>
-            <span className="text-xs font-bold text-slate-400 border-l border-slate-700 pl-2.5">
+            <span className="hidden sm:inline text-xs font-bold text-slate-400 border-l border-slate-700 pl-2.5">
               Comunidad LVBP
             </span>
           </div>

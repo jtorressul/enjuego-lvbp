@@ -867,9 +867,9 @@ export function EnJuegoPortal({
           paddingTop: "env(safe-area-inset-top, 0px)",
         }}
       >
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-3">
-          {/* Brand Horizontal Logo */}
-          <div className="flex items-center shrink-0">
+        <div className="max-w-7xl mx-auto px-2.5 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-3">
+          {/* Brand Horizontal Logo + .online Pill */}
+          <div className="flex items-center shrink-0 min-w-0">
             <Link
               href="/inicio"
               className="flex items-center gap-1.5 sm:gap-2 py-1 group cursor-pointer select-none"
@@ -878,19 +878,25 @@ export function EnJuegoPortal({
               <img
                 src="/logo.png"
                 alt="En Juego · Béisbol Venezolano"
-                className="h-7 sm:h-8 md:h-9 w-auto max-w-[135px] sm:max-w-[165px] md:max-w-[180px] object-contain transition-transform group-hover:scale-102"
+                className="h-6 sm:h-8 md:h-9 w-auto max-w-[118px] sm:max-w-[160px] md:max-w-[180px] object-contain transition-transform group-hover:scale-102 shrink-0"
               />
-              <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-md text-[10px] sm:text-xs font-black italic tracking-tight bg-gradient-to-r from-red-950/70 via-slate-900/90 to-slate-900/90 border border-red-500/40 text-white shadow-[0_0_10px_rgba(239,68,68,0.3)] group-hover:border-red-400 group-hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] transition-all">
-                <span className="text-red-500 font-black text-xs sm:text-sm leading-none mr-0.5 drop-shadow-[0_0_6px_rgba(239,68,68,0.8)]">.</span>
-                <span className="text-white font-black tracking-wide">online</span>
-                <span className="ml-1 sm:ml-1.5 w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_6px_#ef4444]" />
+              <span
+                className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md text-[10px] sm:text-xs font-black italic tracking-tight shadow-sm transition-transform group-hover:scale-105 shrink-0"
+                style={{
+                  background: "linear-gradient(135deg, #e11d48 0%, #be123c 100%)",
+                  color: "#ffffff",
+                  border: "1px solid rgba(251, 113, 133, 0.45)",
+                }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse shrink-0" />
+                <span style={{ color: "#ffffff" }}>.online</span>
               </span>
             </Link>
           </div>
 
-          {/* Desktop Main Navigation with Real URLs */}
+          {/* Desktop Main Navigation with Real URLs (lg+ to match right controls) */}
           <nav
-            className="hidden md:flex items-center gap-1 p-1 rounded-xl border border-slate-800"
+            className="hidden lg:flex items-center gap-1 p-1 rounded-xl border border-slate-800"
             style={{ backgroundColor: "#0f172a", borderColor: "#1e293b" }}
             aria-label="Navegación Principal"
           >
@@ -919,7 +925,7 @@ export function EnJuegoPortal({
           </nav>
 
           {/* Desktop Right Quick Bar: Equipos Dropdown + Quick Icon Strip */}
-          <div className="hidden lg:flex items-center gap-2" ref={teamsDropdownRef}>
+          <div className="hidden lg:flex items-center gap-2 shrink-0" ref={teamsDropdownRef}>
             <div className="relative">
               <button
                 type="button"
@@ -932,7 +938,7 @@ export function EnJuegoPortal({
                 style={
                   teamsDropdownOpen
                     ? undefined
-                    : { backgroundColor: "#0f172a", borderColor: "#1e293b" }
+                    : { backgroundColor: "#0f172a", borderColor: "#1e293b", color: "#f8fafc" }
                 }
                 aria-expanded={teamsDropdownOpen}
                 aria-label="Desplegable de equipos de la LVBP"
@@ -952,18 +958,27 @@ export function EnJuegoPortal({
 
               {/* DESKTOP TEAMS DROPDOWN */}
               {teamsDropdownOpen && (
-                <div className="absolute right-0 top-full mt-2 w-80 rounded-2xl bg-white border border-slate-200 shadow-2xl p-3 z-50 text-slate-900 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div
+                  className="absolute right-0 top-full mt-2 w-80 rounded-2xl bg-white border border-slate-200 shadow-2xl p-3 z-50 text-slate-900 animate-in fade-in slide-in-from-top-2 duration-150"
+                  style={{ backgroundColor: "#ffffff", color: "#0f172a" }}
+                >
                   <div className="flex items-center justify-between px-1 pb-2 mb-2 border-b border-slate-100">
                     <div>
-                      <div className="text-xs font-black text-slate-950 flex items-center gap-1.5">
+                      <div
+                        className="text-xs font-black flex items-center gap-1.5"
+                        style={{ color: "#0f172a" }}
+                      >
                         <Users className="w-3.5 h-3.5 text-amber-600" /> Equipos LVBP
                       </div>
-                      <p className="text-[10px] text-slate-400">8 franquicias oficiales</p>
+                      <p className="text-[10px]" style={{ color: "#64748b" }}>
+                        8 franquicias de la liga
+                      </p>
                     </div>
                     <Link
                       href="/teams"
                       onClick={() => setTeamsDropdownOpen(false)}
-                      className="text-[11px] font-extrabold text-amber-600 hover:text-amber-700 hover:underline"
+                      className="text-[11px] font-extrabold hover:underline"
+                      style={{ color: "#d97706" }}
                     >
                       Directorio ›
                     </Link>
@@ -983,9 +998,10 @@ export function EnJuegoPortal({
                           }}
                           className={`flex items-center gap-2 p-2 rounded-xl border text-xs transition cursor-pointer group ${
                             isSelected
-                              ? "bg-amber-50/90 border-amber-400 ring-1 ring-amber-400/40 text-slate-950 font-black shadow-2xs"
-                              : "bg-slate-50/70 hover:bg-slate-100 border-slate-200 text-slate-800 font-bold"
+                              ? "bg-amber-50 border-amber-400 ring-1 ring-amber-400/40 font-black shadow-2xs"
+                              : "bg-slate-50 hover:bg-slate-100 border-slate-200 font-bold"
                           }`}
+                          style={{ color: "#0f172a" }}
                         >
                           <div
                             className="w-7 h-7 rounded-full p-1 bg-white border border-slate-200 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition"
@@ -998,10 +1014,16 @@ export function EnJuegoPortal({
                             />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="truncate leading-tight text-xs font-extrabold">
+                            <div
+                              className="truncate leading-tight text-xs font-extrabold"
+                              style={{ color: "#0f172a" }}
+                            >
                               {team.nick}
                             </div>
-                            <div className="text-[10px] text-slate-400 truncate font-medium">
+                            <div
+                              className="text-[10px] truncate font-medium"
+                              style={{ color: "#64748b" }}
+                            >
                               {team.city}
                             </div>
                           </div>
@@ -1024,7 +1046,8 @@ export function EnJuegoPortal({
                   setAuthModalTab("profile");
                   setAuthModalOpen(true);
                 }}
-                className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white border border-slate-700/80 text-xs font-bold transition cursor-pointer shadow-2xs hover:border-amber-400"
+                className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-white border text-xs font-bold transition cursor-pointer shadow-2xs hover:border-amber-400"
+                style={{ backgroundColor: "#0f172a", borderColor: "#1e293b", color: "#ffffff" }}
                 title="Ver tu perfil de fanático y equipo favorito"
               >
                 <div
@@ -1063,13 +1086,13 @@ export function EnJuegoPortal({
             )}
           </div>
 
-          {/* Mobile Right Controls: Equipos Dropdown Button + Profile + Hamburger Button */}
-          <div className="flex lg:hidden items-center gap-1.5 sm:gap-2">
+          {/* Mobile & Tablet Right Controls (<1024px): Equipos Dropdown Button + Profile + Hamburger Button */}
+          <div className="flex lg:hidden items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               ref={mobileTeamsButtonRef}
               type="button"
               onClick={() => setTeamsDropdownOpen((prev) => !prev)}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition border cursor-pointer ${
+              className={`inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-bold transition border cursor-pointer ${
                 teamsDropdownOpen
                   ? "bg-amber-400 text-slate-950 border-amber-400 shadow-2xs font-black"
                   : "text-slate-200 hover:text-white"
@@ -1085,11 +1108,16 @@ export function EnJuegoPortal({
               <img
                 src={LVBP_TEAMS[selectedTeamCode]?.logoSvg || LVBP_OFFICIAL_LOGO}
                 alt=""
-                className="w-4 h-4 object-contain"
+                className="w-4 h-4 object-contain shrink-0"
               />
-              <span className="font-extrabold">{LVBP_TEAMS[selectedTeamCode]?.nick || "Equipos"}</span>
+              <span className="font-extrabold sm:hidden">
+                {LVBP_TEAMS[selectedTeamCode]?.shortName || "LVBP"}
+              </span>
+              <span className="font-extrabold hidden sm:inline">
+                {LVBP_TEAMS[selectedTeamCode]?.nick || "Equipos"}
+              </span>
               <ChevronDown
-                className={`w-3 h-3 transition-transform duration-200 ${
+                className={`w-3 h-3 transition-transform duration-200 shrink-0 ${
                   teamsDropdownOpen ? "rotate-180 text-slate-950" : "text-slate-400"
                 }`}
               />
@@ -1120,10 +1148,10 @@ export function EnJuegoPortal({
                 setTeamsDropdownOpen(false);
                 setMobileDrawerOpen(true);
               }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition cursor-pointer shadow-2xs active:scale-95"
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition cursor-pointer shadow-2xs active:scale-95 shrink-0"
               aria-label="Abrir Menú Principal"
             >
-              <Menu className="w-4 h-4" />
+              <Menu className="w-4 h-4 shrink-0" />
               <span>Menú</span>
             </button>
           </div>
@@ -1132,7 +1160,7 @@ export function EnJuegoPortal({
 
       {/* MOBILE TEAMS SELECTOR MODAL (CENTERED WITH BACKDROP TO PREVENT SCREEN OVERFLOW) */}
       {teamsDropdownOpen && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center p-3.5 pt-18 sm:pt-20 lg:hidden animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-[100] flex items-start justify-center p-3.5 pt-16 sm:pt-20 lg:hidden animate-in fade-in duration-150">
           {/* Backdrop overlay */}
           <div
             className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs transition-opacity"
@@ -1142,7 +1170,7 @@ export function EnJuegoPortal({
           {/* Modal Dialog Card */}
           <div
             ref={mobileTeamsModalRef}
-            className="relative w-full max-w-sm rounded-2xl bg-white border border-slate-200 shadow-2xl p-4 z-10 text-slate-900 animate-in zoom-in-95 duration-150 max-h-[82vh] overflow-y-auto"
+            className="relative w-full max-w-sm rounded-2xl bg-white border border-slate-200 shadow-2xl p-4 z-10 text-slate-900 animate-in zoom-in-95 duration-150 max-h-[82dvh] overflow-y-auto"
           >
             <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
@@ -1227,12 +1255,12 @@ export function EnJuegoPortal({
         <div className="fixed inset-0 z-[100] flex justify-end lg:hidden animate-in fade-in duration-150">
           {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity"
+            className="fixed inset-0 bg-slate-950/65 backdrop-blur-xs transition-opacity"
             onClick={() => setMobileDrawerOpen(false)}
           />
 
           {/* Drawer Panel */}
-          <div className="relative w-full max-w-xs sm:max-w-sm bg-white h-full shadow-2xl flex flex-col z-10 overflow-hidden">
+          <div className="relative w-full max-w-xs sm:max-w-sm bg-white h-dvh shadow-2xl flex flex-col z-10 overflow-hidden">
             {/* Drawer Header with Dark Theme Contrast for Logo - STICKY & PINNED */}
             <div
               className="drawer-header p-4 border-b flex items-center justify-between text-white shrink-0 sticky top-0 z-20 shadow-xs"
@@ -1244,17 +1272,23 @@ export function EnJuegoPortal({
             >
               <div className="flex items-center gap-2">
                 <img src="/logo.png" alt="En Juego" className="h-7 w-auto object-contain" />
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-black italic tracking-tight bg-gradient-to-r from-red-950/70 via-slate-900/90 to-slate-900/90 border border-red-500/40 text-white shadow-[0_0_10px_rgba(239,68,68,0.3)] select-none">
-                  <span className="text-red-500 font-black text-xs leading-none mr-0.5 drop-shadow-[0_0_6px_rgba(239,68,68,0.8)]">.</span>
-                  <span className="text-white font-black tracking-wide">online</span>
-                  <span className="ml-1 w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_6px_#ef4444]" />
+                <span
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black italic tracking-tight shadow-xs select-none"
+                  style={{
+                    background: "linear-gradient(135deg, #e11d48 0%, #be123c 100%)",
+                    color: "#ffffff",
+                    border: "1px solid rgba(251, 113, 133, 0.45)",
+                  }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse shrink-0" />
+                  <span style={{ color: "#ffffff" }}>.online</span>
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setMobileDrawerOpen(false)}
                 className="p-2 rounded-xl text-slate-300 hover:text-white transition cursor-pointer active:scale-95"
-                style={{ backgroundColor: "#0f172a" }}
+                style={{ backgroundColor: "#0f172a", border: "1px solid #1e293b" }}
                 aria-label="Cerrar Menú"
               >
                 <X className="w-5 h-5" />
@@ -1262,7 +1296,7 @@ export function EnJuegoPortal({
             </div>
 
             {/* Scrollable Drawer Body */}
-            <div className="flex-1 overflow-y-auto overscroll-contain pb-12">
+            <div className="flex-1 overflow-y-auto overscroll-contain pb-10">
 
             {/* Fan Profile / Login Card in Drawer */}
             <div className="p-3.5 bg-slate-50 border-b border-slate-200">
@@ -1285,7 +1319,7 @@ export function EnJuegoPortal({
                       <div className="text-[10px] text-slate-400 truncate">{currentUser.handle}</div>
                       <div className="text-[10px] text-amber-600 font-extrabold flex items-center gap-1 mt-0.5">
                         <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
-                        {LVBP_TEAMS[currentUser.favoriteTeam]?.name || "Fan Oficial"}
+                        {LVBP_TEAMS[currentUser.favoriteTeam]?.name || "Fan LVBP"}
                       </div>
                     </div>
                   </div>
@@ -1314,14 +1348,26 @@ export function EnJuegoPortal({
                   </div>
                 </div>
               ) : (
-                <div className="p-3 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 text-white shadow-2xs keep-dark">
+                <div
+                  className="p-3.5 rounded-2xl shadow-xs"
+                  style={{
+                    background: "linear-gradient(135deg, #0b1324 0%, #162447 100%)",
+                    border: "1px solid #1e293b",
+                    color: "#ffffff",
+                  }}
+                >
                   <div className="flex items-start gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black shrink-0">
+                    <div
+                      className="w-8 h-8 rounded-xl flex items-center justify-center font-black shrink-0"
+                      style={{ backgroundColor: "#f59e0b", color: "#0f172a" }}
+                    >
                       <Sparkles className="w-4 h-4" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="text-xs font-black text-amber-400">Perfil de Fanático</div>
-                      <p className="text-[11px] text-slate-300 leading-snug mt-0.5">
+                      <div className="text-xs font-black" style={{ color: "#fbbf24" }}>
+                        Perfil de Fanático
+                      </div>
+                      <p className="text-[11px] leading-snug mt-0.5" style={{ color: "#cbd5e1" }}>
                         Guarda tu equipo, participa en la quiniela y comenta en vivo.
                       </p>
                     </div>
@@ -1334,7 +1380,8 @@ export function EnJuegoPortal({
                         setAuthModalTab("quick");
                         setAuthModalOpen(true);
                       }}
-                      className="flex-1 py-1.5 px-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs text-center transition cursor-pointer"
+                      className="flex-1 py-2 px-2.5 rounded-xl font-black text-xs text-center transition cursor-pointer shadow-xs"
+                      style={{ backgroundColor: "#f59e0b", color: "#0f172a" }}
                     >
                       Entrar como Fan ⚡
                     </button>
@@ -1345,7 +1392,12 @@ export function EnJuegoPortal({
                         setAuthModalTab("login");
                         setAuthModalOpen(true);
                       }}
-                      className="py-1.5 px-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition cursor-pointer"
+                      className="py-2 px-3 rounded-xl font-bold text-xs transition cursor-pointer"
+                      style={{
+                        backgroundColor: "#1e293b",
+                        color: "#f8fafc",
+                        border: "1px solid #334155",
+                      }}
                     >
                       Login
                     </button>
@@ -1842,7 +1894,14 @@ export function EnJuegoPortal({
                   {/* User Identity Banner or Inputs */}
                   {currentUser ? (
                     <form onSubmit={handleCreatePost} className="space-y-3 pt-1">
-                      <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-900 border border-slate-800 text-white shadow-xs">
+                      <div
+                        className="flex items-center justify-between p-3 rounded-2xl border shadow-xs"
+                        style={{
+                          backgroundColor: "#0f172a",
+                          borderColor: "#1e293b",
+                          color: "#ffffff",
+                        }}
+                      >
                         <div className="flex items-center gap-2.5 min-w-0">
                           <div
                             className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-black text-xs shrink-0 shadow-inner"
@@ -1854,10 +1913,15 @@ export function EnJuegoPortal({
                             {currentUser.name.slice(0, 2).toUpperCase()}
                           </div>
                           <div className="min-w-0">
-                            <div className="text-xs font-black truncate">{currentUser.name}</div>
-                            <div className="text-[10px] text-amber-400 font-bold truncate flex items-center gap-1">
-                              <Star className="w-2.5 h-2.5 fill-amber-400" />
-                              Fan Oficial de {LVBP_TEAMS[currentUser.favoriteTeam]?.nick || "LVBP"}
+                            <div className="text-xs font-black truncate" style={{ color: "#ffffff" }}>
+                              {currentUser.name}
+                            </div>
+                            <div
+                              className="text-[10px] font-bold truncate flex items-center gap-1"
+                              style={{ color: "#fbbf24" }}
+                            >
+                              <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                              Fan de {LVBP_TEAMS[currentUser.favoriteTeam]?.nick || "LVBP"}
                             </div>
                           </div>
                         </div>
@@ -1867,7 +1931,8 @@ export function EnJuegoPortal({
                             setAuthModalTab("profile");
                             setAuthModalOpen(true);
                           }}
-                          className="text-[11px] font-bold text-amber-400 hover:text-amber-300 hover:underline shrink-0 cursor-pointer ml-2"
+                          className="text-[11px] font-bold hover:underline shrink-0 cursor-pointer ml-2"
+                          style={{ color: "#fbbf24" }}
                         >
                           Cambiar
                         </button>
@@ -2622,7 +2687,7 @@ export function EnJuegoPortal({
 
       {/* MOBILE BOTTOM NAVIGATION BAR (NATIVE APP STYLE FOR PHONES WITH REAL LINKS) */}
       <nav
-        className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-white/95 backdrop-blur-md border-t border-slate-200 px-3 pt-2 flex items-center justify-around shadow-lg"
+        className="fixed bottom-0 inset-x-0 z-40 md:hidden bg-white/95 backdrop-blur-md border-t border-slate-200 px-3 pt-2 flex items-center justify-around shadow-lg"
         style={{ paddingBottom: "max(0.6rem, env(safe-area-inset-bottom, 0.6rem))" }}
         aria-label="Navegación Móvil"
       >

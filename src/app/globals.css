@@ -138,20 +138,20 @@ html[data-theme="light"] .bg-\[\#05080f\] {
 }
 
 /* Cards & Elevated Surfaces */
-html[data-theme="light"] .bg-slate-900:not(header):not(header *):not(.portal-header):not(.portal-header *),
-html[data-theme="light"] .bg-slate-900\/95:not(header):not(header *):not(.portal-header):not(.portal-header *),
-html[data-theme="light"] .bg-slate-900\/90:not(header):not(header *):not(.portal-header):not(.portal-header *),
-html[data-theme="light"] .bg-slate-900\/80:not(header):not(header *):not(.portal-header):not(.portal-header *),
-html[data-theme="light"] .bg-slate-900\/70:not(header):not(header *):not(.portal-header):not(.portal-header *),
-html[data-theme="light"] .bg-slate-900\/60:not(header):not(header *):not(.portal-header):not(.portal-header *),
-html[data-theme="light"] .bg-slate-900\/50:not(header):not(header *):not(.portal-header):not(.portal-header *) {
+html[data-theme="light"] .bg-slate-900:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .bg-slate-900\/95:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .bg-slate-900\/90:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .bg-slate-900\/80:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .bg-slate-900\/70:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .bg-slate-900\/60:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .bg-slate-900\/50:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *) {
   background-color: #ffffff !important;
   box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.06),
     0 1px 3px rgba(15, 23, 42, 0.04) !important;
 }
 
-html[data-theme="light"] .from-slate-900,
-html[data-theme="light"] .from-slate-950 {
+html[data-theme="light"] .from-slate-900:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .from-slate-950:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *) {
   --tw-gradient-from: #ffffff !important;
   --tw-gradient-via: #f8fafc !important;
   --tw-gradient-to: #f1f5f9 !important;
@@ -159,13 +159,13 @@ html[data-theme="light"] .from-slate-950 {
   box-shadow: 0 8px 28px -6px rgba(15, 23, 42, 0.07) !important;
 }
 
-html[data-theme="light"] .to-slate-950,
-html[data-theme="light"] .to-slate-900 {
+html[data-theme="light"] .to-slate-950:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .to-slate-900:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *) {
   --tw-gradient-to: #ffffff !important;
 }
 
-html[data-theme="light"] .via-slate-900,
-html[data-theme="light"] .via-slate-950 {
+html[data-theme="light"] .via-slate-900:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .via-slate-950:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *) {
   --tw-gradient-via: #f8fafc !important;
 }
 
@@ -190,13 +190,8 @@ header.portal-header,
   color: #ffffff !important;
 }
 
-/* Recessed Wells, Inputs & Table Headers (exempt headers) */
+/* Recessed Wells, Inputs & Table Headers (exempt headers, keep-dark, and translucent modal backdrops) */
 html[data-theme="light"] .bg-slate-950:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
-html[data-theme="light"] .bg-slate-950\/90:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
-html[data-theme="light"] .bg-slate-950\/80:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
-html[data-theme="light"] .bg-slate-950\/75:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
-html[data-theme="light"] .bg-slate-950\/70:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
-html[data-theme="light"] .bg-slate-950\/60:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
 html[data-theme="light"] .bg-slate-950\/30:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *) {
   background-color: #f8fafc !important;
 }
@@ -240,7 +235,7 @@ html[data-theme="light"] .divide-slate-800\/60 > :not(:last-child) {
 }
 
 /* Typography in Light Mode */
-html[data-theme="light"] .text-white:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *):not(.bg-red-600):not(.bg-emerald-600):not(.bg-orange-500):not(.bg-sky-600):not(.bg-blue-600) {
+html[data-theme="light"] .text-white:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *):not(.bg-red-600):not(.bg-rose-600):not(.bg-rose-600\/90):not(.bg-emerald-600):not(.bg-orange-500):not(.bg-sky-600):not(.bg-blue-600) {
   color: #0f172a !important;
 }
 
@@ -253,15 +248,15 @@ html[data-theme="light"] .text-slate-300:not(header):not(header *):not(.portal-h
   color: #334155 !important;
 }
 
-html[data-theme="light"] .text-slate-400:not(header):not(header *),
-html[data-theme="light"] .text-slate-500:not(header):not(header *) {
+html[data-theme="light"] .text-slate-400:not(header):not(header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .text-slate-500:not(header):not(header *):not(.keep-dark):not(.keep-dark *) {
   color: #64748b !important;
 }
 
 /* High-Contrast Accents on White Surfaces */
-html[data-theme="light"] .text-amber-400,
-html[data-theme="light"] .text-amber-300,
-html[data-theme="light"] .text-amber-300\/90 {
+html[data-theme="light"] .text-amber-400:not(header):not(header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .text-amber-300:not(header):not(header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .text-amber-300\/90:not(header):not(header *):not(.keep-dark):not(.keep-dark *) {
   color: #b45309 !important;
 }
 
@@ -277,14 +272,14 @@ html[data-theme="light"] .bg-amber-500\/10 {
   background-color: rgba(245, 158, 11, 0.14) !important;
 }
 
-html[data-theme="light"] .text-emerald-400 {
+html[data-theme="light"] .text-emerald-400:not(header):not(header *):not(.keep-dark):not(.keep-dark *) {
   color: #059669 !important;
 }
 
-html[data-theme="light"] .text-red-400 {
+html[data-theme="light"] .text-red-400:not(header):not(header *):not(.keep-dark):not(.keep-dark *) {
   color: #dc2626 !important;
 }
 
-html[data-theme="light"] .text-sky-400 {
+html[data-theme="light"] .text-sky-400:not(header):not(header *):not(.keep-dark):not(.keep-dark *) {
   color: #0284c7 !important;
 }

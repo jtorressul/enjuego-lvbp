@@ -1367,7 +1367,7 @@ export function EnJuegoPortal({
       {/* MAIN CONTENT CONTAINER */}
       <main
         key={`${section}-${activeDate}-${selectedGameId}-${selectedTeamCode}`}
-        className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 py-6 animate-view-enter"
+        className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 pt-4 sm:pt-6 pb-28 md:pb-12 animate-view-enter"
       >
         {/* SECTION: GAMEDAY (/juego/[id]) */}
         {section === "juego" && (

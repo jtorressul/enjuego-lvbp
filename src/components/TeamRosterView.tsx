@@ -287,6 +287,9 @@ export function TeamRosterView({
                       <img
                         src={player.photo}
                         alt={player.name}
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src = currentTeam.logoSvg;
+                        }}
                         className="w-14 h-14 rounded-full object-cover bg-slate-100 border border-slate-200 shrink-0"
                       />
                       <div className="min-w-0">

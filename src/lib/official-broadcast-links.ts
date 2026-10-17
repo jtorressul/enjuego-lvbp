@@ -10,7 +10,7 @@ export interface BroadcastChannelInfo {
 export const OFFICIAL_BROADCAST_CHANNELS: Record<string, BroadcastChannelInfo> = {
   "Venevisión": {
     name: "Venevisión",
-    officialUrl: "https://venevisionplay.com/",
+    officialUrl: "https://www.venevisionplay.com/player/channel/63ebefc9949c830012620602",
     badgeLabel: "Venevisión Play",
     type: "open_stream",
     description: "Señal abierta nacional y streaming oficial gratuito en Venevisión Play.",
@@ -110,26 +110,34 @@ export function getChannelInfo(rawChannel: string): BroadcastChannelInfo {
   };
 }
 
-export function openOfficialBroadcast(channel: string, gameTitle?: string): boolean {
+export function openOfficialBroadcast(
+  channel: string,
+  gameTitle?: string,
+  mode: "pip" | "popout" = "pip"
+): boolean {
   if (typeof window === "undefined") return false;
 
   const info = getChannelInfo(channel);
   const targetUrl = info.officialUrl || "https://www.beisbolplay.com/lvbp-envivo";
 
-  // Desktop screen dimensions check
+  // Mobile screen check: opens in standard tab / app
   const isMobile = window.innerWidth < 768;
-
   if (isMobile) {
-    // Open standard target _blank on mobile to allow deep linking to installed apps
     const opened = window.open(targetUrl, "_blank", "noopener,noreferrer");
     return Boolean(opened);
   }
 
-  // Desktop: Controlled popout window (1020x640) centered on screen
-  const width = Math.min(1080, Math.floor(window.screen.availWidth * 0.8));
-  const height = Math.min(680, Math.floor(window.screen.availHeight * 0.85));
-  const left = Math.max(0, Math.floor((window.screen.availWidth - width) / 2));
-  const top = Math.max(0, Math.floor((window.screen.availHeight - height) / 2));
+  // Desktop: PiP mode docks in the bottom-right corner of the monitor
+  const width = mode === "pip" ? 620 : Math.min(1080, Math.floor(window.screen.availWidth * 0.8));
+  const height = mode === "pip" ? 390 : Math.min(680, Math.floor(window.screen.availHeight * 0.85));
+
+  const left = mode === "pip"
+    ? Math.max(0, window.screen.availWidth - width - 24)
+    : Math.max(0, Math.floor((window.screen.availWidth - width) / 2));
+
+  const top = mode === "pip"
+    ? Math.max(0, window.screen.availHeight - height - 48)
+    : Math.max(0, Math.floor((window.screen.availHeight - height) / 2));
 
   const windowFeatures = [
     `width=${width}`,

@@ -232,8 +232,8 @@ export async function getAdminKv(): Promise<{
   };
 }
 
-const CAMPAIGNS_KEY = "admin:ads:campaigns:v2";
-const METRICS_KEY = "admin:ads:metrics:v2";
+const CAMPAIGNS_KEY = "admin:ads:campaigns:v3";
+const METRICS_KEY = "admin:ads:metrics:v3";
 const PRESENCE_KEY = "admin:presence:sessions:v1";
 const USERS_INDEX_KEY = "admin:users:index:v1";
 const ADMIN_PASS_KEY = "admin:config:password:v1";
@@ -245,58 +245,17 @@ export function getTodayCaracasKey(): string {
   return d.toISOString().slice(0, 10);
 }
 
-// Generates a crisp 970x90 SVG banner data URI for announcements that don't have a custom image file yet
-export function buildGeneratedBannerSvgDataUri(
-  companyName: string,
-  title: string,
-  subtitle: string,
-  ctaText: string,
-  accentColor: string
-): string {
-  const esc = (s: string) =>
-    String(s || "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 970 90" width="970" height="90">
-    <defs>
-      <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stop-color="#0b1324"/>
-        <stop offset="65%" stop-color="#111c33"/>
-        <stop offset="100%" stop-color="#1e293b"/>
-      </linearGradient>
-      <linearGradient id="accent" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stop-color="${esc(accentColor)}"/>
-        <stop offset="100%" stop-color="#f59e0b"/>
-      </linearGradient>
-    </defs>
-    <rect width="970" height="90" rx="10" fill="url(#bg)"/>
-    <rect x="0" y="0" width="10" height="90" rx="4" fill="url(#accent)"/>
-    <circle cx="910" cy="-10" r="95" fill="${esc(accentColor)}" opacity="0.14"/>
-    <rect x="28" y="16" width="170" height="20" rx="5" fill="${esc(accentColor)}"/>
-    <text x="113" y="30" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="900" text-anchor="middle" letter-spacing="0.8">${esc(companyName.toUpperCase().slice(0, 22))}</text>
-    <text x="28" y="57" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="900">${esc(title.slice(0, 56))}</text>
-    <text x="28" y="77" fill="#cbd5e1" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600">${esc(subtitle.slice(0, 80))}</text>
-    <rect x="805" y="23" width="142" height="44" rx="10" fill="${esc(accentColor)}"/>
-    <text x="876" y="50" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="900" text-anchor="middle">${esc(ctaText.slice(0, 14))} →</text>
-  </svg>`;
-
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-}
-
 export const DEFAULT_5_CAMPAIGNS: AdCampaign[] = [
   {
     id: "emp_1",
-    companyName: "Espacio #1 · EnJuego.online",
-    slot: "top-leaderboard",
-    slots: ["top-leaderboard"],
-    title: "Anuncia tu marca en la cabecera de EnJuego.online",
-    subtitle: "Banner 970x90 px de máxima visibilidad en cada jornada · Escríbenos por WhatsApp",
-    ctaText: "Anúnciate",
+    companyName: "Empresa #1 · Disponible",
+    slot: "general",
+    slots: ["general"],
+    title: "Impulsa tu marca en EnJuego.online",
+    subtitle: "Espacio publicitario #1 activo en el rotativo de toda la jornada.",
+    ctaText: "Pautar",
     linkUrl:
-      "https://wa.me/?text=Hola%20EnJuego.online,%20me%20interesa%20el%20Banner%20Inicio%20Arriba%20(970x90)",
+      "https://wa.me/?text=Hola%20EnJuego.online,%20me%20interesa%20el%20Espacio%20Publicitario%20%231",
     imageUrl: "",
     accentColor: "#e11d48",
     startsOn: "",
@@ -308,14 +267,14 @@ export const DEFAULT_5_CAMPAIGNS: AdCampaign[] = [
   },
   {
     id: "emp_2",
-    companyName: "Espacio #2 · EnJuego.online",
-    slot: "in-feed",
-    slots: ["in-feed"],
-    title: "Destaca tu negocio o servicio ante miles de fanáticos",
-    subtitle: "Ubicación intermedia entre la pizarra en vivo y las estadísticas de la liga",
-    ctaText: "Pautar",
+    companyName: "Empresa #2 · Disponible",
+    slot: "general",
+    slots: ["general"],
+    title: "Conecta con miles de fanáticos del béisbol",
+    subtitle: "Destaca tu negocio o servicio en cada inning de la temporada.",
+    ctaText: "Anunciar",
     linkUrl:
-      "https://wa.me/?text=Hola%20EnJuego.online,%20me%20interesa%20el%20Banner%20Inicio%20Medio%20(970x90)",
+      "https://wa.me/?text=Hola%20EnJuego.online,%20me%20interesa%20el%20Espacio%20Publicitario%20%232",
     imageUrl: "",
     accentColor: "#d97706",
     startsOn: "",
@@ -327,14 +286,14 @@ export const DEFAULT_5_CAMPAIGNS: AdCampaign[] = [
   },
   {
     id: "emp_3",
-    companyName: "Espacio #3 · EnJuego.online",
-    slot: "home-bottom",
-    slots: ["home-bottom"],
-    title: "Promociona tu tienda, restaurante o marca aquí",
-    subtitle: "Banners gráficos PNG, JPG, WebP o GIF animados con enlace directo a tu negocio",
-    ctaText: "Reservar",
+    companyName: "Empresa #3 · Disponible",
+    slot: "general",
+    slots: ["general"],
+    title: "Patrocina la Pizarra en Vivo y el Jugada a Jugada",
+    subtitle: "Presencia directa frente a la audiencia deportiva en móvil y PC.",
+    ctaText: "Contactar",
     linkUrl:
-      "https://wa.me/?text=Hola%20EnJuego.online,%20me%20interesa%20el%20Banner%20Inicio%20Abajo%20(970x90)",
+      "https://wa.me/?text=Hola%20EnJuego.online,%20me%20interesa%20el%20Espacio%20Publicitario%20%233",
     imageUrl: "",
     accentColor: "#0284c7",
     startsOn: "",
@@ -346,14 +305,14 @@ export const DEFAULT_5_CAMPAIGNS: AdCampaign[] = [
   },
   {
     id: "emp_4",
-    companyName: "Espacio #4 · EnJuego.online",
-    slot: "gameday-sidebar",
-    slots: ["gameday-sidebar"],
-    title: "Patrocina la Pizarra en Vivo y el Jugada a Jugada",
-    subtitle: "Presencia exclusiva dentro de la transmisión en tiempo real de cada partido",
-    ctaText: "Contactar",
+    companyName: "Empresa #4 · Disponible",
+    slot: "general",
+    slots: ["general"],
+    title: "Promociona tu tienda, restaurante o app aquí",
+    subtitle: "Banners dinámicos con enlace directo a tu WhatsApp o Instagram.",
+    ctaText: "Reservar",
     linkUrl:
-      "https://wa.me/?text=Hola%20EnJuego.online,%20me%20interesa%20el%20Banner%20Gameday%20(970x90)",
+      "https://wa.me/?text=Hola%20EnJuego.online,%20me%20interesa%20el%20Espacio%20Publicitario%20%234",
     imageUrl: "",
     accentColor: "#059669",
     startsOn: "",
@@ -365,14 +324,14 @@ export const DEFAULT_5_CAMPAIGNS: AdCampaign[] = [
   },
   {
     id: "emp_5",
-    companyName: "Espacio #5 · Rotativo",
+    companyName: "Empresa #5 · Disponible",
     slot: "general",
     slots: ["general"],
     title: "Alianzas Comerciales Temporada 2026-2027",
-    subtitle: "Espacio rotativo en todo el sitio sin repetirse en la misma página",
+    subtitle: "Reserva tu espacio en el rotativo de patrocinadores de EnJuego.online.",
     ctaText: "Más Info",
     linkUrl:
-      "https://wa.me/?text=Hola%20EnJuego.online,%20me%20interesa%20el%20Banner%20Rotativo%20Todo%20el%20Sitio",
+      "https://wa.me/?text=Hola%20EnJuego.online,%20me%20interesa%20el%20Espacio%20Publicitario%20%235",
     imageUrl: "",
     accentColor: "#7c3aed",
     startsOn: "",
@@ -442,7 +401,7 @@ export async function getAdCampaigns(): Promise<AdCampaign[]> {
   if (raw) {
     try {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
+      if (Array.isArray(parsed) && parsed.length > 0) {
         list = parsed;
       }
     } catch {
@@ -464,49 +423,50 @@ export async function getAdCampaigns(): Promise<AdCampaign[]> {
   });
 }
 
+function shuffleArray<T>(arr: T[]): T[] {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
 /**
- * Exact jugadaenvivo.com ad assignment algorithm:
- * - Each slot shows one live ad at a time; if multiple ads share the same slot, they rotate at random per page load.
- * - Slots without their own ad pull one from "general" ("Todo el sitio") or any active ad, NEVER repeating the same ad on the same page.
+ * Exact jugadaenvivo.com dynamic ad server algorithm:
+ * - On every request, shuffles active ads randomly.
+ * - First checks if a slot has ads specifically pinned to that slot.
+ * - Otherwise pulls from the "general" ("Rotativo · Todo el sitio") pool or any active ad, NEVER repeating the same ad on the same page.
  */
 export async function pickAdsForPageSlots(
   requestedSlots: AdSlotType[]
 ): Promise<Record<string, AdCampaign | null>> {
   const allCampaigns = await getAdCampaigns();
-  const liveAds = allCampaigns.filter(isAdCampaignLive);
+  const liveAds = shuffleArray(allCampaigns.filter(isAdCampaignLive));
   const usedIds = new Set<string>();
   const result: Record<string, AdCampaign | null> = {};
 
-  function pickRandom(pool: AdCampaign[]): AdCampaign | null {
-    if (pool.length === 0) return null;
-    const idx = Math.floor(Math.random() * pool.length);
-    return pool[idx];
-  }
-
-  // Pass 1: Assign slots that have dedicated ads
+  // Pass 1: Assign slots that have dedicated ads specifically targeting that slot
   for (const slot of requestedSlots) {
-    const dedicatedPool = liveAds.filter(
+    const dedicated = liveAds.find(
       (ad) => ad.slot === slot && !usedIds.has(ad.id)
     );
-    const chosen = pickRandom(dedicatedPool);
-    if (chosen) {
-      result[slot] = chosen;
-      usedIds.add(chosen.id);
+    if (dedicated) {
+      result[slot] = dedicated;
+      usedIds.add(dedicated.id);
     } else {
       result[slot] = null;
     }
   }
 
-  // Pass 2: Fill remaining empty slots from "general" ("Todo el sitio") or any unused live ad without repeating on the same page
+  // Pass 2: Fill remaining empty slots from "general" ("Rotativo · Todo el sitio") or any unused live ad without repeating on the same page
   for (const slot of requestedSlots) {
     if (result[slot]) continue;
-    const generalPool = liveAds.filter(
+    let chosen = liveAds.find(
       (ad) => ad.slot === "general" && !usedIds.has(ad.id)
     );
-    let chosen = pickRandom(generalPool);
     if (!chosen) {
-      const anyUnusedPool = liveAds.filter((ad) => !usedIds.has(ad.id));
-      chosen = pickRandom(anyUnusedPool);
+      chosen = liveAds.find((ad) => !usedIds.has(ad.id));
     }
     if (chosen) {
       result[slot] = chosen;

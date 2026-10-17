@@ -9,6 +9,8 @@ import { GamedayView } from "@/components/gameday/GamedayView";
 import { LeadersWidget } from "@/components/LeadersWidget";
 import { TeamRosterView } from "@/components/TeamRosterView";
 import { BroadcastChannelsRow } from "@/components/BroadcastChannelsRow";
+import { AuthModal } from "@/components/AuthModal";
+import { UserProfile } from "@/lib/user-auth";
 import {
   ChevronLeft,
   ChevronRight,
@@ -28,6 +30,9 @@ import {
   Check,
   Menu,
   X,
+  User,
+  Sparkles,
+  LogIn,
 } from "lucide-react";
 
 export type NavSection =
@@ -194,6 +199,11 @@ export function EnJuegoPortal({
   const mobileTeamsButtonRef = useRef<HTMLButtonElement>(null);
   const mobileTeamsModalRef = useRef<HTMLDivElement>(null);
 
+  // User Profile & Authentication State
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalTab, setAuthModalTab] = useState<"quick" | "login" | "register" | "profile">("quick");
+
   useEffect(() => {
     setMobileDrawerOpen(false);
     setTeamsDropdownOpen(false);
@@ -230,6 +240,21 @@ export function EnJuegoPortal({
     try {
       const fav = localStorage.getItem("enjuego_fav_team");
       if (fav && LVBP_TEAMS[fav]) setFavoriteTeamCode(fav);
+
+      const storedUser = localStorage.getItem("enjuego_user_session");
+      if (storedUser) {
+        const parsed = JSON.parse(storedUser);
+        if (parsed?.id) {
+          setCurrentUser(parsed);
+          if (parsed.favoriteTeam && LVBP_TEAMS[parsed.favoriteTeam]) {
+            setFavoriteTeamCode(parsed.favoriteTeam);
+            setPostTeam(parsed.favoriteTeam);
+          }
+          if (parsed.name) {
+            setPostAuthor(parsed.name);
+          }
+        }
+      }
     } catch {
       // ignore
     }
@@ -281,6 +306,19 @@ export function EnJuegoPortal({
   const [newPostText, setNewPostText] = useState("");
   const [postAuthor, setPostAuthor] = useState("");
   const [postTeam, setPostTeam] = useState("CAR");
+
+  const handleUserUpdate = (updated: UserProfile | null) => {
+    setCurrentUser(updated);
+    if (updated) {
+      if (updated.favoriteTeam && LVBP_TEAMS[updated.favoriteTeam]) {
+        setFavoriteTeamCode(updated.favoriteTeam);
+        setPostTeam(updated.favoriteTeam);
+      }
+      if (updated.name) {
+        setPostAuthor(updated.name);
+      }
+    }
+  };
 
   const mapServerPosts = (posts: any[]) =>
     posts.map((p: any) => ({
@@ -942,36 +980,51 @@ export function EnJuegoPortal({
               )}
             </div>
 
-            {/* Quick mini-logos strip */}
-            <div className="flex items-center gap-1">
-              {Object.values(LVBP_TEAMS).map((team) => {
-                const isSelected = section === "equipos" && selectedTeamCode === team.code;
-                const isFav = favoriteTeamCode === team.code;
-                return (
-                  <Link
-                    key={team.code}
-                    href={`/teams?team=${team.slug}`}
-                    title={`${team.name}`}
-                    className={`relative w-7 h-7 rounded-full p-1 flex items-center justify-center border transition shrink-0 cursor-pointer ${
-                      isSelected
-                        ? "bg-amber-400/20 border-amber-400 ring-2 ring-amber-400/40 scale-105"
-                        : isFav
-                          ? "bg-amber-400/10 border-amber-400"
-                          : "bg-slate-900 border-slate-800 hover:border-amber-400 hover:scale-105"
-                    }`}
-                  >
-                    <img
-                      src={team.logoSvg}
-                      alt={team.shortName}
-                      className="w-full h-full object-contain"
-                    />
-                    {isFav && (
-                      <Star className="absolute -top-1 -right-0.5 w-2 h-2 text-amber-500 fill-amber-500" />
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
+            {/* Desktop User Profile / Login */}
+            {currentUser ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthModalTab("profile");
+                  setAuthModalOpen(true);
+                }}
+                className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white border border-slate-700/80 text-xs font-bold transition cursor-pointer shadow-2xs hover:border-amber-400"
+                title="Ver tu perfil de fanático y equipo favorito"
+              >
+                <div
+                  className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black text-white shrink-0"
+                  style={{
+                    backgroundColor:
+                      LVBP_TEAMS[currentUser.favoriteTeam]?.color || "#d97706",
+                  }}
+                >
+                  {currentUser.name.slice(0, 1).toUpperCase()}
+                </div>
+                <span className="max-w-[110px] truncate font-extrabold">{currentUser.name}</span>
+                {currentUser.favoriteTeam && LVBP_TEAMS[currentUser.favoriteTeam] && (
+                  <img
+                    src={LVBP_TEAMS[currentUser.favoriteTeam].logoSvg}
+                    alt=""
+                    className="w-4 h-4 object-contain shrink-0"
+                  />
+                )}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthModalTab("quick");
+                  setAuthModalOpen(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>Iniciar Sesión</span>
+                <span className="hidden xl:inline text-[10px] font-extrabold bg-slate-950/10 px-1.5 py-0.5 rounded-md">
+                  Fan LVBP
+                </span>
+              </button>
+            )}
           </div>
 
           {/* Mobile Right Controls: Equipos Dropdown Button + Hamburger Button */}
@@ -1120,19 +1173,113 @@ export function EnJuegoPortal({
 
           {/* Drawer Panel */}
           <div className="relative w-full max-w-xs sm:max-w-sm bg-white h-full shadow-2xl flex flex-col z-10 overflow-y-auto">
-            {/* Drawer Header */}
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950 text-white">
+            {/* Drawer Header with Dark Theme Contrast for Logo */}
+            <div
+              className="p-4 border-b flex items-center justify-between text-white"
+              style={{ backgroundColor: "#060a12", borderColor: "#1e293b" }}
+            >
               <div className="flex items-center gap-2.5">
                 <img src="/logo.png" alt="En Juego" className="h-8 w-auto object-contain" />
               </div>
               <button
                 type="button"
                 onClick={() => setMobileDrawerOpen(false)}
-                className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition cursor-pointer"
+                className="p-2 rounded-xl text-slate-400 hover:text-white transition cursor-pointer"
+                style={{ backgroundColor: "#0f172a" }}
                 aria-label="Cerrar Menú"
               >
                 <X className="w-5 h-5" />
               </button>
+            </div>
+
+            {/* Fan Profile / Login Card in Drawer */}
+            <div className="p-3.5 bg-slate-50 border-b border-slate-200">
+              {currentUser ? (
+                <div className="p-3 rounded-2xl bg-white border border-slate-200/90 shadow-2xs">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-sm shadow-inner shrink-0"
+                      style={{
+                        backgroundColor:
+                          LVBP_TEAMS[currentUser.favoriteTeam]?.color || "#d97706",
+                      }}
+                    >
+                      {currentUser.name.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-black text-slate-900 truncate">
+                        {currentUser.name}
+                      </div>
+                      <div className="text-[10px] text-slate-400 truncate">{currentUser.handle}</div>
+                      <div className="text-[10px] text-amber-600 font-extrabold flex items-center gap-1 mt-0.5">
+                        <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
+                        {LVBP_TEAMS[currentUser.favoriteTeam]?.name || "Fan Oficial"}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileDrawerOpen(false);
+                        setAuthModalTab("profile");
+                        setAuthModalOpen(true);
+                      }}
+                      className="text-[11px] font-bold text-amber-600 hover:text-amber-700 hover:underline cursor-pointer"
+                    >
+                      Cambiar Equipo / Perfil
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        localStorage.removeItem("enjuego_user_session");
+                        setCurrentUser(null);
+                      }}
+                      className="text-[11px] font-semibold text-slate-400 hover:text-red-500 cursor-pointer"
+                    >
+                      Cerrar sesión
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 text-white shadow-2xs">
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black shrink-0">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-black text-amber-400">Perfil de Fanático</div>
+                      <p className="text-[11px] text-slate-300 leading-snug mt-0.5">
+                        Guarda tu equipo, participa en la quiniela y comenta en vivo.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileDrawerOpen(false);
+                        setAuthModalTab("quick");
+                        setAuthModalOpen(true);
+                      }}
+                      className="flex-1 py-1.5 px-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs text-center transition cursor-pointer"
+                    >
+                      Entrar como Fan ⚡
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileDrawerOpen(false);
+                        setAuthModalTab("login");
+                        setAuthModalOpen(true);
+                      }}
+                      className="py-1.5 px-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition cursor-pointer"
+                    >
+                      Login
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Navigation Links */}
@@ -2372,6 +2519,15 @@ export function EnJuegoPortal({
           </div>
         </div>
       </footer>
+
+      {/* Auth & Fan Profile Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        currentUser={currentUser}
+        onUserUpdate={handleUserUpdate}
+        initialTab={authModalTab}
+      />
     </div>
   );
 }

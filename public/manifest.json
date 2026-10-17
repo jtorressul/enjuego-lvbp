@@ -1,0 +1,23 @@
+{
+  "name": "En Juego · Béisbol Venezolano",
+  "short_name": "EnJuego",
+  "description": "Marcadores en vivo, jugada a jugada, canales de TV y estadísticas de la LVBP",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#060a12",
+  "theme_color": "#060a12",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

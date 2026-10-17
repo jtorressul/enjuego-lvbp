@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Megaphone, ExternalLink, ArrowUpRight } from "lucide-react";
+import { Sparkles, ExternalLink, MessageCircle, ArrowRight } from "lucide-react";
 
 export interface AdBannerProps {
   slot?: "top-leaderboard" | "in-feed" | "gameday-sidebar";
@@ -17,8 +17,8 @@ export interface AdBannerProps {
 export function AdBanner({
   slot = "top-leaderboard",
   imageUrl,
-  linkUrl = "https://wa.me/?text=Hola%20EnJuego,%20deseo%20informaci%C3%B3n%20para%20pautar%20publicidad%20en%20su%20portal%20de%20b%C3%A9isbol",
-  alt = "Publicidad en EnJuego",
+  linkUrl = "https://wa.me/?text=Hola%20EnJuego.online,%20deseo%20informaci%C3%B3n%20para%20publicitar%20mi%20marca",
+  alt = "Espacio Comercial en EnJuego.online",
   title,
   subtitle,
   ctaText,
@@ -26,141 +26,157 @@ export function AdBanner({
 }: AdBannerProps) {
   const [imageError, setImageError] = useState(false);
 
-  // Clean, honest copy without any fake official claims
+  // Concise copy that never truncates with "..." on mobile screens
   const defaultTitle =
     title ||
     (slot === "in-feed"
-      ? "Llega a la fanaticada del béisbol"
+      ? "Impulsa tu marca en cada jornada"
       : slot === "gameday-sidebar"
-        ? "Patrocina la Pizarra en Vivo"
-        : "Tu marca en EnJuego.online");
+        ? "Patrocina el Jugada a Jugada"
+        : "Tu marca aquí en EnJuego.online");
 
   const defaultSubtitle =
     subtitle ||
     (slot === "in-feed"
-      ? "Promociona tu negocio en cada jornada ante miles de fanáticos."
+      ? "Conecta con miles de fanáticos del béisbol en vivo."
       : slot === "gameday-sidebar"
-        ? "Presencia destacada durante las transmisiones y jugada a jugada."
-        : "Espacio disponible para banners y patrocinios.");
+        ? "Presencia directa junto a la pizarra en tiempo real."
+        : "Espacio disponible para banners y alianzas comerciales.");
 
-  const defaultCta = ctaText || "Anúnciate";
+  const defaultCta = ctaText || "Pautar";
 
   const isSidebar = slot === "gameday-sidebar";
 
+  if (imageUrl && !imageError) {
+    return (
+      <div className={`w-full ${className}`}>
+        <a
+          href={linkUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group relative block w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 aspect-[21/9] sm:aspect-[32/9] max-h-[115px] shadow-xs"
+          aria-label={alt}
+        >
+          <img
+            src={imageUrl}
+            alt={alt}
+            onError={() => setImageError(true)}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-102"
+          />
+          <span
+            className="absolute top-2 left-2 rounded-md px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider backdrop-blur-xs"
+            style={{ backgroundColor: "rgba(15, 23, 42, 0.75)", color: "#e2e8f0" }}
+          >
+            Patrocinado
+          </span>
+          <div
+            className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity rounded-md px-2 py-0.5 text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs"
+            style={{ backgroundColor: "rgba(6, 10, 18, 0.85)", color: "#ffffff" }}
+          >
+            <span>Visitar</span>
+            <ExternalLink className="w-2.5 h-2.5" />
+          </div>
+        </a>
+      </div>
+    );
+  }
+
   return (
     <div className={`w-full ${className}`}>
-      {/* CLEAN EDITORIAL CARD CONTAINER */}
-      <div className="rounded-2xl border border-slate-200/90 bg-white p-1.5 sm:p-2.5 shadow-2xs">
-        {imageUrl && !imageError ? (
-          /* Custom Banner Image */
-          <a
-            href={linkUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group relative block w-full overflow-hidden rounded-xl bg-slate-950 aspect-[21/9] sm:aspect-[32/9] max-h-[115px]"
-            aria-label={alt}
-          >
-            <img
-              src={imageUrl}
-              alt={alt}
-              onError={() => setImageError(true)}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-102"
-            />
-            <div
-              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity rounded-md px-2 py-0.5 text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs"
-              style={{ backgroundColor: "rgba(6, 10, 18, 0.85)", color: "#ffffff" }}
-            >
-              <span>Abrir</span>
-              <ExternalLink className="w-2.5 h-2.5" />
-            </div>
-          </a>
-        ) : (
-          /* High-Contrast Sleek Banner Inside Card (Immune to CSS Overrides) */
-          <a
-            href={linkUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group relative block w-full overflow-hidden rounded-xl px-2.5 py-2 sm:px-4 sm:py-3 transition-all"
-            style={{
-              background: "linear-gradient(135deg, #0b1324 0%, #13203c 55%, #1e293b 100%)",
-              border: "1px solid #1e293b",
-              color: "#ffffff",
-            }}
-            aria-label={alt}
-          >
-            {/* Subtle decorative glow */}
-            <div
-              className="pointer-events-none absolute -right-8 -top-8 w-32 h-32 rounded-full opacity-20 blur-2xl"
-              style={{ background: "radial-gradient(circle, #f59e0b 0%, transparent 70%)" }}
-            />
+      {/* ENJUEGO.ONLINE ORIGINAL BROADCAST TICKET BANNER (Single unified card, no outer white wrapper) */}
+      <a
+        href={linkUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group relative block w-full overflow-hidden rounded-2xl transition-all hover:shadow-md active:scale-[0.995]"
+        style={{
+          background: "linear-gradient(110deg, #ffffff 0%, #f8fafc 60%, #fff1f2 100%)",
+          border: "1px solid #e2e8f0",
+        }}
+        aria-label={alt}
+      >
+        {/* Left Signature Crimson-to-Amber Accent Bar */}
+        <div
+          className="absolute inset-y-0 left-0 w-1.5"
+          style={{
+            background: "linear-gradient(180deg, #e11d48 0%, #f59e0b 100%)",
+          }}
+        />
 
-            <div
-              className={`relative flex ${
-                isSidebar
-                  ? "flex-col items-start gap-2.5"
-                  : "flex-row items-center justify-between gap-2 sm:gap-4"
+        {/* Subtle Baseball Diamond SVG Watermark on the Right */}
+        <svg
+          viewBox="0 0 100 100"
+          className="pointer-events-none absolute -right-4 -bottom-6 w-28 h-28 opacity-[0.06] text-rose-600 rotate-12 transition-transform duration-500 group-hover:scale-110"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="6"
+        >
+          <rect x="20" y="20" width="60" height="60" rx="8" transform="rotate(45 50 50)" />
+          <circle cx="50" cy="50" r="10" fill="currentColor" />
+        </svg>
+
+        <div
+          className={`relative pl-4 pr-3 py-2.5 sm:px-5 sm:py-3.5 flex ${
+            isSidebar
+              ? "flex-col items-start gap-2.5"
+              : "flex-row items-center justify-between gap-2.5 sm:gap-4"
+          }`}
+        >
+          {/* Left Content: Brand Pill + Full Unclipped Copy */}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <span
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider leading-none"
+                style={{
+                  backgroundColor: "#ffe4e6",
+                  color: "#be123c",
+                }}
+              >
+                <Sparkles className="w-2.5 h-2.5" />
+                <span>enjuego.online</span>
+              </span>
+              <span
+                className="text-[9px] font-extrabold uppercase tracking-widest"
+                style={{ color: "#94a3b8" }}
+              >
+                · Espacio Comercial
+              </span>
+            </div>
+
+            <h3
+              className="text-xs sm:text-sm font-black tracking-tight leading-snug"
+              style={{ color: "#0f172a" }}
+            >
+              {defaultTitle}
+            </h3>
+
+            <p
+              className="text-[11px] sm:text-xs font-medium leading-snug mt-0.5"
+              style={{ color: "#475569" }}
+            >
+              {defaultSubtitle}
+            </p>
+          </div>
+
+          {/* Right CTA Pill with EnJuego Crimson/Dark Identity */}
+          <div className={`shrink-0 ${isSidebar ? "w-full pt-1" : "self-center"}`}>
+            <span
+              className={`inline-flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl font-black text-[11px] sm:text-xs transition-all group-hover:translate-x-0.5 shadow-2xs whitespace-nowrap ${
+                isSidebar ? "w-full" : ""
               }`}
+              style={{
+                background: "linear-gradient(135deg, #e11d48 0%, #be123c 100%)",
+                color: "#ffffff",
+              }}
             >
-              {/* Left Info */}
-              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                <div
-                  className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0 shadow-xs transition-transform group-hover:scale-105"
-                  style={{ backgroundColor: "#f59e0b", color: "#0f172a" }}
-                >
-                  <Megaphone className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 stroke-[2.2]" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span
-                      className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider leading-none"
-                      style={{
-                        backgroundColor: "rgba(245, 158, 11, 0.18)",
-                        color: "#fbbf24",
-                        border: "1px solid rgba(245, 158, 11, 0.35)",
-                      }}
-                    >
-                      Patrocinio
-                    </span>
-                    <span
-                      className="text-xs sm:text-sm font-black tracking-tight leading-snug truncate"
-                      style={{ color: "#ffffff" }}
-                    >
-                      {defaultTitle}
-                    </span>
-                  </div>
-                  <p
-                    className="text-[10px] sm:text-[11px] leading-snug mt-0.5 line-clamp-1"
-                    style={{ color: "#cbd5e1" }}
-                  >
-                    {defaultSubtitle}
-                  </p>
-                </div>
-              </div>
-
-              {/* Right CTA Button */}
-              <div className={`shrink-0 ${isSidebar ? "w-full pt-0.5" : "self-center"}`}>
-                <span
-                  className={`inline-flex items-center justify-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-xs transition-transform group-hover:scale-102 shadow-xs whitespace-nowrap ${
-                    isSidebar ? "w-full" : ""
-                  }`}
-                  style={{ backgroundColor: "#f59e0b", color: "#0f172a" }}
-                >
-                  <span>{defaultCta}</span>
-                  {!ctaText && <span className="hidden sm:inline">aquí</span>}
-                  <ArrowUpRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[2.5]" />
-                </span>
-              </div>
-            </div>
-          </a>
-        )}
-
-        {/* Centered PUBLICIDAD Label (Like Reference Design) */}
-        <div className="pt-1 sm:pt-1.5 text-center leading-none">
-          <span className="text-[8px] sm:text-[9px] font-extrabold uppercase tracking-[0.18em] text-slate-400">
-            PUBLICIDAD
-          </span>
+              <MessageCircle className="w-3.5 h-3.5 stroke-[2.3]" />
+              <span>{defaultCta}</span>
+              <ArrowRight className="w-3 h-3 stroke-[2.5]" />
+            </span>
+          </div>
         </div>
-      </div>
+      </a>
     </div>
   );
 }
+

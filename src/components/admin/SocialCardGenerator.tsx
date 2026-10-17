@@ -7,6 +7,7 @@ import {
   Image as ImageIcon,
   Palette,
   RefreshCw,
+  Share2,
   Sparkles,
   Trophy,
   Upload,
@@ -60,13 +61,26 @@ function loadImageElement(src: string): Promise<HTMLImageElement | null> {
   const cached = imageCache.get(src);
   if (cached) return Promise.resolve(cached);
   return new Promise((resolve) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      imageCache.set(src, img);
-      resolve(img);
+    let settled = false;
+    const finish = (val: HTMLImageElement | null) => {
+      if (settled) return;
+      settled = true;
+      resolve(val);
     };
-    img.onerror = () => resolve(null);
+    const timer = setTimeout(() => finish(null), 4000);
+    const img = new Image();
+    if (!src.startsWith("data:") && !src.startsWith("blob:")) {
+      img.crossOrigin = "anonymous";
+    }
+    img.onload = () => {
+      clearTimeout(timer);
+      imageCache.set(src, img);
+      finish(img);
+    };
+    img.onerror = () => {
+      clearTimeout(timer);
+      finish(null);
+    };
     img.src = src;
   });
 }
@@ -294,30 +308,32 @@ function ensureSportsFontsLoaded(): Promise<void> {
   if (typeof document === "undefined") return Promise.resolve();
   if (fontsLoadedPromise) return fontsLoadedPromise;
 
-  fontsLoadedPromise = (async () => {
-    const linkId = "enjuego-social-google-fonts";
-    if (!document.getElementById(linkId)) {
-      const link = document.createElement("link");
-      link.id = linkId;
-      link.rel = "stylesheet";
-      link.href =
-        "https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,700;1,800&family=Bebas+Neue&family=Montserrat:wght@600;700;800;900&family=Teko:wght@500;600;700&display=swap";
-      document.head.appendChild(link);
-      await new Promise((r) => setTimeout(r, 150));
-    }
-    const fonts = (document as any).fonts;
-    if (fonts?.load) {
-      await Promise.allSettled([
-        fonts.load('400 160px "Bebas Neue"'),
-        fonts.load('600 160px "Teko"'),
-        fonts.load('700 40px "Barlow Condensed"'),
-        fonts.load('600 30px "Barlow Condensed"'),
-        fonts.load('800 30px "Montserrat"'),
-        fonts.load('900 40px "Montserrat"'),
-      ]);
-      await fonts.ready;
-    }
-  })();
+  fontsLoadedPromise = Promise.race([
+    (async () => {
+      const linkId = "enjuego-social-google-fonts";
+      if (!document.getElementById(linkId)) {
+        const link = document.createElement("link");
+        link.id = linkId;
+        link.rel = "stylesheet";
+        link.href =
+          "https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,700;1,800&family=Bebas+Neue&family=Montserrat:wght@600;700;800;900&family=Teko:wght@500;600;700&display=swap";
+        document.head.appendChild(link);
+        await new Promise((r) => setTimeout(r, 150));
+      }
+      const fonts = (document as any).fonts;
+      if (fonts?.load) {
+        await Promise.allSettled([
+          fonts.load('400 160px "Bebas Neue"'),
+          fonts.load('600 160px "Teko"'),
+          fonts.load('700 40px "Barlow Condensed"'),
+          fonts.load('600 30px "Barlow Condensed"'),
+          fonts.load('800 30px "Montserrat"'),
+          fonts.load('900 40px "Montserrat"'),
+        ]);
+      }
+    })(),
+    new Promise<void>((r) => setTimeout(r, 1500)),
+  ]);
 
   return fontsLoadedPromise;
 }
@@ -425,6 +441,8 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
   const [customSponsorLogo, setCustomSponsorLogo] = useState<string>("");
   const [customSponsorName, setCustomSponsorName] = useState<string>("TuZapp");
   const [rendering, setRendering] = useState<boolean>(false);
+  const [previewDataUrl, setPreviewDataUrl] = useState<string>("");
+  const [downloadingMobile, setDownloadingMobile] = useState<boolean>(false);
 
   const VENEZUELA_TV_CHANNELS = [
     "IVC",
@@ -1429,6 +1447,11 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
         vctx.clearRect(0, 0, W, H);
         vctx.drawImage(offscreen, 0, 0);
       }
+      try {
+        setPreviewDataUrl(visibleCanvas.toDataURL("image/png", 1.0));
+      } catch {
+        // ignore if tainted
+      }
     } finally {
       if (version === renderVersionRef.current) setRendering(false);
     }
@@ -1464,20 +1487,119 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
     renderCardToCanvas();
   }, [renderCardToCanvas]);
 
-  const handleDownloadPng = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const dataUrl = canvas.toDataURL("image/png", 1.0);
-    const link = document.createElement("a");
+  const getDownloadFilename = () => {
     const suffix =
       templateMode === "slate_all"
         ? `jornada-${selectedDate}`
         : `${awayCode}-vs-${homeCode}-${selectedDate}`;
-    link.download = `enjuego-${templateMode}-${suffix}.png`;
-    link.href = dataUrl;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    return `enjuego-${templateMode}-${suffix}.png`;
+  };
+
+  const dataUrlToBlob = (dataUrl: string): Blob => {
+    const parts = dataUrl.split(",");
+    const byteStr = atob(parts[1] || "");
+    const ab = new ArrayBuffer(byteStr.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteStr.length; i++) {
+      ia[i] = byteStr.charCodeAt(i);
+    }
+    return new Blob([ab], { type: "image/png" });
+  };
+
+  const triggerServerAttachmentDownload = (dataUrl: string, filename: string) => {
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = "/api/admin/download-card";
+    form.style.display = "none";
+
+    const inputData = document.createElement("input");
+    inputData.type = "hidden";
+    inputData.name = "dataUrl";
+    inputData.value = dataUrl;
+    form.appendChild(inputData);
+
+    const inputName = document.createElement("input");
+    inputName.type = "hidden";
+    inputName.name = "filename";
+    inputName.value = filename;
+    form.appendChild(inputName);
+
+    document.body.appendChild(form);
+    form.submit();
+    setTimeout(() => {
+      if (document.body.contains(form)) document.body.removeChild(form);
+    }, 3000);
+  };
+
+  const handleDownloadPng = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    setDownloadingMobile(true);
+    try {
+      const filename = getDownloadFilename();
+      const dataUrl = canvas.toDataURL("image/png", 1.0);
+      const isMobile =
+        typeof navigator !== "undefined" &&
+        /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+
+      if (isMobile) {
+        // On mobile browsers (iOS Safari, Android Chrome, in-app browsers),
+        // an HTTP response with Content-Disposition: attachment is 100% reliable
+        // and never fails due to data:/blob: URL size limits.
+        triggerServerAttachmentDownload(dataUrl, filename);
+        return;
+      }
+
+      const blob = dataUrlToBlob(dataUrl);
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.download = filename;
+      link.href = blobUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+    } finally {
+      setTimeout(() => setDownloadingMobile(false), 600);
+    }
+  };
+
+  const handleShareOrSaveMobile = async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    setDownloadingMobile(true);
+    try {
+      const filename = getDownloadFilename();
+      const dataUrl = canvas.toDataURL("image/png", 1.0);
+      const blob = dataUrlToBlob(dataUrl);
+      const file = new File([blob], filename, { type: "image/png" });
+
+      const nav = navigator as Navigator & {
+        canShare?: (data?: ShareData) => boolean;
+      };
+      if (typeof nav.share === "function" && (!nav.canShare || nav.canShare({ files: [file] }))) {
+        await nav.share({
+          files: [file],
+          title: "EnJuego · Arte Deportivo",
+        });
+        return;
+      }
+
+      // Fallback if Web Share API with files is not supported on this device/browser
+      triggerServerAttachmentDownload(dataUrl, filename);
+    } catch (err: any) {
+      if (err?.name !== "AbortError") {
+        const canvasEl = canvasRef.current;
+        if (canvasEl) {
+          triggerServerAttachmentDownload(
+            canvasEl.toDataURL("image/png", 1.0),
+            getDownloadFilename()
+          );
+        }
+      }
+    } finally {
+      setDownloadingMobile(false);
+    }
   };
 
   const optionBtn = (active: boolean) =>
@@ -2142,20 +2264,53 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
               </span>
             </div>
 
-            <div className="w-full rounded-xl overflow-hidden border border-slate-200 bg-slate-100 flex justify-center items-center p-2">
-              <canvas ref={canvasRef} className="w-full max-w-[380px] h-auto rounded-lg shadow-md" />
+            <div className="w-full rounded-xl overflow-hidden border border-slate-200 bg-slate-100 flex flex-col justify-center items-center p-2">
+              <canvas
+                ref={canvasRef}
+                className={
+                  previewDataUrl
+                    ? "hidden"
+                    : "w-full max-w-[380px] h-auto rounded-lg shadow-md"
+                }
+              />
+              {previewDataUrl && (
+                <img
+                  src={previewDataUrl}
+                  alt="Arte Deportivo EnJuego"
+                  className="w-full max-w-[380px] h-auto rounded-lg shadow-md select-auto"
+                />
+              )}
+              <p className="text-[11px] text-slate-500 font-semibold mt-2 text-center sm:hidden">
+                💡 También puedes mantener presionada la imagen para guardarla en Fotos
+              </p>
             </div>
 
-            <button
-              type="button"
-              onClick={handleDownloadPng}
-              disabled={rendering}
-              className="w-full py-3.5 px-5 rounded-xl text-white font-black text-sm shadow-lg flex items-center justify-center gap-2 transition cursor-pointer active:scale-98"
-              style={{ background: "linear-gradient(135deg, #e11d48 0%, #be123c 100%)" }}
-            >
-              <Download className="w-4 h-4" />
-              <span>Descargar Arte en PNG (Alta Calidad)</span>
-            </button>
+            <div className="space-y-2.5">
+              <button
+                type="button"
+                onClick={handleDownloadPng}
+                disabled={rendering || downloadingMobile}
+                className="w-full py-3.5 px-5 rounded-xl text-white font-black text-sm shadow-lg flex items-center justify-center gap-2 transition cursor-pointer active:scale-98 disabled:opacity-60"
+                style={{ background: "linear-gradient(135deg, #e11d48 0%, #be123c 100%)" }}
+              >
+                <Download className="w-4 h-4" />
+                <span>
+                  {downloadingMobile
+                    ? "Preparando PNG..."
+                    : "Descargar Arte en PNG (Alta Calidad)"}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleShareOrSaveMobile}
+                disabled={rendering || downloadingMobile}
+                className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs shadow-sm flex items-center justify-center gap-2 transition cursor-pointer active:scale-98 disabled:opacity-60 sm:hidden"
+              >
+                <Share2 className="w-4 h-4 text-amber-400" />
+                <span>Guardar en Fotos / Compartir (WhatsApp · IG)</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

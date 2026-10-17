@@ -27,5 +27,11 @@
       "binding": "ENJUEGO_KV",
       "id": "d5921664c3d6468ea0c5475bc515d8e7"
     }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "ENJUEGO_R2",
+      "bucket_name": "enjuego-storage"
+    }
   ]
 }

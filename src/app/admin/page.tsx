@@ -663,7 +663,7 @@ export default function AdminDashboardPage() {
               </span>
             </div>
             <div className="mt-2 text-[11px] font-bold text-slate-500">
-              5 espacios fijos · <strong className="text-emerald-700">970x90 px</strong>
+              Rotativo en todo el sitio · <strong className="text-emerald-700">970x90 px</strong>
             </div>
           </div>
 
@@ -697,7 +697,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* NAVIGATION MENU (Like jugadaenvivo.com/panel) */}
+        {/* NAVIGATION MENU */}
         <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3">
           <button
             type="button"
@@ -750,92 +750,28 @@ export default function AdminDashboardPage() {
         )}
 
         {/* ===================================================================
-            TAB 1: PUBLICIDAD (EXACT JUGADAENVIVO.COM /PANEL SYSTEM)
+            TAB 1: PUBLICIDAD (ROTATIVO GLOBAL EN TODO EL SITIO)
            =================================================================== */}
         {activeTab === "ads" && (
           <div className="space-y-6">
-            {/* Section 1: Espacios Publicitarios (#ad-slots) */}
+            {/* Section 1: Nuevo anuncio */}
             <section className="rounded-2xl bg-white border border-slate-200 p-5 shadow-2xs space-y-4">
-              <div>
-                <h2 className="text-lg font-black text-slate-950">Publicidad</h2>
-                <p className="text-xs sm:text-sm text-slate-600 mt-1 leading-relaxed">
-                  Cada espacio muestra un anuncio vigente a la vez; si hay varios
-                  en el mismo espacio, rotan al azar al cargar la página. Los
-                  espacios sin anuncio propio muestran uno del rotativo{" "}
-                  <strong>&ldquo;Todo el sitio&rdquo;</strong> (o cualquier
-                  anuncio activo), sin repetirlo en la misma página.
-                </p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-lg font-black text-slate-950">
+                    Nuevo anuncio · Todo el sitio (Rotativo)
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Todos los anuncios activos rotan al azar en toda la web (PC y móvil) sin repetirse en la misma página.
+                  </p>
+                </div>
+                <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-rose-50 text-rose-700 border border-rose-200">
+                  {liveAdsCount} en emisión · 970x90 px
+                </span>
               </div>
-
-              <ul className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                {slots.map((slotItem) => {
-                  const countInSlot = campaigns.filter(
-                    (ad) => ad.slot === slotItem.key && ad.live !== false && ad.active
-                  ).length;
-
-                  return (
-                    <li
-                      key={slotItem.key}
-                      className="flex items-center justify-between gap-3 p-3.5 rounded-xl border border-slate-200 bg-slate-50/70"
-                    >
-                      <div className="min-w-0">
-                        <strong className="block text-xs sm:text-sm font-black text-slate-900">
-                          {slotItem.label}
-                        </strong>
-                        <span className="block text-[11px] text-slate-500 mt-0.5">
-                          {slotItem.where} · <b>{slotItem.size} px</b>
-                        </span>
-                      </div>
-                      <em
-                        className={`shrink-0 not-italic text-xs font-extrabold px-2.5 py-1 rounded-full ${
-                          countInSlot > 0
-                            ? "bg-rose-50 text-rose-700 border border-rose-200"
-                            : "bg-slate-200/70 text-slate-600"
-                        }`}
-                      >
-                        {countInSlot > 0
-                          ? `${countInSlot} en emisión`
-                          : slotItem.key === "general"
-                            ? "Vacío"
-                            : "Libre · usa el rotativo"}
-                      </em>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-
-            {/* Section 2: Nuevo anuncio (#ad-form) */}
-            <section className="rounded-2xl bg-white border border-slate-200 p-5 shadow-2xs space-y-4">
-              <h2 className="text-lg font-black text-slate-950">
-                Nuevo anuncio
-              </h2>
 
               <form onSubmit={handleCreateAd} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-extrabold uppercase text-slate-600 mb-1">
-                      Espacio
-                    </label>
-                    <select
-                      value={newSlot}
-                      onChange={(e) => setNewSlot(e.target.value as CanonicalSlotKey)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs sm:text-sm font-bold text-slate-900"
-                    >
-                      {slots.map((s) => (
-                        <option key={s.key} value={s.key}>
-                          {s.label} ({s.size})
-                        </option>
-                      ))}
-                    </select>
-                    {selectedSlotInfo && (
-                      <p className="text-[11px] text-slate-500 mt-1">
-                        Medida recomendada: <b>{selectedSlotInfo.size} px</b>.{" "}
-                        {selectedSlotInfo.where}.
-                      </p>
-                    )}
-                  </div>
-
                   <div>
                     <label className="block text-xs font-extrabold uppercase text-slate-600 mb-1">
                       Anunciante o campaña
@@ -846,14 +782,12 @@ export default function AdminDashboardPage() {
                       maxLength={80}
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
-                      placeholder="Ej. San Ignacio / Fly251 / Mi Odontólogo – Octubre"
+                      placeholder="Ej. TuZapp / San Ignacio / Fly251"
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm font-bold text-slate-900"
                     />
                   </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="md:col-span-1">
+                  <div>
                     <label className="block text-xs font-extrabold uppercase text-slate-600 mb-1">
                       Enlace al hacer clic (opcional)
                     </label>
@@ -865,7 +799,9 @@ export default function AdminDashboardPage() {
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm font-mono text-slate-800"
                     />
                   </div>
+                </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-extrabold uppercase text-slate-600 mb-1">
                       Desde (opcional)
@@ -969,7 +905,7 @@ export default function AdminDashboardPage() {
               </form>
             </section>
 
-            {/* Section 3: Anuncios publicados (#ad-list - exact jugadaenvivo.com .ad-row layout) */}
+            {/* Section 2: Anuncios publicados */}
             <section className="rounded-2xl bg-white border border-slate-200 p-5 shadow-2xs space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-black text-slate-950">
@@ -1069,21 +1005,9 @@ export default function AdminDashboardPage() {
                           </div>
 
                           <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
-                            <select
-                              value={ad.slot || "general"}
-                              onChange={(e) =>
-                                handleUpdateAd(ad.id, {
-                                  slot: e.target.value as CanonicalSlotKey,
-                                })
-                              }
-                              className="px-2.5 py-1 rounded-lg border border-slate-300 bg-white text-xs font-bold text-slate-800"
-                            >
-                              {slots.map((s) => (
-                                <option key={s.key} value={s.key}>
-                                  {s.label}
-                                </option>
-                              ))}
-                            </select>
+                            <span className="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700">
+                              Todo el sitio (Rotativo)
+                            </span>
 
                             <span>·</span>
 

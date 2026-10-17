@@ -9,29 +9,14 @@ export type AdSlotType =
   | "listas_top"
   | "listas_bottom"
   | "gameday"
-  // Legacy aliases mapped automatically:
   | "top-leaderboard"
   | "in-feed"
   | "home-bottom"
   | "gameday-sidebar";
 
-export type CanonicalSlotKey =
-  | "general"
-  | "home_top"
-  | "home_mid"
-  | "home_bottom"
-  | "listas_top"
-  | "listas_bottom"
-  | "gameday";
+export type CanonicalSlotKey = "general";
 
-export function normalizeSlotKey(slot?: string): CanonicalSlotKey {
-  if (!slot) return "general";
-  if (slot === "top-leaderboard" || slot === "home_top") return "home_top";
-  if (slot === "in-feed" || slot === "home_mid") return "home_mid";
-  if (slot === "home-bottom" || slot === "home_bottom") return "home_bottom";
-  if (slot === "gameday-sidebar" || slot === "gameday") return "gameday";
-  if (slot === "listas_top") return "listas_top";
-  if (slot === "listas_bottom") return "listas_bottom";
+export function normalizeSlotKey(_slot?: string): CanonicalSlotKey {
   return "general";
 }
 
@@ -46,43 +31,8 @@ export const AD_SLOTS_CATALOG: AdSlotInfo[] = [
   {
     key: "general",
     label: "Todo el sitio (Rotativo)",
-    where: "Cubre cualquier espacio libre sin repetirlo en la misma página",
-    size: "970x90",
-  },
-  {
-    key: "home_top",
-    label: "Inicio · Arriba",
-    where: "Debajo de la cabecera en la página de inicio",
-    size: "970x90",
-  },
-  {
-    key: "home_mid",
-    label: "Inicio · Medio",
-    where: "Entre la pizarra de juegos y las noticias/comunidad en el inicio",
-    size: "970x90",
-  },
-  {
-    key: "home_bottom",
-    label: "Inicio · Abajo",
-    where: "Antes del pie de página en el inicio",
-    size: "970x90",
-  },
-  {
-    key: "listas_top",
-    label: "Listas · Arriba",
-    where: "Arriba en Resultados, Calendario, Posiciones, Líderes y Equipos",
-    size: "970x90",
-  },
-  {
-    key: "listas_bottom",
-    label: "Listas · Abajo",
-    where: "Abajo en Resultados, Calendario, Posiciones, Líderes y Equipos",
-    size: "970x90",
-  },
-  {
-    key: "gameday",
-    label: "Gameday · Juego en Vivo",
-    where: "En la pantalla del partido en vivo y jugada a jugada",
+    where:
+      "Rota automáticamente en todos los espacios publicitarios sin repetirse en la misma página",
     size: "970x90",
   },
 ];
@@ -133,7 +83,7 @@ export interface DailyTrafficStats {
 }
 
 export interface HybridKVStore {
-  get(key: string, options?: { skipKv?: boolean }): Promise<string | null>;
+  get(key: string, options?: { skipKv?: boolean; ttlMs?: number }): Promise<string | null>;
   put(
     key: string,
     value: string,
@@ -141,34 +91,33 @@ export interface HybridKVStore {
   ): Promise<void>;
 }
 
+interface MemCacheEntry {
+  value: string;
+  expiresAt: number;
+}
+
 const globalRef = globalThis as unknown as {
-  __ENJUEGO_MEM_STORE__?: Map<string, string>;
+  __ENJUEGO_MEM_CACHE_V2__?: Map<string, MemCacheEntry>;
+  __ENJUEGO_LAST_R2_FLUSH__?: Map<string, number>;
 };
-if (!globalRef.__ENJUEGO_MEM_STORE__) {
-  globalRef.__ENJUEGO_MEM_STORE__ = new Map<string, string>();
+if (!globalRef.__ENJUEGO_MEM_CACHE_V2__) {
+  globalRef.__ENJUEGO_MEM_CACHE_V2__ = new Map<string, MemCacheEntry>();
 }
-const memoryKv = globalRef.__ENJUEGO_MEM_STORE__;
-
-function getEdgeCache(): Cache | null {
-  try {
-    const c = (globalThis as any).caches?.default;
-    if (c && typeof c.match === "function" && typeof c.put === "function") {
-      return c as Cache;
-    }
-  } catch {
-    // Not in Worker runtime
-  }
-  return null;
+if (!globalRef.__ENJUEGO_LAST_R2_FLUSH__) {
+  globalRef.__ENJUEGO_LAST_R2_FLUSH__ = new Map<string, number>();
 }
-
-function makeCacheUrl(key: string): string {
-  return `https://cache.enjuego.online/__kv__/${encodeURIComponent(key)}`;
-}
+const memoryCache = globalRef.__ENJUEGO_MEM_CACHE_V2__;
+const lastR2Flush = globalRef.__ENJUEGO_LAST_R2_FLUSH__;
 
 export async function getAdminKv(): Promise<{
   kv: HybridKVStore;
   isCloudflareKv: boolean;
 }> {
+  let r2Bucket: {
+    get(k: string): Promise<{ text(): Promise<string> } | null>;
+    put(k: string, v: string): Promise<unknown>;
+  } | null = null;
+
   let rawKv: {
     get(k: string): Promise<string | null>;
     put(k: string, v: string, o?: { expirationTtl?: number }): Promise<void>;
@@ -177,6 +126,9 @@ export async function getAdminKv(): Promise<{
   try {
     const ctx = await getCloudflareContext({ async: true });
     const env = ctx?.env as Record<string, any> | undefined;
+    if (env?.ENJUEGO_R2 && typeof env.ENJUEGO_R2.get === "function") {
+      r2Bucket = env.ENJUEGO_R2;
+    }
     if (env?.ENJUEGO_KV && typeof env.ENJUEGO_KV.get === "function") {
       rawKv = env.ENJUEGO_KV;
     }
@@ -184,51 +136,59 @@ export async function getAdminKv(): Promise<{
     // Fallback in local Node dev mode
   }
 
-  const edgeCache = getEdgeCache();
-
   const hybridKv: HybridKVStore = {
-    async get(key: string, options?: { skipKv?: boolean }): Promise<string | null> {
-      const memVal = memoryKv.get(key);
-      if (memVal !== undefined) {
-        return memVal;
+    async get(
+      key: string,
+      options?: { skipKv?: boolean; ttlMs?: number }
+    ): Promise<string | null> {
+      const now = Date.now();
+      const memEntry = memoryCache.get(key);
+      if (memEntry && now < memEntry.expiresAt) {
+        return memEntry.value;
       }
 
-      if (edgeCache) {
+      const cacheTtlMs = options?.ttlMs ?? 2000;
+
+      // 1. Primary Global Strongly-Consistent Store: Cloudflare R2 (enjuego-storage)
+      if (r2Bucket) {
         try {
-          const cachedRes = await edgeCache.match(makeCacheUrl(key));
-          if (cachedRes && cachedRes.ok) {
-            const text = await cachedRes.text();
-            memoryKv.set(key, text);
+          const obj = await r2Bucket.get(`store/${key}.json`);
+          if (obj) {
+            const text = await obj.text();
+            memoryCache.set(key, {
+              value: text,
+              expiresAt: now + cacheTtlMs,
+            });
             return text;
           }
         } catch {
-          // ignore
+          // ignore R2 read error
         }
       }
 
+      // 2. Fallback: Cloudflare KV
       if (rawKv && !options?.skipKv) {
         try {
           const kvVal = await rawKv.get(key);
           if (kvVal !== null && kvVal !== undefined) {
-            memoryKv.set(key, kvVal);
-            if (edgeCache) {
-              edgeCache
-                .put(
-                  makeCacheUrl(key),
-                  new Response(kvVal, {
-                    headers: {
-                      "Content-Type": "text/plain;charset=UTF-8",
-                      "Cache-Control": "public, max-age=604800",
-                    },
-                  })
-                )
-                .catch(() => {});
+            memoryCache.set(key, {
+              value: kvVal,
+              expiresAt: now + cacheTtlMs,
+            });
+            // Migrate automatically to R2 if available
+            if (r2Bucket) {
+              r2Bucket.put(`store/${key}.json`, kvVal).catch(() => {});
             }
             return kvVal;
           }
         } catch {
           // ignore
         }
+      }
+
+      // Return stale memory entry if nothing in R2/KV (e.g., local dev)
+      if (memEntry) {
+        return memEntry.value;
       }
 
       return null;
@@ -239,26 +199,29 @@ export async function getAdminKv(): Promise<{
       value: string,
       options?: { expirationTtl?: number; persistToKv?: boolean }
     ): Promise<void> {
-      memoryKv.set(key, value);
+      const now = Date.now();
+      const isCritical = options?.persistToKv !== false;
+      memoryCache.set(key, {
+        value,
+        expiresAt: now + (isCritical ? 2000 : 5000),
+      });
 
-      if (edgeCache) {
-        try {
-          const ttl = options?.expirationTtl || 86400 * 30;
-          await edgeCache.put(
-            makeCacheUrl(key),
-            new Response(value, {
-              headers: {
-                "Content-Type": "text/plain;charset=UTF-8",
-                "Cache-Control": `public, max-age=${ttl}`,
-              },
-            })
-          );
-        } catch {
-          // ignore
+      // Write to Cloudflare R2 (1,000,000 free writes/month, globally consistent across PC & Mobile)
+      if (r2Bucket) {
+        const lastFlush = lastR2Flush.get(key) || 0;
+        // Critical writes (ads, users, password) flush immediately; high-frequency writes (metrics, presence) flush every 8s
+        if (isCritical || now - lastFlush >= 8000) {
+          lastR2Flush.set(key, now);
+          try {
+            await r2Bucket.put(`store/${key}.json`, value);
+          } catch {
+            // ignore R2 write error
+          }
         }
       }
 
-      if (rawKv && options?.persistToKv !== false) {
+      // Best-effort backup to KV only for critical updates
+      if (rawKv && isCritical) {
         try {
           await rawKv.put(key, value, {
             expirationTtl: options?.expirationTtl || 86400 * 365,
@@ -272,7 +235,7 @@ export async function getAdminKv(): Promise<{
 
   return {
     kv: hybridKv,
-    isCloudflareKv: Boolean(rawKv || edgeCache),
+    isCloudflareKv: Boolean(r2Bucket || rawKv),
   };
 }
 
@@ -328,7 +291,7 @@ async function getBannerMetricsMap(): Promise<
   Record<string, { impressions: number; clicks: number }>
 > {
   const { kv } = await getAdminKv();
-  const raw = await kv.get(METRICS_KEY, { skipKv: true });
+  const raw = await kv.get(METRICS_KEY, { skipKv: true, ttlMs: 4000 });
   if (!raw) return {};
   try {
     return JSON.parse(raw) || {};
@@ -340,7 +303,7 @@ async function getBannerMetricsMap(): Promise<
 export async function getAdCampaigns(): Promise<AdCampaign[]> {
   const { kv } = await getAdminKv();
   const [raw, metricsMap] = await Promise.all([
-    kv.get(CAMPAIGNS_KEY),
+    kv.get(CAMPAIGNS_KEY, { ttlMs: 1500 }),
     getBannerMetricsMap(),
   ]);
 
@@ -358,13 +321,12 @@ export async function getAdCampaigns(): Promise<AdCampaign[]> {
 
   return list.map((c) => {
     const m = metricsMap[c.id];
-    const slotKey = normalizeSlotKey(c.slot);
     const name = c.name || c.companyName || "Anuncio";
     return {
       ...c,
       name,
       companyName: name,
-      slot: slotKey,
+      slot: "general",
       size: c.size || "970x90",
       startsOn: c.startsOn || "",
       endsOn: c.endsOn || "",
@@ -384,10 +346,9 @@ function shuffleArray<T>(arr: T[]): T[] {
 }
 
 /**
- * Exact jugadaenvivo.com /api/ads?slots=... logic:
- * 1. Each slot shows one live ad at a time; if there are multiple in the same slot, they rotate at random.
- * 2. Slots without their own ad show one from "general" ("Todo el sitio") or any active ad, without repeating it on the same page.
- * 3. If a slot has no valid ad, it returns null so the frontend hides the container completely.
+ * Rotativo Global ("Todo el sitio"):
+ * Toma todos los anuncios activos y los reparte al azar entre los espacios de la página
+ * sin repetir el mismo anuncio en la misma página.
  */
 export async function pickAdsForPageSlots(
   requestedRawSlots: string[]
@@ -395,52 +356,24 @@ export async function pickAdsForPageSlots(
   const allCampaigns = await getAdCampaigns();
   const liveAds = shuffleArray(allCampaigns.filter(isAdCampaignLive));
   const usedIds = new Set<string>();
-  const chosenByRawSlot: Record<string, AdCampaign | null> = {};
-
-  // Pass 1: Dedicated slot match
-  for (const rawSlot of requestedRawSlots) {
-    const canonical = normalizeSlotKey(rawSlot);
-    const dedicated = liveAds.find(
-      (ad) => ad.slot === canonical && !usedIds.has(ad.id)
-    );
-    if (dedicated) {
-      chosenByRawSlot[rawSlot] = dedicated;
-      usedIds.add(dedicated.id);
-    } else {
-      chosenByRawSlot[rawSlot] = null;
-    }
-  }
-
-  // Pass 2: Fill empty slots from "general" ("Todo el sitio") or any unused live ad without repeating on the same page
-  for (const rawSlot of requestedRawSlots) {
-    if (chosenByRawSlot[rawSlot]) continue;
-    let fallback = liveAds.find(
-      (ad) => ad.slot === "general" && !usedIds.has(ad.id)
-    );
-    if (!fallback) {
-      fallback = liveAds.find((ad) => !usedIds.has(ad.id));
-    }
-    if (fallback) {
-      chosenByRawSlot[rawSlot] = fallback;
-      usedIds.add(fallback.id);
-    }
-  }
-
-  // Record +1 view (impression) for each served ad and format exact jugadaenvivo response
   const response: Record<string, ServedSlotAd | null> = {};
+
   for (const rawSlot of requestedRawSlots) {
-    const ad = chosenByRawSlot[rawSlot];
-    if (!ad) {
+    const picked = liveAds.find((ad) => !usedIds.has(ad.id)) || null;
+    if (!picked) {
       response[rawSlot] = null;
       continue;
     }
-    await recordBannerMetric(ad.id, "impression").catch(() => {});
+    usedIds.add(picked.id);
+    await recordBannerMetric(picked.id, "impression").catch(() => {});
     response[rawSlot] = {
-      id: ad.id,
-      imageUrl: ad.imageUrl,
-      alt: ad.name || ad.companyName || "Publicidad",
-      href: ad.linkUrl ? `/api/banners/go?id=${encodeURIComponent(ad.id)}` : "",
-      size: ad.size || "970x90",
+      id: picked.id,
+      imageUrl: picked.imageUrl,
+      alt: picked.name || picked.companyName || "Publicidad",
+      href: picked.linkUrl
+        ? `/api/banners/go?id=${encodeURIComponent(picked.id)}`
+        : "",
+      size: picked.size || "970x90",
     };
   }
 
@@ -487,7 +420,7 @@ export async function recordPresenceHeartbeat(
 ): Promise<{ onlineCount: number }> {
   const { kv } = await getAdminKv();
   const now = Date.now();
-  const raw = await kv.get(PRESENCE_KEY, { skipKv: true });
+  const raw = await kv.get(PRESENCE_KEY, { skipKv: true, ttlMs: 4000 });
   let sessions: LiveSession[] = [];
   if (raw) {
     try {
@@ -526,7 +459,7 @@ export async function recordPresenceHeartbeat(
 
   const dateKey = getTodayCaracasKey();
   const statsKey = `admin:traffic:${dateKey}`;
-  const rawStats = await kv.get(statsKey, { skipKv: true });
+  const rawStats = await kv.get(statsKey, { skipKv: true, ttlMs: 5000 });
   let stats: DailyTrafficStats = {
     dateKey,
     totalHeartbeats: 0,
@@ -567,7 +500,7 @@ export async function getLivePresenceSummary(): Promise<{
 }> {
   const { kv } = await getAdminKv();
   const now = Date.now();
-  const raw = await kv.get(PRESENCE_KEY, { skipKv: true });
+  const raw = await kv.get(PRESENCE_KEY, { skipKv: true, ttlMs: 3000 });
   let sessions: LiveSession[] = [];
   if (raw) {
     try {
@@ -587,7 +520,7 @@ export async function getLivePresenceSummary(): Promise<{
   const registeredOnlineCount = activeSessions.filter((s) => s.isRegistered).length;
 
   const dateKey = getTodayCaracasKey();
-  const rawStats = await kv.get(`admin:traffic:${dateKey}`, { skipKv: true });
+  const rawStats = await kv.get(`admin:traffic:${dateKey}`, { skipKv: true, ttlMs: 4000 });
   let todayUniqueVisitors = activeSessions.length;
   let todayPeakOnline = activeSessions.length;
   if (rawStats) {

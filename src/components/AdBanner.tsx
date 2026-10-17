@@ -2,11 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import {
-  normalizeSlotKey,
-  type AdSlotType,
-  type ServedSlotAd,
-} from "@/lib/admin-store";
+import type { AdSlotType, ServedSlotAd } from "@/lib/admin-store";
 
 export interface AdBannerProps {
   slot?: AdSlotType;
@@ -21,14 +17,21 @@ export interface AdBannerProps {
   className?: string;
 }
 
-// Per-route batch cache so all [data-ad-slot] components on the same page share ONE request to /api/banners?slots=...
-// and never repeat the same ad on the same page (exact jugadaenvivo.com ads.js logic).
+// Per-route batch cache so all AdBanner slots on the same page share ONE request
+// and rotate ads without repeating on the same page.
 let cachedRouteKey = "";
 let assignedSlotsCache: Record<string, ServedSlotAd | null> | null = null;
 let fetchPromise: Promise<Record<string, ServedSlotAd | null>> | null = null;
 
-const ALL_SLOTS_QUERY =
-  "home_top,home_mid,home_bottom,listas_top,listas_bottom,gameday,top-leaderboard,in-feed,home-bottom,gameday-sidebar";
+function getSlotsForRoute(routeKey: string): string {
+  if (routeKey === "/" || routeKey.startsWith("/inicio")) {
+    return "top-leaderboard,in-feed,home-bottom";
+  }
+  if (routeKey.startsWith("/juego")) {
+    return "top-leaderboard,gameday-sidebar,home-bottom";
+  }
+  return "top-leaderboard,home-bottom";
+}
 
 async function loadPageSlotAds(
   routeKey: string
@@ -39,14 +42,16 @@ async function loadPageSlotAds(
   if (!fetchPromise || cachedRouteKey !== routeKey) {
     cachedRouteKey = routeKey;
     assignedSlotsCache = null;
+    const slotsQuery = getSlotsForRoute(routeKey);
     fetchPromise = fetch(
-      `/api/banners?slots=${encodeURIComponent(ALL_SLOTS_QUERY)}&_t=${Date.now()}`,
+      `/api/banners?slots=${encodeURIComponent(slotsQuery)}&_t=${Date.now()}`,
       { cache: "no-store" }
     )
       .then(async (res) => {
         if (!res.ok) throw new Error("Failed");
         const data = await res.json();
-        const map: Record<string, ServedSlotAd | null> = data?.slots || data || {};
+        const map: Record<string, ServedSlotAd | null> =
+          data?.slots || data || {};
         assignedSlotsCache = map;
         return map;
       })
@@ -56,14 +61,14 @@ async function loadPageSlotAds(
       .finally(() => {
         setTimeout(() => {
           fetchPromise = null;
-        }, 2500);
+        }, 1500);
       });
   }
   return fetchPromise;
 }
 
 export function AdBanner({
-  slot = "home_top",
+  slot = "top-leaderboard",
   imageUrl: propImageUrl,
   linkUrl: propLinkUrl,
   alt = "Publicidad",
@@ -73,43 +78,23 @@ export function AdBanner({
   const [ad, setAd] = useState<ServedSlotAd | null>(null);
   const [imageError, setImageError] = useState(false);
 
-  // Map legacy slot names contextual to current pathname if needed
-  const effectiveSlot = React.useMemo(() => {
-    const isListPage =
-      pathname.startsWith("/resultados") ||
-      pathname.startsWith("/calendario") ||
-      pathname.startsWith("/posiciones") ||
-      pathname.startsWith("/lideres") ||
-      pathname.startsWith("/equipos") ||
-      pathname.startsWith("/comunidad") ||
-      pathname.startsWith("/favoritos");
-
-    if (isListPage) {
-      if (slot === "top-leaderboard" || slot === "home_top") return "listas_top";
-      if (slot === "home-bottom" || slot === "home_bottom" || slot === "in-feed")
-        return "listas_bottom";
-    }
-    return normalizeSlotKey(slot);
-  }, [slot, pathname]);
-
   useEffect(() => {
     let mounted = true;
     setImageError(false);
     loadPageSlotAds(pathname).then((slotsMap) => {
       if (!mounted) return;
-      const picked = slotsMap[effectiveSlot] ?? slotsMap[slot] ?? null;
-      setAd(picked);
+      setAd(slotsMap[slot] ?? null);
     });
     return () => {
       mounted = false;
     };
-  }, [effectiveSlot, slot, pathname]);
+  }, [slot, pathname]);
 
   const finalImageUrl = propImageUrl || ad?.imageUrl || "";
   const finalHref = propLinkUrl || ad?.href || "";
   const finalAlt = ad?.alt || alt || "Publicidad";
 
-  // Exact jugadaenvivo.com behavior: if there is no active image ad for this slot, keep the container hidden (return null)
+  // Hidden completely when no active ad is assigned to this slot
   if (!finalImageUrl || imageError) {
     return null;
   }
@@ -121,17 +106,17 @@ export function AdBanner({
       loading="lazy"
       decoding="async"
       onError={() => setImageError(true)}
-      className="block max-w-full h-auto rounded-[8px]"
+      className="block w-full max-w-[970px] h-auto rounded-[10px] object-contain mx-auto"
     />
   );
 
   return (
     <div
-      className={`w-full my-2 ${className}`}
-      data-ad-slot={effectiveSlot}
+      className={`w-full my-2 flex justify-center ${className}`}
+      data-ad-slot={slot}
     >
       <div
-        className="ad-box grid justify-items-center gap-1 pt-2 px-2 pb-1.5 rounded-[14px] border border-[#e2e8f0] bg-white shadow-2xs"
+        className="ad-box w-fit max-w-full mx-auto grid justify-items-center gap-1 p-1.5 pb-1 rounded-[14px] border border-[#e2e8f0] bg-white shadow-2xs"
         style={{ backgroundColor: "#ffffff", borderColor: "#e2e8f0" }}
       >
         {finalHref ? (
@@ -139,7 +124,7 @@ export function AdBanner({
             href={finalHref}
             target="_blank"
             rel="noopener sponsored"
-            className="block max-w-full leading-none"
+            className="block w-full max-w-[970px] leading-none"
           >
             {imgElement}
           </a>
@@ -147,7 +132,7 @@ export function AdBanner({
           imgElement
         )}
         <span
-          className="ad-label text-[0.62rem] font-bold uppercase tracking-[0.1em] leading-none"
+          className="ad-label text-[9px] font-bold uppercase tracking-[0.12em] leading-none"
           style={{ color: "#64748b" }}
         >
           Publicidad

@@ -10,6 +10,7 @@ import { LeadersWidget } from "@/components/LeadersWidget";
 import { TeamRosterView } from "@/components/TeamRosterView";
 import { BroadcastChannelsRow } from "@/components/BroadcastChannelsRow";
 import { AuthModal } from "@/components/AuthModal";
+import { AdBanner } from "@/components/AdBanner";
 import { UserProfile } from "@/lib/user-auth";
 import { getFallbackSchedule } from "@/lib/lvbp-fallback-data";
 import {
@@ -1573,8 +1574,12 @@ export function EnJuegoPortal({
       {/* MAIN CONTENT CONTAINER */}
       <main
         key={`${section}-${activeDate}-${selectedGameId}-${selectedTeamCode}`}
-        className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 pt-3 sm:pt-5 pb-16 md:pb-10 animate-view-enter"
+        className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 pt-3 sm:pt-4 pb-16 md:pb-10 animate-view-enter"
       >
+        {/* TOP LEADERBOARD SPONSOR BANNER (PRO STYLE) */}
+        <div className="mb-4 sm:mb-5">
+          <AdBanner slot="top-leaderboard" />
+        </div>
         {/* SECTION: GAMEDAY (/juego/[id]) */}
         {section === "juego" && (
           <GamedayView
@@ -1798,6 +1803,9 @@ export function EnJuegoPortal({
                 ))}
               </div>
             </section>
+
+            {/* IN-FEED SPONSOR BANNER (PRO STYLE) */}
+            <AdBanner slot="in-feed" />
 
             {/* 4. MUNDO JUGADAS / LA GRADA DE LA FANATICADA */}
             <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-xs">

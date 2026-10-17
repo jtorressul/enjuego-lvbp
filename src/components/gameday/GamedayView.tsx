@@ -31,6 +31,7 @@ import {
   Info,
   Sparkles,
 } from "lucide-react";
+import { AdBanner } from "@/components/AdBanner";
 import type { UserProfile } from "@/lib/user-auth";
 
 const HIT_TYPES = new Set(["single", "double", "triple", "home_run"]);
@@ -1768,6 +1769,9 @@ export function GamedayView({
               />
             </div>
           </section>
+
+          {/* SPONSOR BANNER IN GAMEDAY (PRO STYLE) */}
+          <AdBanner slot="gameday-sidebar" />
 
           {/* 3. CHAT EN VIVO DE LA TRIBUNA */}
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs flex flex-col h-[410px]">

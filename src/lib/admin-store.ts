@@ -3,13 +3,40 @@ import type { UserProfile } from "@/lib/user-auth";
 
 export type AdSlotType =
   | "general"
+  | "home_top"
+  | "home_mid"
+  | "home_bottom"
+  | "listas_top"
+  | "listas_bottom"
+  | "gameday"
+  // Legacy aliases mapped automatically:
   | "top-leaderboard"
   | "in-feed"
   | "home-bottom"
   | "gameday-sidebar";
 
+export type CanonicalSlotKey =
+  | "general"
+  | "home_top"
+  | "home_mid"
+  | "home_bottom"
+  | "listas_top"
+  | "listas_bottom"
+  | "gameday";
+
+export function normalizeSlotKey(slot?: string): CanonicalSlotKey {
+  if (!slot) return "general";
+  if (slot === "top-leaderboard" || slot === "home_top") return "home_top";
+  if (slot === "in-feed" || slot === "home_mid") return "home_mid";
+  if (slot === "home-bottom" || slot === "home_bottom") return "home_bottom";
+  if (slot === "gameday-sidebar" || slot === "gameday") return "gameday";
+  if (slot === "listas_top") return "listas_top";
+  if (slot === "listas_bottom") return "listas_bottom";
+  return "general";
+}
+
 export interface AdSlotInfo {
-  key: AdSlotType;
+  key: CanonicalSlotKey;
   label: string;
   where: string;
   size: string;
@@ -18,53 +45,70 @@ export interface AdSlotInfo {
 export const AD_SLOTS_CATALOG: AdSlotInfo[] = [
   {
     key: "general",
-    label: "Rotativo · Todo el sitio",
+    label: "Todo el sitio (Rotativo)",
     where: "Cubre cualquier espacio libre sin repetirlo en la misma página",
     size: "970x90",
   },
   {
-    key: "top-leaderboard",
+    key: "home_top",
     label: "Inicio · Arriba",
-    where: "Debajo de la cabecera y tira de juegos en el inicio",
+    where: "Debajo de la cabecera en la página de inicio",
     size: "970x90",
   },
   {
-    key: "in-feed",
+    key: "home_mid",
     label: "Inicio · Medio",
-    where: "Entre la pizarra de juegos y las noticias / secciones",
+    where: "Entre la pizarra de juegos y las noticias/comunidad en el inicio",
     size: "970x90",
   },
   {
-    key: "home-bottom",
+    key: "home_bottom",
     label: "Inicio · Abajo",
-    where: "Antes del pie de página en todo el portal",
+    where: "Antes del pie de página en el inicio",
     size: "970x90",
   },
   {
-    key: "gameday-sidebar",
-    label: "Gameday · Pizarra en Vivo",
-    where: "Dentro de la transmisión jugada a jugada del partido",
+    key: "listas_top",
+    label: "Listas · Arriba",
+    where: "Arriba en Resultados, Calendario, Posiciones, Líderes y Equipos",
+    size: "970x90",
+  },
+  {
+    key: "listas_bottom",
+    label: "Listas · Abajo",
+    where: "Abajo en Resultados, Calendario, Posiciones, Líderes y Equipos",
+    size: "970x90",
+  },
+  {
+    key: "gameday",
+    label: "Gameday · Juego en Vivo",
+    where: "En la pantalla del partido en vivo y jugada a jugada",
     size: "970x90",
   },
 ];
 
 export interface AdCampaign {
   id: string;
+  name: string;
   companyName: string;
-  slot: AdSlotType;
-  slots: AdSlotType[];
-  title: string;
-  subtitle: string;
-  ctaText: string;
+  slot: CanonicalSlotKey;
+  imageUrl: string;
   linkUrl: string;
-  imageUrl?: string;
-  accentColor: string;
-  startsOn?: string;
-  endsOn?: string;
+  startsOn: string;
+  endsOn: string;
+  size: string;
   active: boolean;
   impressions: number;
   clicks: number;
   updatedAt: number;
+}
+
+export interface ServedSlotAd {
+  id: string;
+  imageUrl: string;
+  alt: string;
+  href: string;
+  size: string;
 }
 
 export interface LiveSession {
@@ -220,7 +264,7 @@ export async function getAdminKv(): Promise<{
             expirationTtl: options?.expirationTtl || 86400 * 365,
           });
         } catch {
-          // Gracefully absorb KV daily quota limit
+          // Gracefully absorb daily KV put quota limit
         }
       }
     },
@@ -232,8 +276,8 @@ export async function getAdminKv(): Promise<{
   };
 }
 
-const CAMPAIGNS_KEY = "admin:ads:campaigns:v3";
-const METRICS_KEY = "admin:ads:metrics:v3";
+const CAMPAIGNS_KEY = "admin:ads:jugada_v1";
+const METRICS_KEY = "admin:ads:metrics:jugada_v1";
 const PRESENCE_KEY = "admin:presence:sessions:v1";
 const USERS_INDEX_KEY = "admin:users:index:v1";
 const ADMIN_PASS_KEY = "admin:config:password:v1";
@@ -245,106 +289,9 @@ export function getTodayCaracasKey(): string {
   return d.toISOString().slice(0, 10);
 }
 
-export const DEFAULT_5_CAMPAIGNS: AdCampaign[] = [
-  {
-    id: "emp_1",
-    companyName: "Empresa #1 · Disponible",
-    slot: "general",
-    slots: ["general"],
-    title: "Impulsa tu marca en EnJuego.online",
-    subtitle: "Espacio publicitario #1 activo en el rotativo de toda la jornada.",
-    ctaText: "Pautar",
-    linkUrl:
-      "https://wa.me/?text=Hola%20EnJuego.online,%20me%20interesa%20el%20Espacio%20Publicitario%20%231",
-    imageUrl: "",
-    accentColor: "#e11d48",
-    startsOn: "",
-    endsOn: "",
-    active: true,
-    impressions: 0,
-    clicks: 0,
-    updatedAt: Date.now(),
-  },
-  {
-    id: "emp_2",
-    companyName: "Empresa #2 · Disponible",
-    slot: "general",
-    slots: ["general"],
-    title: "Conecta con miles de fanáticos del béisbol",
-    subtitle: "Destaca tu negocio o servicio en cada inning de la temporada.",
-    ctaText: "Anunciar",
-    linkUrl:
-      "https://wa.me/?text=Hola%20EnJuego.online,%20me%20interesa%20el%20Espacio%20Publicitario%20%232",
-    imageUrl: "",
-    accentColor: "#d97706",
-    startsOn: "",
-    endsOn: "",
-    active: true,
-    impressions: 0,
-    clicks: 0,
-    updatedAt: Date.now(),
-  },
-  {
-    id: "emp_3",
-    companyName: "Empresa #3 · Disponible",
-    slot: "general",
-    slots: ["general"],
-    title: "Patrocina la Pizarra en Vivo y el Jugada a Jugada",
-    subtitle: "Presencia directa frente a la audiencia deportiva en móvil y PC.",
-    ctaText: "Contactar",
-    linkUrl:
-      "https://wa.me/?text=Hola%20EnJuego.online,%20me%20interesa%20el%20Espacio%20Publicitario%20%233",
-    imageUrl: "",
-    accentColor: "#0284c7",
-    startsOn: "",
-    endsOn: "",
-    active: true,
-    impressions: 0,
-    clicks: 0,
-    updatedAt: Date.now(),
-  },
-  {
-    id: "emp_4",
-    companyName: "Empresa #4 · Disponible",
-    slot: "general",
-    slots: ["general"],
-    title: "Promociona tu tienda, restaurante o app aquí",
-    subtitle: "Banners dinámicos con enlace directo a tu WhatsApp o Instagram.",
-    ctaText: "Reservar",
-    linkUrl:
-      "https://wa.me/?text=Hola%20EnJuego.online,%20me%20interesa%20el%20Espacio%20Publicitario%20%234",
-    imageUrl: "",
-    accentColor: "#059669",
-    startsOn: "",
-    endsOn: "",
-    active: true,
-    impressions: 0,
-    clicks: 0,
-    updatedAt: Date.now(),
-  },
-  {
-    id: "emp_5",
-    companyName: "Empresa #5 · Disponible",
-    slot: "general",
-    slots: ["general"],
-    title: "Alianzas Comerciales Temporada 2026-2027",
-    subtitle: "Reserva tu espacio en el rotativo de patrocinadores de EnJuego.online.",
-    ctaText: "Más Info",
-    linkUrl:
-      "https://wa.me/?text=Hola%20EnJuego.online,%20me%20interesa%20el%20Espacio%20Publicitario%20%235",
-    imageUrl: "",
-    accentColor: "#7c3aed",
-    startsOn: "",
-    endsOn: "",
-    active: true,
-    impressions: 0,
-    clicks: 0,
-    updatedAt: Date.now(),
-  },
-];
-
 export function isAdCampaignLive(ad: AdCampaign): boolean {
   if (!ad.active) return false;
+  if (!ad.imageUrl) return false;
   const today = getTodayCaracasKey();
   if (ad.startsOn && ad.startsOn.trim() !== "" && today < ad.startsOn.trim()) {
     return false;
@@ -397,26 +344,30 @@ export async function getAdCampaigns(): Promise<AdCampaign[]> {
     getBannerMetricsMap(),
   ]);
 
-  let list: AdCampaign[] = DEFAULT_5_CAMPAIGNS.map((c) => ({ ...c }));
+  let list: AdCampaign[] = [];
   if (raw) {
     try {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         list = parsed;
       }
     } catch {
-      // Fallback to default 5
+      list = [];
     }
   }
 
   return list.map((c) => {
     const m = metricsMap[c.id];
-    const primarySlot: AdSlotType =
-      c.slot || (Array.isArray(c.slots) && c.slots[0]) || "general";
+    const slotKey = normalizeSlotKey(c.slot);
+    const name = c.name || c.companyName || "Anuncio";
     return {
       ...c,
-      slot: primarySlot,
-      slots: [primarySlot],
+      name,
+      companyName: name,
+      slot: slotKey,
+      size: c.size || "970x90",
+      startsOn: c.startsOn || "",
+      endsOn: c.endsOn || "",
       impressions: Math.max(c.impressions || 0, m?.impressions || 0),
       clicks: Math.max(c.clicks || 0, m?.clicks || 0),
     };
@@ -433,48 +384,67 @@ function shuffleArray<T>(arr: T[]): T[] {
 }
 
 /**
- * Exact jugadaenvivo.com dynamic ad server algorithm:
- * - On every request, shuffles active ads randomly.
- * - First checks if a slot has ads specifically pinned to that slot.
- * - Otherwise pulls from the "general" ("Rotativo · Todo el sitio") pool or any active ad, NEVER repeating the same ad on the same page.
+ * Exact jugadaenvivo.com /api/ads?slots=... logic:
+ * 1. Each slot shows one live ad at a time; if there are multiple in the same slot, they rotate at random.
+ * 2. Slots without their own ad show one from "general" ("Todo el sitio") or any active ad, without repeating it on the same page.
+ * 3. If a slot has no valid ad, it returns null so the frontend hides the container completely.
  */
 export async function pickAdsForPageSlots(
-  requestedSlots: AdSlotType[]
-): Promise<Record<string, AdCampaign | null>> {
+  requestedRawSlots: string[]
+): Promise<Record<string, ServedSlotAd | null>> {
   const allCampaigns = await getAdCampaigns();
   const liveAds = shuffleArray(allCampaigns.filter(isAdCampaignLive));
   const usedIds = new Set<string>();
-  const result: Record<string, AdCampaign | null> = {};
+  const chosenByRawSlot: Record<string, AdCampaign | null> = {};
 
-  // Pass 1: Assign slots that have dedicated ads specifically targeting that slot
-  for (const slot of requestedSlots) {
+  // Pass 1: Dedicated slot match
+  for (const rawSlot of requestedRawSlots) {
+    const canonical = normalizeSlotKey(rawSlot);
     const dedicated = liveAds.find(
-      (ad) => ad.slot === slot && !usedIds.has(ad.id)
+      (ad) => ad.slot === canonical && !usedIds.has(ad.id)
     );
     if (dedicated) {
-      result[slot] = dedicated;
+      chosenByRawSlot[rawSlot] = dedicated;
       usedIds.add(dedicated.id);
     } else {
-      result[slot] = null;
+      chosenByRawSlot[rawSlot] = null;
     }
   }
 
-  // Pass 2: Fill remaining empty slots from "general" ("Rotativo · Todo el sitio") or any unused live ad without repeating on the same page
-  for (const slot of requestedSlots) {
-    if (result[slot]) continue;
-    let chosen = liveAds.find(
+  // Pass 2: Fill empty slots from "general" ("Todo el sitio") or any unused live ad without repeating on the same page
+  for (const rawSlot of requestedRawSlots) {
+    if (chosenByRawSlot[rawSlot]) continue;
+    let fallback = liveAds.find(
       (ad) => ad.slot === "general" && !usedIds.has(ad.id)
     );
-    if (!chosen) {
-      chosen = liveAds.find((ad) => !usedIds.has(ad.id));
+    if (!fallback) {
+      fallback = liveAds.find((ad) => !usedIds.has(ad.id));
     }
-    if (chosen) {
-      result[slot] = chosen;
-      usedIds.add(chosen.id);
+    if (fallback) {
+      chosenByRawSlot[rawSlot] = fallback;
+      usedIds.add(fallback.id);
     }
   }
 
-  return result;
+  // Record +1 view (impression) for each served ad and format exact jugadaenvivo response
+  const response: Record<string, ServedSlotAd | null> = {};
+  for (const rawSlot of requestedRawSlots) {
+    const ad = chosenByRawSlot[rawSlot];
+    if (!ad) {
+      response[rawSlot] = null;
+      continue;
+    }
+    await recordBannerMetric(ad.id, "impression").catch(() => {});
+    response[rawSlot] = {
+      id: ad.id,
+      imageUrl: ad.imageUrl,
+      alt: ad.name || ad.companyName || "Publicidad",
+      href: ad.linkUrl ? `/api/banners/go?id=${encodeURIComponent(ad.id)}` : "",
+      size: ad.size || "970x90",
+    };
+  }
+
+  return response;
 }
 
 export async function saveAdCampaigns(campaigns: AdCampaign[]): Promise<AdCampaign[]> {

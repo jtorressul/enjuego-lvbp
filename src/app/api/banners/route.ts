@@ -5,7 +5,6 @@ import {
   pickAdsForPageSlots,
   recordBannerMetric,
   recordPresenceHeartbeat,
-  type AdSlotType,
 } from "@/lib/admin-store";
 
 export const dynamic = "force-dynamic";
@@ -16,13 +15,21 @@ export async function GET(request: Request) {
     const slotsParam = searchParams.get("slots");
 
     if (slotsParam) {
-      const requested = slotsParam
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean) as AdSlotType[];
+      const requested = Array.from(
+        new Set(
+          slotsParam
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+        )
+      ).slice(0, 12);
+
       const assigned = await pickAdsForPageSlots(requested);
       return NextResponse.json(
-        { slots: assigned },
+        {
+          ...assigned,
+          slots: assigned,
+        },
         { headers: { "Cache-Control": "no-store, max-age=0" } }
       );
     }
@@ -30,14 +37,17 @@ export async function GET(request: Request) {
     const campaigns = await getAdCampaigns();
     const activeCampaigns = campaigns.filter(isAdCampaignLive);
     const assigned = await pickAdsForPageSlots([
-      "top-leaderboard",
-      "in-feed",
-      "home-bottom",
-      "gameday-sidebar",
+      "home_top",
+      "home_mid",
+      "home_bottom",
+      "listas_top",
+      "listas_bottom",
+      "gameday",
     ]);
 
     return NextResponse.json(
       {
+        ...assigned,
         campaigns: activeCampaigns,
         slots: assigned,
       },

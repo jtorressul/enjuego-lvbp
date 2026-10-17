@@ -31,7 +31,7 @@ import {
   AD_SLOTS_CATALOG,
   type AdCampaign,
   type AdSlotInfo,
-  type AdSlotType,
+  type CanonicalSlotKey,
   type LiveSession,
 } from "@/lib/admin-store";
 import type { UserProfile } from "@/lib/user-auth";
@@ -129,15 +129,13 @@ export default function AdminDashboardPage() {
   } | null>(null);
 
   // "Nuevo anuncio" Form State (Exact jugadaenvivo.com/panel fields)
-  const [newSlot, setNewSlot] = useState<AdSlotType>("top-leaderboard");
+  const [newSlot, setNewSlot] = useState<CanonicalSlotKey>("general");
   const [newName, setNewName] = useState("");
   const [newLinkUrl, setNewLinkUrl] = useState("");
   const [newStartsOn, setNewStartsOn] = useState("");
   const [newEndsOn, setNewEndsOn] = useState("");
   const [newImageUrl, setNewImageUrl] = useState("");
   const [newFileName, setNewFileName] = useState("");
-  const [newTitle, setNewTitle] = useState("");
-  const [newSubtitle, setNewSubtitle] = useState("");
   const [publishingNew, setPublishingNew] = useState(false);
 
   const [userSearch, setUserSearch] = useState("");
@@ -231,11 +229,15 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // Publish new ad (like #ad-form in jugadaenvivo.com)
+  // Publish new ad (exact #ad-form in jugadaenvivo.com)
   const handleCreateAd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) {
       alert("Escribe el nombre del anunciante o campaña.");
+      return;
+    }
+    if (!newImageUrl) {
+      alert("Elige una imagen (PNG, JPG, WebP o GIF) para publicar el anuncio.");
       return;
     }
     setPublishingNew(true);
@@ -250,14 +252,12 @@ export default function AdminDashboardPage() {
         body: JSON.stringify({
           action: "create_ad",
           slot: newSlot,
+          name: newName.trim(),
           companyName: newName.trim(),
           linkUrl: newLinkUrl.trim(),
           startsOn: newStartsOn,
           endsOn: newEndsOn,
           imageUrl: newImageUrl,
-          title: newTitle.trim() || newName.trim(),
-          subtitle:
-            newSubtitle.trim() || "Patrocinador en EnJuego.online",
         }),
       });
       const data = await res.json();
@@ -269,9 +269,7 @@ export default function AdminDashboardPage() {
       setNewEndsOn("");
       setNewImageUrl("");
       setNewFileName("");
-      setNewTitle("");
-      setNewSubtitle("");
-      setStatusMessage("¡Anuncio publicado y en emisión!");
+      setStatusMessage("¡Anuncio publicado!");
       setTimeout(() => setStatusMessage(""), 4500);
     } catch (err: any) {
       alert(err?.message || "Error al publicar anuncio");
@@ -821,7 +819,7 @@ export default function AdminDashboardPage() {
                     </label>
                     <select
                       value={newSlot}
-                      onChange={(e) => setNewSlot(e.target.value as AdSlotType)}
+                      onChange={(e) => setNewSlot(e.target.value as CanonicalSlotKey)}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs sm:text-sm font-bold text-slate-900"
                     >
                       {slots.map((s) => (
@@ -898,17 +896,17 @@ export default function AdminDashboardPage() {
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <span className="block text-xs font-extrabold uppercase text-slate-700">
-                        Imagen del Banner (PNG, JPG, WebP o GIF animado · 970x90 px)
+                        Imagen (PNG, JPG, WebP o GIF)
                       </span>
                       <span className="text-[11px] text-slate-500">
-                        Sube el arte gráfico horizontal del cliente o pega su URL directa.
+                        Medida recomendada: 970x90 px (soporta GIF animado).
                       </span>
                     </div>
 
                     <div className="flex items-center gap-2">
                       <label className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black cursor-pointer transition">
                         <Upload className="w-3.5 h-3.5" />
-                        <span>Elegir archivo (PNG/JPG/GIF)</span>
+                        <span>Elegir archivo</span>
                         <input
                           type="file"
                           accept="image/png,image/jpeg,image/webp,image/gif"
@@ -948,25 +946,6 @@ export default function AdminDashboardPage() {
                       />
                     </div>
                   )}
-
-                  {!newImageUrl && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                      <input
-                        type="text"
-                        value={newTitle}
-                        onChange={(e) => setNewTitle(e.target.value)}
-                        placeholder="Si no tienes imagen aún: Título del banner..."
-                        className="px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-bold"
-                      />
-                      <input
-                        type="text"
-                        value={newSubtitle}
-                        onChange={(e) => setNewSubtitle(e.target.value)}
-                        placeholder="Subtítulo opcional..."
-                        className="px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs"
-                      />
-                    </div>
-                  )}
                 </div>
 
                 <div>
@@ -996,13 +975,15 @@ export default function AdminDashboardPage() {
                 <h2 className="text-lg font-black text-slate-950">
                   Anuncios ({campaigns.length})
                 </h2>
-                <button
-                  type="button"
-                  onClick={() => handleResetMetrics()}
-                  className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-slate-900 cursor-pointer"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" /> Reiniciar todas las estadísticas
-                </button>
+                {campaigns.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => handleResetMetrics()}
+                    className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-slate-900 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" /> Reiniciar todas las estadísticas
+                  </button>
+                )}
               </div>
 
               {campaigns.length === 0 ? (
@@ -1034,41 +1015,15 @@ export default function AdminDashboardPage() {
                       >
                         {/* Left Preview Thumbnail (3 cols) */}
                         <div className="md:col-span-3 flex flex-col gap-2">
-                          {ad.imageUrl ? (
-                            <img
-                              src={ad.imageUrl}
-                              alt={ad.companyName}
-                              className="w-full h-[90px] object-contain rounded-lg bg-slate-100 border border-slate-200 p-1"
-                            />
-                          ) : (
-                            <div
-                              className="w-full h-[90px] rounded-lg p-2.5 flex flex-col justify-center border border-slate-200"
-                              style={{
-                                background:
-                                  "linear-gradient(110deg, #0b1324 0%, #1e293b 100%)",
-                                borderLeft: `4px solid ${ad.accentColor}`,
-                                color: "#ffffff",
-                              }}
-                            >
-                              <span
-                                className="inline-block self-start px-1.5 py-0.5 rounded text-[8px] font-black uppercase mb-1"
-                                style={{ backgroundColor: ad.accentColor }}
-                              >
-                                {ad.companyName}
-                              </span>
-                              <p className="text-[11px] font-black text-white line-clamp-2 leading-tight">
-                                {ad.title}
-                              </p>
-                            </div>
-                          )}
+                          <img
+                            src={ad.imageUrl}
+                            alt={ad.companyName}
+                            className="w-full h-[90px] object-contain rounded-lg bg-slate-100 border border-slate-200 p-1"
+                          />
 
                           <label className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-300 text-[11px] font-bold text-slate-700 cursor-pointer text-center">
                             <Upload className="w-3 h-3" />
-                            <span>
-                              {ad.imageUrl
-                                ? "Cambiar imagen (970x90)"
-                                : "Subir imagen (970x90)"}
-                            </span>
+                            <span>Cambiar imagen (970x90)</span>
                             <input
                               type="file"
                               accept="image/png,image/jpeg,image/webp,image/gif"
@@ -1118,7 +1073,7 @@ export default function AdminDashboardPage() {
                               value={ad.slot || "general"}
                               onChange={(e) =>
                                 handleUpdateAd(ad.id, {
-                                  slot: e.target.value as AdSlotType,
+                                  slot: e.target.value as CanonicalSlotKey,
                                 })
                               }
                               className="px-2.5 py-1 rounded-lg border border-slate-300 bg-white text-xs font-bold text-slate-800"

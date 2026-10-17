@@ -1,17 +1,16 @@
 import { NextResponse } from "next/server";
 import {
   AD_SLOTS_CATALOG,
-  DEFAULT_5_CAMPAIGNS,
   getAdCampaigns,
   getAdminKv,
   getLivePresenceSummary,
   getRegisteredUsersList,
   isAdCampaignLive,
+  normalizeSlotKey,
   saveAdCampaigns,
   updateAdminPassword,
   verifyAdminPassword,
   type AdCampaign,
-  type AdSlotType,
 } from "@/lib/admin-store";
 
 export const dynamic = "force-dynamic";
@@ -102,27 +101,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     }
 
-    // Create a new ad directly from the "Nuevo anuncio" form (like jugadaenvivo.com)
+    // Create a new ad directly from the "Nuevo anuncio" form (exact jugadaenvivo.com logic)
     if (action === "create_ad") {
+      const imageUrl = body.imageUrl ? String(body.imageUrl).trim() : "";
+      if (!imageUrl) {
+        return NextResponse.json(
+          { error: "Debes elegir una imagen (PNG, JPG, WebP o GIF) para publicar el anuncio." },
+          { status: 400 }
+        );
+      }
+
       const campaigns = await getAdCampaigns();
-      const slot = (body.slot || "general") as AdSlotType;
+      const slot = normalizeSlotKey(body.slot);
+      const name = String(body.name || body.companyName || "Anuncio").slice(0, 80);
+
       const newAd: AdCampaign = {
         id: `ad_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-        companyName: String(body.companyName || "Nuevo Anunciante").slice(0, 80),
+        name,
+        companyName: name,
         slot,
-        slots: [slot],
-        title: String(
-          body.title || body.companyName || "Anuncio en EnJuego.online"
-        ).slice(0, 90),
-        subtitle: String(
-          body.subtitle || "Patrocinador en EnJuego.online"
-        ).slice(0, 130),
-        ctaText: String(body.ctaText || "Visitar").slice(0, 24),
         linkUrl: String(body.linkUrl || "").trim(),
-        imageUrl: body.imageUrl ? String(body.imageUrl) : "",
-        accentColor: String(body.accentColor || "#e11d48"),
+        imageUrl,
         startsOn: body.startsOn ? String(body.startsOn).trim() : "",
         endsOn: body.endsOn ? String(body.endsOn).trim() : "",
+        size: "970x90",
         active: true,
         impressions: 0,
         clicks: 0,
@@ -142,27 +144,18 @@ export async function POST(request: Request) {
       const campaigns = await getAdCampaigns();
       const updated = campaigns.map((c) => {
         if (c.id !== adId) return c;
-        const nextSlot = (body.slot ?? c.slot ?? "general") as AdSlotType;
+        const nextSlot =
+          body.slot !== undefined ? normalizeSlotKey(body.slot) : c.slot;
+        const nextName =
+          body.name !== undefined || body.companyName !== undefined
+            ? String(body.name ?? body.companyName).slice(0, 80)
+            : c.name;
+
         return {
           ...c,
-          companyName:
-            body.companyName !== undefined
-              ? String(body.companyName).slice(0, 80)
-              : c.companyName,
+          name: nextName,
+          companyName: nextName,
           slot: nextSlot,
-          slots: [nextSlot],
-          title:
-            body.title !== undefined
-              ? String(body.title).slice(0, 90)
-              : c.title,
-          subtitle:
-            body.subtitle !== undefined
-              ? String(body.subtitle).slice(0, 130)
-              : c.subtitle,
-          ctaText:
-            body.ctaText !== undefined
-              ? String(body.ctaText).slice(0, 24)
-              : c.ctaText,
           linkUrl:
             body.linkUrl !== undefined
               ? String(body.linkUrl).trim()
@@ -199,53 +192,6 @@ export async function POST(request: Request) {
       });
     }
 
-    if (action === "save_campaigns") {
-      const incoming = body?.campaigns as AdCampaign[];
-      if (!Array.isArray(incoming)) {
-        return NextResponse.json(
-          { error: "Formato de campañas inválido" },
-          { status: 400 }
-        );
-      }
-
-      const sanitized: AdCampaign[] = incoming.map((c, idx) => {
-        const slot = (c.slot ||
-          (Array.isArray(c.slots) && c.slots[0]) ||
-          "general") as AdSlotType;
-        return {
-          id: String(c.id || `emp_${Date.now()}_${idx}`),
-          companyName: String(c.companyName || `Empresa #${idx + 1}`).slice(
-            0,
-            80
-          ),
-          slot,
-          slots: [slot],
-          title: String(
-            c.title || "Anuncia tu marca en EnJuego.online"
-          ).slice(0, 90),
-          subtitle: String(
-            c.subtitle || "Espacio publicitario disponible."
-          ).slice(0, 130),
-          ctaText: String(c.ctaText || "Pautar").slice(0, 24),
-          linkUrl: String(c.linkUrl || "").trim(),
-          imageUrl: c.imageUrl ? String(c.imageUrl) : "",
-          accentColor: String(c.accentColor || "#e11d48"),
-          startsOn: c.startsOn ? String(c.startsOn).trim() : "",
-          endsOn: c.endsOn ? String(c.endsOn).trim() : "",
-          active: Boolean(c.active),
-          impressions: Number(c.impressions) || 0,
-          clicks: Number(c.clicks) || 0,
-          updatedAt: Date.now(),
-        };
-      });
-
-      const saved = await saveAdCampaigns(sanitized);
-      return NextResponse.json({
-        ok: true,
-        campaigns: saved.map((c) => ({ ...c, live: isAdCampaignLive(c) })),
-      });
-    }
-
     if (action === "reset_metrics") {
       const targetId = body?.campaignId;
       const campaigns = await getAdCampaigns();
@@ -256,14 +202,6 @@ export async function POST(request: Request) {
         return c;
       });
       const saved = await saveAdCampaigns(updated);
-      return NextResponse.json({
-        ok: true,
-        campaigns: saved.map((c) => ({ ...c, live: isAdCampaignLive(c) })),
-      });
-    }
-
-    if (action === "restore_defaults") {
-      const saved = await saveAdCampaigns(DEFAULT_5_CAMPAIGNS);
       return NextResponse.json({
         ok: true,
         campaigns: saved.map((c) => ({ ...c, live: isAdCampaignLive(c) })),

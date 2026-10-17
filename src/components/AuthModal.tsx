@@ -210,7 +210,7 @@ export function AuthModal({
       >
         {/* Modal Header */}
         <div
-          className="p-5 border-b flex items-center justify-between text-white"
+          className="auth-header p-5 border-b flex items-center justify-between text-white"
           style={{ backgroundColor: "#060a12", borderColor: "#1e293b" }}
         >
           <div className="flex items-center gap-2.5">
@@ -308,7 +308,7 @@ export function AuthModal({
         )}
 
         {/* Modal Body */}
-        <div className="p-5 max-h-[75vh] overflow-y-auto">
+        <div className="p-5 max-h-[82dvh] overflow-y-auto overscroll-contain no-scrollbar">
           {/* PROFILE VIEW (LOGGED IN) */}
           {currentUser ? (
             <div className="space-y-5">

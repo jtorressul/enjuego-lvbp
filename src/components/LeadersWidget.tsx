@@ -40,7 +40,7 @@ function SingleLeaderCard({
       <div>
         <header className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
           <h3 className="text-sm font-black text-slate-900">{title}</h3>
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/60">
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/60 overflow-x-auto no-scrollbar max-w-[210px] sm:max-w-none">
             {categories.map((cat) => (
               <button
                 key={cat.key}

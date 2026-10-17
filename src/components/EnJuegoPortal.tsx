@@ -852,7 +852,10 @@ export function EnJuegoPortal({
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f3f6fb] text-slate-900 pb-20 md:pb-0">
+    <div
+      className="min-h-screen flex flex-col bg-[#f3f6fb] text-slate-900"
+      style={{ paddingBottom: "calc(4.75rem + env(safe-area-inset-bottom, 0px))" }}
+    >
       {/* CLEAN EDITORIAL TOPBAR WITH REAL NEXT.JS LINKS */}
       {/* TOPBAR WITH BRAND HORIZONTAL LOGO (AS REQUESTED) */}
       <header
@@ -1232,7 +1235,7 @@ export function EnJuegoPortal({
           <div className="relative w-full max-w-xs sm:max-w-sm bg-white h-full shadow-2xl flex flex-col z-10 overflow-hidden">
             {/* Drawer Header with Dark Theme Contrast for Logo - STICKY & PINNED */}
             <div
-              className="p-4 border-b flex items-center justify-between text-white shrink-0 sticky top-0 z-20 shadow-xs"
+              className="drawer-header p-4 border-b flex items-center justify-between text-white shrink-0 sticky top-0 z-20 shadow-xs"
               style={{
                 backgroundColor: "#060a12",
                 borderColor: "#1e293b",
@@ -1311,7 +1314,7 @@ export function EnJuegoPortal({
                   </div>
                 </div>
               ) : (
-                <div className="p-3 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 text-white shadow-2xs">
+                <div className="p-3 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 text-white shadow-2xs keep-dark">
                   <div className="flex items-start gap-2.5">
                     <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black shrink-0">
                       <Sparkles className="w-4 h-4" />
@@ -1506,7 +1509,7 @@ export function EnJuegoPortal({
           </div>
 
           {/* Horizontal Livebugs Strip with Official Logos & Direct /juego/[id] Links */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
             {gamesOfDay.length > 0 ? (
               gamesOfDay.map((game) => {
                 const isPlayed = game.status === "IN_PROGRESS" || game.status === "FINISHED";
@@ -1617,7 +1620,7 @@ export function EnJuegoPortal({
                     : "Elige tu equipo favorito para fijar sus juegos de primero:"}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 overflow-x-auto">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
                 {Object.values(LVBP_TEAMS).map((t) => {
                   const active = favoriteTeamCode === t.code;
                   return (
@@ -2041,7 +2044,7 @@ export function EnJuegoPortal({
               </div>
 
               {/* Date pills synced with URL */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
                 {dates.slice(0, 12).map((d, idx) => {
                   const f = formatCompactDay(d);
                   return (
@@ -2114,7 +2117,7 @@ export function EnJuegoPortal({
               <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2 px-1">
                 Filtrar calendario por equipo:
               </div>
-              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
                 <button
                   type="button"
                   onClick={() => {
@@ -2470,8 +2473,8 @@ export function EnJuegoPortal({
               </div>
             ) : (
               <>
-                <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-xs">
-                  <table className="w-full text-xs text-right border-collapse">
+                <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-xs no-scrollbar">
+                  <table className="w-full min-w-[720px] text-xs text-right border-collapse">
                     <thead>
                       <tr className="bg-slate-50 text-slate-500 border-b border-slate-200 font-extrabold">
                         <th className="py-3 px-4 text-left">POS / ZONA</th>
@@ -2619,7 +2622,8 @@ export function EnJuegoPortal({
 
       {/* MOBILE BOTTOM NAVIGATION BAR (NATIVE APP STYLE FOR PHONES WITH REAL LINKS) */}
       <nav
-        className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-white/95 backdrop-blur-md border-t border-slate-200 px-3 py-2 flex items-center justify-around shadow-lg"
+        className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-white/95 backdrop-blur-md border-t border-slate-200 px-3 pt-2 flex items-center justify-around shadow-lg"
+        style={{ paddingBottom: "max(0.6rem, env(safe-area-inset-bottom, 0.6rem))" }}
         aria-label="Navegación Móvil"
       >
         {(
@@ -2647,7 +2651,7 @@ export function EnJuegoPortal({
       </nav>
 
       {/* FOOTER */}
-      <footer className="border-t border-slate-200 bg-white py-6 mt-6 sm:mt-8 mb-16 md:mb-0">
+      <footer className="border-t border-slate-200 bg-white py-6 mt-6 sm:mt-8 mb-0">
         <div className="max-w-7xl mx-auto px-4 space-y-4 text-xs text-slate-500">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">

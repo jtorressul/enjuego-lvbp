@@ -593,7 +593,7 @@ export function GamedayView({
               className="w-1.5 absolute inset-y-0 right-0 transition-all group-hover:w-2"
               style={{ backgroundColor: game.homeTeam.color }}
             />
-            <span className="text-3xl sm:text-5xl font-black text-slate-950 tabular-nums mr-3 order-2 md:order-1">
+            <span className="text-3xl sm:text-5xl font-black text-slate-950 tabular-nums ml-3 md:ml-0 md:mr-3 order-2 md:order-1">
               {game.homeScore}
             </span>
             <div className="flex items-center gap-3.5 min-w-0 order-1 md:order-2 md:text-right pr-1">
@@ -639,8 +639,8 @@ export function GamedayView({
         )}
 
         {/* INNING BY INNING LINESCORE TABLE */}
-        <div className="mt-5 overflow-x-auto rounded-xl border border-slate-200 bg-white">
-          <table className="w-full text-center text-xs border-collapse">
+        <div className="mt-5 overflow-x-auto rounded-xl border border-slate-200 bg-white no-scrollbar">
+          <table className="w-full min-w-[500px] text-center text-xs border-collapse">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 font-extrabold">
                 <th className="py-2.5 px-3 text-left">EQUIPO</th>
@@ -970,7 +970,7 @@ export function GamedayView({
           {/* 3. LAS 4 PESTAÑAS DE DETALLE (JUGADA A JUGADA, BOX SCORE, ALINEACIONES, DETALLES) */}
           <section className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
             {/* Tab Bar */}
-            <div className="flex overflow-x-auto border-b border-slate-200 bg-slate-50/70">
+            <div className="flex overflow-x-auto border-b border-slate-200 bg-slate-50/70 no-scrollbar">
               {(
                 [
                   ["feed", "Jugada a jugada"],
@@ -1253,8 +1253,8 @@ export function GamedayView({
                     <h3 className="text-xs font-black uppercase tracking-wider text-amber-700 mb-2">
                       Bateo
                     </h3>
-                    <div className="overflow-x-auto rounded-xl border border-slate-200">
-                      <table className="w-full text-xs text-right border-collapse">
+                    <div className="overflow-x-auto rounded-xl border border-slate-200 no-scrollbar">
+                      <table className="w-full min-w-[460px] text-xs text-right border-collapse">
                         <thead>
                           <tr className="bg-slate-50 text-slate-500 border-b border-slate-200 font-black">
                             <th className="py-2.5 px-3 text-left">Bateador</th>
@@ -1310,8 +1310,8 @@ export function GamedayView({
                     <h3 className="text-xs font-black uppercase tracking-wider text-sky-700 mb-2">
                       Pitcheo
                     </h3>
-                    <div className="overflow-x-auto rounded-xl border border-slate-200">
-                      <table className="w-full text-xs text-right border-collapse">
+                    <div className="overflow-x-auto rounded-xl border border-slate-200 no-scrollbar">
+                      <table className="w-full min-w-[460px] text-xs text-right border-collapse">
                         <thead>
                           <tr className="bg-slate-50 text-slate-500 border-b border-slate-200 font-black">
                             <th className="py-2.5 px-3 text-left">Lanzador</th>

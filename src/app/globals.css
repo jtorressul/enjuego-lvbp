@@ -169,14 +169,35 @@ html[data-theme="light"] .via-slate-950 {
   --tw-gradient-via: #f8fafc !important;
 }
 
+/* ============================================================================
+   SCROLLBAR UTILITIES FOR MOBILE TOUCH SWIPING
+   ============================================================================ */
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+header.portal-header,
+.drawer-header,
+.auth-header,
+.keep-dark {
+  background-color: #060a12 !important;
+  color: #ffffff !important;
+}
+
 /* Recessed Wells, Inputs & Table Headers (exempt headers) */
-html[data-theme="light"] .bg-slate-950:not(header):not(header *):not(.portal-header):not(.portal-header *),
-html[data-theme="light"] .bg-slate-950\/90:not(header):not(header *):not(.portal-header):not(.portal-header *),
-html[data-theme="light"] .bg-slate-950\/80:not(header):not(header *):not(.portal-header):not(.portal-header *),
-html[data-theme="light"] .bg-slate-950\/75:not(header):not(header *):not(.portal-header):not(.portal-header *),
-html[data-theme="light"] .bg-slate-950\/70:not(header):not(header *):not(.portal-header):not(.portal-header *),
-html[data-theme="light"] .bg-slate-950\/60:not(header):not(header *):not(.portal-header):not(.portal-header *),
-html[data-theme="light"] .bg-slate-950\/30:not(header):not(header *):not(.portal-header):not(.portal-header *) {
+html[data-theme="light"] .bg-slate-950:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .bg-slate-950\/90:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .bg-slate-950\/80:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .bg-slate-950\/75:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .bg-slate-950\/70:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .bg-slate-950\/60:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .bg-slate-950\/30:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *) {
   background-color: #f8fafc !important;
 }
 
@@ -187,29 +208,29 @@ header.portal-header {
 }
 
 /* Secondary Buttons & Pills */
-html[data-theme="light"] .bg-slate-800:not(header):not(header *):not(.portal-header):not(.portal-header *),
-html[data-theme="light"] .bg-slate-800\/90:not(header):not(header *):not(.portal-header):not(.portal-header *),
-html[data-theme="light"] .bg-slate-800\/80:not(header):not(header *):not(.portal-header):not(.portal-header *),
-html[data-theme="light"] .bg-slate-800\/60:not(header):not(header *):not(.portal-header):not(.portal-header *),
-html[data-theme="light"] .bg-slate-800\/40:not(header):not(header *):not(.portal-header):not(.portal-header *),
-html[data-theme="light"] .bg-slate-800\/30:not(header):not(header *):not(.portal-header):not(.portal-header *) {
+html[data-theme="light"] .bg-slate-800:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .bg-slate-800\/90:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .bg-slate-800\/80:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .bg-slate-800\/60:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .bg-slate-800\/40:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .bg-slate-800\/30:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *) {
   background-color: #edf2f7 !important;
 }
 
-html[data-theme="light"] .hover\:bg-slate-800:hover:not(header):not(header *),
-html[data-theme="light"] .hover\:bg-slate-800\/80:hover:not(header):not(header *),
-html[data-theme="light"] .hover\:bg-slate-800\/70:hover:not(header):not(header *),
-html[data-theme="light"] .hover\:bg-slate-800\/50:hover:not(header):not(header *),
-html[data-theme="light"] .hover\:bg-slate-700:hover:not(header):not(header *) {
+html[data-theme="light"] .hover\:bg-slate-800:hover:not(header):not(header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .hover\:bg-slate-800\/80:hover:not(header):not(header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .hover\:bg-slate-800\/70:hover:not(header):not(header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .hover\:bg-slate-800\/50:hover:not(header):not(header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .hover\:bg-slate-700:hover:not(header):not(header *):not(.keep-dark):not(.keep-dark *) {
   background-color: #e2e8f0 !important;
 }
 
 /* Borders & Dividers */
-html[data-theme="light"] .border-slate-800:not(header):not(header *):not(.portal-header):not(.portal-header *),
-html[data-theme="light"] .border-slate-800\/90:not(header):not(header *):not(.portal-header):not(.portal-header *),
-html[data-theme="light"] .border-slate-800\/80:not(header):not(header *):not(.portal-header):not(.portal-header *),
-html[data-theme="light"] .border-slate-800\/70:not(header):not(header *):not(.portal-header):not(.portal-header *),
-html[data-theme="light"] .border-slate-700:not(header):not(header *):not(.portal-header):not(.portal-header *) {
+html[data-theme="light"] .border-slate-800:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .border-slate-800\/90:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .border-slate-800\/80:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .border-slate-800\/70:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .border-slate-700:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *) {
   border-color: #e2e8f0 !important;
 }
 
@@ -219,16 +240,16 @@ html[data-theme="light"] .divide-slate-800\/60 > :not(:last-child) {
 }
 
 /* Typography in Light Mode */
-html[data-theme="light"] .text-white:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.bg-red-600):not(.bg-emerald-600):not(.bg-orange-500):not(.bg-sky-600):not(.bg-blue-600) {
+html[data-theme="light"] .text-white:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *):not(.bg-red-600):not(.bg-emerald-600):not(.bg-orange-500):not(.bg-sky-600):not(.bg-blue-600) {
   color: #0f172a !important;
 }
 
-html[data-theme="light"] .hover\:text-white:hover:not(header):not(header *) {
+html[data-theme="light"] .hover\:text-white:hover:not(header):not(header *):not(.keep-dark):not(.keep-dark *) {
   color: #0f172a !important;
 }
 
-html[data-theme="light"] .text-slate-200:not(header):not(header *):not(.portal-header):not(.portal-header *),
-html[data-theme="light"] .text-slate-300:not(header):not(header *):not(.portal-header):not(.portal-header *) {
+html[data-theme="light"] .text-slate-200:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
+html[data-theme="light"] .text-slate-300:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *) {
   color: #334155 !important;
 }
 

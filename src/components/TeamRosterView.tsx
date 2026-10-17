@@ -223,7 +223,7 @@ export function TeamRosterView({
               />
             </div>
 
-            <div className="flex items-center gap-1 overflow-x-auto">
+            <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
               {(
                 [
                   ["ALL", "Todos"],

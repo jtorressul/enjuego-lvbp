@@ -71,7 +71,7 @@ export function AdBanner({
             href={linkUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="group relative block w-full overflow-hidden rounded-xl bg-slate-950 p-3 sm:p-4 text-white border border-slate-800 transition-all hover:border-amber-400/70"
+            className="keep-dark group relative block w-full overflow-hidden rounded-xl bg-slate-950 p-3 sm:p-4 text-white border border-slate-800 transition-all hover:border-amber-400/70"
             aria-label={alt}
           >
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">

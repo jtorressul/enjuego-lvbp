@@ -867,7 +867,7 @@ export function EnJuegoPortal({
           paddingTop: "env(safe-area-inset-top, 0px)",
         }}
       >
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 h-16 sm:h-18 flex items-center justify-between gap-2.5 sm:gap-3">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 h-15 sm:h-17 flex items-center justify-between gap-2 sm:gap-3">
           {/* Brand Horizontal Logo + .online Pill */}
           <div className="flex items-center shrink-0 min-w-0">
             <Link
@@ -878,10 +878,10 @@ export function EnJuegoPortal({
               <img
                 src="/logo.png"
                 alt="En Juego · Béisbol Venezolano"
-                className="h-9 sm:h-11 md:h-12 w-auto object-contain transition-transform group-hover:scale-102 shrink-0"
+                className="h-8 sm:h-10 md:h-11 w-auto object-contain transition-transform group-hover:scale-102 shrink-0"
               />
               <span
-                className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[11px] sm:text-xs font-black italic tracking-tight shadow-sm transition-transform group-hover:scale-105 shrink-0 -ml-0.5"
+                className="inline-flex items-center gap-1 px-1.5 sm:px-2.5 py-0.5 rounded-md text-[10px] sm:text-xs font-black italic tracking-tight shadow-sm transition-transform group-hover:scale-105 shrink-0 -ml-0.5"
                 style={{
                   background: "linear-gradient(135deg, #e11d48 0%, #be123c 100%)",
                   color: "#ffffff",
@@ -1086,13 +1086,13 @@ export function EnJuegoPortal({
             )}
           </div>
 
-          {/* Mobile & Tablet Right Controls (<1024px): Large, Clear Touch Buttons */}
-          <div className="flex lg:hidden items-center gap-2 shrink-0">
+          {/* Mobile & Tablet Right Controls (<1024px): Perfectly Fitted Touch Buttons */}
+          <div className="flex lg:hidden items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               ref={mobileTeamsButtonRef}
               type="button"
               onClick={() => setTeamsDropdownOpen((prev) => !prev)}
-              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-black transition border cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-xs sm:text-sm font-black transition border cursor-pointer ${
                 teamsDropdownOpen
                   ? "bg-amber-400 text-slate-950 border-amber-400 shadow-2xs"
                   : "text-slate-100 hover:text-white"
@@ -1110,7 +1110,10 @@ export function EnJuegoPortal({
                 alt=""
                 className="w-5 h-5 object-contain shrink-0"
               />
-              <span className="font-extrabold">
+              <span className="font-extrabold sm:hidden">
+                {LVBP_TEAMS[selectedTeamCode]?.shortName || "LVBP"}
+              </span>
+              <span className="font-extrabold hidden sm:inline">
                 {LVBP_TEAMS[selectedTeamCode]?.nick || "Equipos"}
               </span>
               <ChevronDown
@@ -1127,7 +1130,7 @@ export function EnJuegoPortal({
                   setAuthModalTab("profile");
                   setAuthModalOpen(true);
                 }}
-                className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-black text-sm shrink-0 shadow-2xs border border-slate-700 cursor-pointer active:scale-95"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-white font-black text-xs sm:text-sm shrink-0 shadow-2xs border border-slate-700 cursor-pointer active:scale-95"
                 style={{
                   backgroundColor:
                     LVBP_TEAMS[currentUser.favoriteTeam]?.color || "#d97706",
@@ -1145,57 +1148,19 @@ export function EnJuegoPortal({
                 setTeamsDropdownOpen(false);
                 setMobileDrawerOpen(true);
               }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs sm:text-sm font-black transition cursor-pointer shadow-xs active:scale-95 shrink-0"
+              className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs sm:text-sm font-black transition cursor-pointer shadow-xs active:scale-95 shrink-0"
               aria-label="Abrir Menú Principal"
             >
-              <Menu className="w-4.5 h-4.5 shrink-0 stroke-[2.5]" />
+              <Menu className="w-4 h-4 sm:w-4.5 sm:h-4.5 shrink-0 stroke-[2.5]" />
               <span>Menú</span>
             </button>
-          </div>
-        </div>
-
-        {/* MOBILE & TABLET HORIZONTAL NAVIGATION STRIP (LARGE, VISIBLE & TOUCH-FRIENDLY) */}
-        <div
-          className="lg:hidden border-t px-3 py-2 overflow-x-auto no-scrollbar"
-          style={{ backgroundColor: "#0a101d", borderColor: "#1e293b" }}
-        >
-          <div className="flex items-center gap-1.5 min-w-max">
-            {(
-              [
-                ["home", "/inicio", "Inicio", Home],
-                ["resultados", "/resultados", "Resultados", Activity],
-                ["calendario", "/calendario", "Calendario", Calendar],
-                ["posiciones", "/posiciones", "Posiciones", Trophy],
-                ["lideres", "/lideres", "Líderes", BarChart3],
-                ["equipos", `/teams?team=${LVBP_TEAMS[selectedTeamCode]?.slug || "leones"}`, "Equipos", Users],
-              ] as const
-            ).map(([key, href, label, Icon]) => {
-              const active = section === key || (section === "juego" && key === "resultados");
-              return (
-                <Link
-                  key={key}
-                  href={href}
-                  className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer shrink-0 ${
-                    active ? "shadow-xs" : ""
-                  }`}
-                  style={
-                    active
-                      ? { backgroundColor: "#f59e0b", color: "#0f172a" }
-                      : { backgroundColor: "#131c2e", color: "#e2e8f0", border: "1px solid #1e293b" }
-                  }
-                >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  <span>{label}</span>
-                </Link>
-              );
-            })}
           </div>
         </div>
       </header>
 
       {/* MOBILE TEAMS SELECTOR MODAL (CENTERED WITH BACKDROP TO PREVENT SCREEN OVERFLOW) */}
       {teamsDropdownOpen && (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center p-3.5 pt-20 sm:pt-24 lg:hidden animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-[100] flex items-start justify-center p-3.5 pt-18 sm:pt-20 lg:hidden animate-in fade-in duration-150">
           {/* Backdrop overlay */}
           <div
             className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs transition-opacity"
@@ -1536,11 +1501,11 @@ export function EnJuegoPortal({
         </div>
       )}
 
-      {/* SCORE STRIP / TICKER BAR */}
+      {/* SCORE STRIP / TICKER BAR (SINGLE COMPACT HORIZONTAL ROW ON MOBILE & DESKTOP) */}
       <section className="border-b border-slate-200 bg-slate-50/90">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2.5 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 flex items-center gap-2">
           {/* Date Selector Box */}
-          <div className="flex items-center justify-between sm:justify-start gap-2 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 shrink-0 shadow-2xs">
+          <div className="flex items-center gap-1 sm:gap-2 bg-white border border-slate-200 rounded-xl px-1.5 sm:px-2.5 py-1.5 shrink-0 shadow-2xs">
             <button
               type="button"
               disabled={selectedDateIndex <= 0}
@@ -1553,13 +1518,13 @@ export function EnJuegoPortal({
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <div className="text-center min-w-[76px]">
-              <span className="block text-[9px] font-extrabold uppercase tracking-wider text-amber-600">
+            <div className="text-center min-w-[54px] sm:min-w-[74px]">
+              <span className="block text-[8px] sm:text-[9px] font-extrabold uppercase tracking-wider text-amber-600 leading-none">
                 Jornada
               </span>
-              <strong className="text-sm font-black text-slate-900">
+              <strong className="text-xs sm:text-sm font-black text-slate-900 leading-tight">
                 {dayFormatted.dayNum}{" "}
-                <small className="text-xs text-slate-500">{dayFormatted.monthShort}</small>
+                <small className="text-[10px] sm:text-xs text-slate-500">{dayFormatted.monthShort}</small>
               </strong>
             </div>
             <button
@@ -1587,7 +1552,7 @@ export function EnJuegoPortal({
                       setUserSelectedDateManually(false);
                     }
                   }}
-                  className="ml-1 inline-flex items-center gap-1 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 px-2 py-0.5 text-[10px] font-black uppercase transition cursor-pointer"
+                  className="hidden sm:inline-flex ml-1 items-center gap-1 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 px-2 py-0.5 text-[10px] font-black uppercase transition cursor-pointer"
                   title="Ir a los juegos de hoy"
                 >
                   Hoy
@@ -1596,7 +1561,7 @@ export function EnJuegoPortal({
           </div>
 
           {/* Horizontal Livebugs Strip with Official Logos & Direct /juego/[id] Links */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1 min-w-0">
             {gamesOfDay.length > 0 ? (
               gamesOfDay.map((game) => {
                 const isPlayed = game.status === "IN_PROGRESS" || game.status === "FINISHED";
@@ -2722,8 +2687,8 @@ export function EnJuegoPortal({
 
       {/* MOBILE BOTTOM NAVIGATION BAR (NATIVE APP STYLE FOR PHONES WITH REAL LINKS) */}
       <nav
-        className="fixed bottom-0 inset-x-0 z-40 md:hidden bg-white/95 backdrop-blur-md border-t border-slate-200 px-3 pt-2 flex items-center justify-around shadow-lg"
-        style={{ paddingBottom: "max(0.6rem, env(safe-area-inset-bottom, 0.6rem))" }}
+        className="fixed bottom-0 inset-x-0 z-40 md:hidden bg-white/95 backdrop-blur-md border-t border-slate-200 px-2 pt-1.5 flex items-center justify-around shadow-lg"
+        style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom, 0.5rem))" }}
         aria-label="Navegación Móvil"
       >
         {(
@@ -2732,6 +2697,7 @@ export function EnJuegoPortal({
             ["resultados", "/resultados", "Pizarra", Activity],
             ["calendario", "/calendario", "Calendario", Calendar],
             ["posiciones", "/posiciones", "Posiciones", Trophy],
+            ["equipos", `/equipos/${TEAM_CODE_TO_SLUG[selectedTeamCode] || "leones"}`, "Equipos", Users],
           ] as const
         ).map(([key, href, label, Icon]) => {
           const active = section === key || (section === "juego" && key === "resultados");
@@ -2739,11 +2705,11 @@ export function EnJuegoPortal({
             <Link
               key={key}
               href={href}
-              className={`flex flex-col items-center justify-center gap-1 py-1 px-3.5 rounded-xl text-[11px] font-black transition cursor-pointer ${
+              className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2.5 rounded-xl text-[10px] font-black transition cursor-pointer ${
                 active ? "text-amber-600 bg-amber-50/80 shadow-2xs" : "text-slate-500 hover:text-slate-900"
               }`}
             >
-              <Icon className={`w-5 h-5 ${active ? "text-amber-600 stroke-[2.5]" : "text-slate-400"}`} />
+              <Icon className={`w-4.5 h-4.5 ${active ? "text-amber-600 stroke-[2.5]" : "text-slate-400"}`} />
               <span>{label}</span>
             </Link>
           );

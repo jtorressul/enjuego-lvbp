@@ -30,27 +30,27 @@ export function AdBanner({
   const defaultTitle =
     title ||
     (slot === "in-feed"
-      ? "Llega a la fanaticada del béisbol venezolano"
+      ? "Llega a la fanaticada del béisbol"
       : slot === "gameday-sidebar"
         ? "Patrocina la Pizarra en Vivo"
-        : "Tu marca en EnJuego.online · Espacio Publicitario");
+        : "Tu marca en EnJuego.online");
 
   const defaultSubtitle =
     subtitle ||
     (slot === "in-feed"
-      ? "Promociona tu marca o negocio en cada jornada ante miles de fanáticos."
+      ? "Promociona tu negocio en cada jornada ante miles de fanáticos."
       : slot === "gameday-sidebar"
         ? "Presencia destacada durante las transmisiones y jugada a jugada."
-        : "Espacio disponible para banners y patrocinantes. Contáctanos para pautas.");
+        : "Espacio disponible para banners y patrocinios.");
 
-  const defaultCta = ctaText || "Anúnciate aquí";
+  const defaultCta = ctaText || "Anúnciate";
 
   const isSidebar = slot === "gameday-sidebar";
 
   return (
     <div className={`w-full ${className}`}>
       {/* CLEAN EDITORIAL CARD CONTAINER */}
-      <div className="rounded-2xl border border-slate-200/90 bg-white p-2 sm:p-2.5 shadow-2xs">
+      <div className="rounded-2xl border border-slate-200/90 bg-white p-1.5 sm:p-2.5 shadow-2xs">
         {imageUrl && !imageError ? (
           /* Custom Banner Image */
           <a
@@ -80,7 +80,7 @@ export function AdBanner({
             href={linkUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="group relative block w-full overflow-hidden rounded-xl p-3 sm:px-4 sm:py-3 transition-all"
+            className="group relative block w-full overflow-hidden rounded-xl px-2.5 py-2 sm:px-4 sm:py-3 transition-all"
             style={{
               background: "linear-gradient(135deg, #0b1324 0%, #13203c 55%, #1e293b 100%)",
               border: "1px solid #1e293b",
@@ -98,21 +98,21 @@ export function AdBanner({
               className={`relative flex ${
                 isSidebar
                   ? "flex-col items-start gap-2.5"
-                  : "flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4"
+                  : "flex-row items-center justify-between gap-2 sm:gap-4"
               }`}
             >
               {/* Left Info */}
-              <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                 <div
-                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center shrink-0 shadow-xs transition-transform group-hover:scale-105 mt-0.5 sm:mt-0"
+                  className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0 shadow-xs transition-transform group-hover:scale-105"
                   style={{ backgroundColor: "#f59e0b", color: "#0f172a" }}
                 >
-                  <Megaphone className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2.2]" />
+                  <Megaphone className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 stroke-[2.2]" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span
-                      className="inline-block px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider leading-none"
+                      className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider leading-none"
                       style={{
                         backgroundColor: "rgba(245, 158, 11, 0.18)",
                         color: "#fbbf24",
@@ -122,14 +122,14 @@ export function AdBanner({
                       Patrocinio
                     </span>
                     <span
-                      className="text-xs sm:text-sm font-black tracking-tight leading-snug line-clamp-1"
+                      className="text-xs sm:text-sm font-black tracking-tight leading-snug truncate"
                       style={{ color: "#ffffff" }}
                     >
                       {defaultTitle}
                     </span>
                   </div>
                   <p
-                    className="text-[11px] leading-snug mt-0.5 line-clamp-2 sm:line-clamp-1"
+                    className="text-[10px] sm:text-[11px] leading-snug mt-0.5 line-clamp-1"
                     style={{ color: "#cbd5e1" }}
                   >
                     {defaultSubtitle}
@@ -138,15 +138,16 @@ export function AdBanner({
               </div>
 
               {/* Right CTA Button */}
-              <div className={`shrink-0 ${isSidebar ? "w-full pt-0.5" : "self-end sm:self-center"}`}>
+              <div className={`shrink-0 ${isSidebar ? "w-full pt-0.5" : "self-center"}`}>
                 <span
-                  className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-[11px] sm:text-xs transition-transform group-hover:scale-102 shadow-xs ${
+                  className={`inline-flex items-center justify-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-xs transition-transform group-hover:scale-102 shadow-xs whitespace-nowrap ${
                     isSidebar ? "w-full" : ""
                   }`}
                   style={{ backgroundColor: "#f59e0b", color: "#0f172a" }}
                 >
                   <span>{defaultCta}</span>
-                  <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                  {!ctaText && <span className="hidden sm:inline">aquí</span>}
+                  <ArrowUpRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[2.5]" />
                 </span>
               </div>
             </div>
@@ -154,8 +155,8 @@ export function AdBanner({
         )}
 
         {/* Centered PUBLICIDAD Label (Like Reference Design) */}
-        <div className="pt-1.5 text-center leading-none">
-          <span className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-slate-400">
+        <div className="pt-1 sm:pt-1.5 text-center leading-none">
+          <span className="text-[8px] sm:text-[9px] font-extrabold uppercase tracking-[0.18em] text-slate-400">
             PUBLICIDAD
           </span>
         </div>

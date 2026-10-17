@@ -387,6 +387,7 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
   const [medallionStyle, setMedallionStyle] =
     useState<MedallionStyleMode>("floating_shield");
   const [showTeamNames, setShowTeamNames] = useState<boolean>(true);
+  const [showVenueAndTv, setShowVenueAndTv] = useState<boolean>(true);
   const [selectedGameId, setSelectedGameId] = useState<string>("");
 
   // Editable single-game fields
@@ -397,9 +398,20 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
   const [statusPillText, setStatusPillText] = useState<string>("FINAL");
   const [headlineWord1, setHeadlineWord1] = useState<string>("RESULTADO");
   const [headlineWord2, setHeadlineWord2] = useState<string>("FINAL");
+  const [venueText, setVenueText] = useState<string>(
+    `${LVBP_TEAMS.ZUL.venue} · ${LVBP_TEAMS.ZUL.venueCity}`
+  );
+  const [tvChannelsText, setTvChannelsText] = useState<string>(
+    "IVC · Televen · 1Baseball · BeisbolPlay"
+  );
   const [subInfoText, setSubInfoText] = useState<string>("");
   const [centerBadgeLine1, setCenterBadgeLine1] = useState<string>("");
   const [centerBadgeLine2, setCenterBadgeLine2] = useState<string>("");
+
+  // Optional per-game overrides for Full-Day Slate ("Jornada Completa")
+  const [slateOverrides, setSlateOverrides] = useState<
+    Record<string, { venue?: string; tv?: string; time?: string }>
+  >({});
 
   // Sponsor ("Presentado por:")
   const [sponsorMode, setSponsorMode] = useState<"campaign" | "custom" | "none">(
@@ -413,6 +425,33 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
   const [customSponsorLogo, setCustomSponsorLogo] = useState<string>("");
   const [customSponsorName, setCustomSponsorName] = useState<string>("TuZapp");
   const [rendering, setRendering] = useState<boolean>(false);
+
+  const VENEZUELA_TV_CHANNELS = [
+    "IVC",
+    "Televen",
+    "Venevisión",
+    "1Baseball",
+    "ByM Sport",
+    "Meridiano TV",
+    "SimpleTV",
+    "BeisbolPlay",
+    "Canal i",
+    "TLT",
+  ];
+
+  const toggleTvChannelChip = (channel: string) => {
+    const currentParts = tvChannelsText
+      .split(/[·,|/]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const exists = currentParts.some(
+      (p) => p.toLowerCase() === channel.toLowerCase()
+    );
+    const nextParts = exists
+      ? currentParts.filter((p) => p.toLowerCase() !== channel.toLowerCase())
+      : [...currentParts, channel];
+    setTvChannelsText(nextParts.join(" · "));
+  };
 
   useEffect(() => {
     try {
@@ -441,25 +480,30 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
       setAwayScore(game.awayScore || 0);
       setHomeScore(game.homeScore || 0);
 
+      const homeMeta = LVBP_TEAMS[game.homeTeam.code];
+      const resolvedVenue =
+        game.venue ||
+        (homeMeta ? `${homeMeta.venue} · ${homeMeta.venueCity}` : "");
+      setVenueText(resolvedVenue);
+
+      const resolvedTv =
+        game.tvChannels && game.tvChannels.length > 0
+          ? game.tvChannels.join(" · ")
+          : game.tv || "BeisbolPlay · Circuito Radial";
+      setTvChannelsText(resolvedTv);
+
       if (activeMode === "preview_single") {
         setHeadlineWord1("JUEGO");
         setHeadlineWord2("DE HOY");
         setStatusPillText(game.time || "7:00 PM");
-        const tvText =
-          game.tvChannels && game.tvChannels.length > 0
-            ? game.tvChannels.join(" · ")
-            : game.tv || "";
-        setSubInfoText(tvText ? `${game.venue} · TV: ${tvText}` : game.venue || "");
       } else if (activeMode === "live_single") {
         setHeadlineWord1("EN");
         setHeadlineWord2("VIVO");
         setStatusPillText((game.inning || "EN JUEGO").toUpperCase());
-        setSubInfoText(game.venue || "");
       } else {
         setHeadlineWord1("RESULTADO");
         setHeadlineWord2("FINAL");
         setStatusPillText("FINAL");
-        setSubInfoText("");
       }
     },
     [templateMode]
@@ -484,6 +528,16 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
           setHomeCode(lastFinished.homeTeam.code);
           setAwayScore(lastFinished.awayScore || 0);
           setHomeScore(lastFinished.homeScore || 0);
+          const homeMeta = LVBP_TEAMS[lastFinished.homeTeam.code];
+          setVenueText(
+            lastFinished.venue ||
+              (homeMeta ? `${homeMeta.venue} · ${homeMeta.venueCity}` : "")
+          );
+          const resolvedTv =
+            lastFinished.tvChannels && lastFinished.tvChannels.length > 0
+              ? lastFinished.tvChannels.join(" · ")
+              : lastFinished.tv || "IVC · BeisbolPlay";
+          setTvChannelsText(resolvedTv);
         } else {
           const uniqueDates = Array.from(
             new Set(data.games.map((g: ScheduleGame) => g.date))
@@ -807,7 +861,7 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
       // ----------------------------------------------------------------------
       // 3. HEADLINE
       // ----------------------------------------------------------------------
-      const headlineCenterY = isStory ? 470 : isSquare ? 265 : 375;
+      const headlineCenterY = isStory ? 465 : isSquare ? 258 : 368;
       {
         ctx.save();
         const w1 = (headlineWord1 || "RESULTADO").trim().toUpperCase();
@@ -854,7 +908,6 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
       ) => {
         ctx.save();
         if (medallionStyle === "floating_shield") {
-          // Soft team glow behind the shield + studio drop shadow
           const glow = ctx.createRadialGradient(cx, cy, r * 0.2, cx, cy, r * 1.35);
           glow.addColorStop(0, rgba(teamColor, theme.isDark ? 0.45 : 0.16));
           glow.addColorStop(1, rgba(teamColor, 0));
@@ -870,7 +923,6 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
             ctx.drawImage(logo, cx - w / 2, cy - h / 2, w, h);
           }
         } else if (medallionStyle === "pearl_medallion") {
-          // Ivory medallion with a thin club-colour bezel
           ctx.shadowColor = theme.isDark ? "rgba(0,0,0,0.5)" : "rgba(18,23,52,0.22)";
           ctx.shadowBlur = r * 0.25;
           ctx.shadowOffsetY = r * 0.1;
@@ -897,7 +949,6 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
             ctx.drawImage(logo, cx - w / 2, cy - h / 2, w, h);
           }
         } else {
-          // Mascot over a club-colour gradient disc (no white ring)
           ctx.shadowColor = theme.isDark ? "rgba(0,0,0,0.5)" : "rgba(18,23,52,0.22)";
           ctx.shadowBlur = r * 0.25;
           ctx.shadowOffsetY = r * 0.1;
@@ -927,12 +978,47 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
         ctx.restore();
       };
 
+      // Vector Map Pin Icon helper
+      const drawPinIcon = (x: number, y: number, size: number, color: string) => {
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.25, size * 0.38, Math.PI, 0, false);
+        ctx.quadraticCurveTo(x + size * 0.38, y + size * 0.15, x, y + size * 0.55);
+        ctx.quadraticCurveTo(x - size * 0.38, y + size * 0.15, x - size * 0.38, y - size * 0.25);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = theme.isDark ? "#0e1630" : "#ffffff";
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.25, size * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      };
+
+      // Vector TV Screen Icon helper
+      const drawTvIcon = (x: number, y: number, size: number, color: string) => {
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.6;
+        const w = size * 0.95;
+        const h = size * 0.68;
+        drawRoundedRect(ctx, x - w / 2, y - h / 2 + 2, w, h, 4);
+        ctx.stroke();
+        // Antenna V
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.22, y - h / 2 - size * 0.18);
+        ctx.lineTo(x, y - h / 2 + 2);
+        ctx.lineTo(x + size * 0.22, y - h / 2 - size * 0.18);
+        ctx.stroke();
+        ctx.restore();
+      };
+
       // ----------------------------------------------------------------------
       // 5. MATCHUP / SLATE
       // ----------------------------------------------------------------------
       if (templateMode !== "slate_all") {
-        const centerY = isStory ? 990 : isSquare ? 575 : 770;
-        const r = isSquare ? 108 : 122;
+        const centerY = isStory ? 950 : isSquare ? 535 : 720;
+        const r = isSquare ? 102 : 118;
         const awayCx = 240;
         const homeCx = W - 240;
 
@@ -945,7 +1031,7 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
           ctx.fillStyle = theme.teamName;
           ctx.textAlign = "center";
           ctx.textBaseline = "alphabetic";
-          const nameY = centerY + r + 52;
+          const nameY = centerY + r + 48;
           ctx.fillText(awayTeam.nick.toUpperCase(), awayCx, nameY);
           ctx.fillText(homeTeam.nick.toUpperCase(), homeCx, nameY);
           ctx.restore();
@@ -1002,66 +1088,183 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
           ctx.restore();
         }
 
+        // BROADCAST BAR: ESTADIO + CANALES DE TV
+        let infoCursorY = centerY + r + (showTeamNames ? 96 : 54);
+        if (showVenueAndTv) {
+          const cleanVenue = venueText.trim().toUpperCase();
+          const cleanTv = tvChannelsText.trim().toUpperCase();
+
+          if (cleanVenue) {
+            ctx.save();
+            ctx.font = '700 28px "Barlow Condensed", sans-serif';
+            const textW = ctx.measureText(cleanVenue).width;
+            const iconGap = 28;
+            const totalW = textW + iconGap;
+            const startX = (W - totalW) / 2;
+
+            drawPinIcon(
+              startX + 10,
+              infoCursorY - 8,
+              24,
+              theme.isDark ? "#f87171" : "#b3161a"
+            );
+            ctx.fillStyle = theme.footerText;
+            ctx.textAlign = "left";
+            ctx.textBaseline = "alphabetic";
+            ctx.fillText(cleanVenue, startX + iconGap, infoCursorY);
+            ctx.restore();
+            infoCursorY += isSquare ? 46 : 54;
+          }
+
+          if (cleanTv) {
+            ctx.save();
+            const tvLabel = `TRANSMITE: ${cleanTv}`;
+            ctx.font = '700 25px "Barlow Condensed", sans-serif';
+            const textW = ctx.measureText(tvLabel).width;
+            const iconSpace = 34;
+            const pillW = Math.min(W - 180, textW + iconSpace + 48);
+            const pillH = 44;
+            const pillX = (W - pillW) / 2;
+            const pillY = infoCursorY - 31;
+
+            ctx.fillStyle = theme.isDark
+              ? "rgba(255, 255, 255, 0.12)"
+              : "rgba(18, 23, 52, 0.08)";
+            drawRoundedRect(ctx, pillX, pillY, pillW, pillH, 22);
+            ctx.fill();
+
+            const contentW = textW + iconSpace;
+            const contentStartX = (W - contentW) / 2;
+            drawTvIcon(
+              contentStartX + 12,
+              pillY + pillH / 2,
+              22,
+              theme.isDark ? "#fbbf24" : "#b3161a"
+            );
+
+            ctx.fillStyle = theme.isDark ? "#ffffff" : "#121734";
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            ctx.fillText(
+              tvLabel,
+              contentStartX + iconSpace,
+              pillY + pillH / 2 + 1
+            );
+            ctx.restore();
+            infoCursorY += isSquare ? 44 : 52;
+          }
+        }
+
         if (subInfoText.trim()) {
           ctx.save();
-          ctx.font = '600 28px "Barlow Condensed", sans-serif';
+          ctx.font = '600 26px "Barlow Condensed", sans-serif';
           ctx.fillStyle = theme.footerMuted;
           ctx.textAlign = "center";
-          ctx.fillText(
-            subInfoText.trim().toUpperCase(),
-            W / 2,
-            centerY + r + (showTeamNames ? 104 : 64)
-          );
+          ctx.fillText(subInfoText.trim().toUpperCase(), W / 2, infoCursorY);
           ctx.restore();
         }
       } else {
-        const startY = isStory ? 660 : isSquare ? 390 : 530;
-        const rowH = isSquare ? 108 : 126;
-        const rowGap = isSquare ? 14 : 20;
+        // FULL DAY SLATE ("JORNADA COMPLETA") WITH ESTADIO & TV PER GAME
+        const startY = isStory ? 635 : isSquare ? 372 : 505;
+        const rowH = isSquare ? 116 : showVenueAndTv ? 142 : 124;
+        const rowGap = isSquare ? 12 : 16;
+
         slateGames.forEach((g, i) => {
           const logos = (slateLogos as Array<[HTMLImageElement | null, HTMLImageElement | null]>)[i] || [null, null];
           const ry = startY + i * (rowH + rowGap);
-          const rx = 96;
-          const rw = W - 192;
-          const cy = ry + rowH / 2;
+          const rx = 92;
+          const rw = W - 184;
+          const mainH = showVenueAndTv ? rowH - 36 : rowH;
+          const cy = ry + mainH / 2;
 
           ctx.save();
           ctx.shadowColor = theme.isDark ? "rgba(0,0,0,0.35)" : "rgba(18,23,52,0.08)";
           ctx.shadowBlur = 18;
           ctx.shadowOffsetY = 5;
-          ctx.fillStyle = theme.isDark ? "rgba(255,255,255,0.08)" : "#ffffff";
+          ctx.fillStyle = theme.isDark ? "rgba(255,255,255,0.09)" : "#ffffff";
           drawRoundedRect(ctx, rx, ry, rw, rowH, 22);
           ctx.fill();
           ctx.restore();
 
           const aColor = LVBP_TEAMS[g.awayTeam.code]?.color || "#121734";
           const hColor = LVBP_TEAMS[g.homeTeam.code]?.color || "#121734";
-          drawTeamLogo(rx + 70, cy, 42, aColor, logos[0]);
-          drawTeamLogo(rx + rw - 70, cy, 42, hColor, logos[1]);
+          const logoR = isSquare ? 36 : 40;
+          drawTeamLogo(rx + 66, cy, logoR, aColor, logos[0]);
+          drawTeamLogo(rx + rw - 66, cy, logoR, hColor, logos[1]);
+
+          const ov = slateOverrides[g.id] || {};
+          const homeMeta = LVBP_TEAMS[g.homeTeam.code];
+          const gVenue =
+            ov.venue !== undefined
+              ? ov.venue
+              : g.venue || (homeMeta ? homeMeta.venue : "");
+          const gTv =
+            ov.tv !== undefined
+              ? ov.tv
+              : g.tvChannels && g.tvChannels.length > 0
+                ? g.tvChannels.join(" · ")
+                : g.tv || "BeisbolPlay";
+          const gTime = ov.time || g.time || "7:00 PM";
 
           ctx.save();
-          ctx.font = '400 40px "Bebas Neue", sans-serif';
+          ctx.font = '400 38px "Bebas Neue", sans-serif';
           ctx.fillStyle = theme.footerText;
           ctx.textBaseline = "middle";
           ctx.textAlign = "left";
-          ctx.fillText(g.awayTeam.nick.toUpperCase(), rx + 130, cy + 2);
+          ctx.fillText(g.awayTeam.nick.toUpperCase(), rx + 124, cy + 2);
           ctx.textAlign = "right";
-          ctx.fillText(g.homeTeam.nick.toUpperCase(), rx + rw - 130, cy + 2);
+          ctx.fillText(g.homeTeam.nick.toUpperCase(), rx + rw - 124, cy + 2);
           ctx.textAlign = "center";
+
           if (g.status === "FINISHED" || g.status === "IN_PROGRESS") {
-            ctx.font = '600 58px "Teko", "Bebas Neue", sans-serif';
+            ctx.font = '600 54px "Teko", "Bebas Neue", sans-serif';
             ctx.fillStyle = theme.isDark ? "#ffffff" : "#b3161a";
-            ctx.fillText(`${g.awayScore}  -  ${g.homeScore}`, W / 2, cy - 2);
-            ctx.font = '700 20px "Barlow Condensed", sans-serif';
+            ctx.fillText(`${g.awayScore}  -  ${g.homeScore}`, W / 2, cy - 4);
+            ctx.font = '700 18px "Barlow Condensed", sans-serif';
             ctx.fillStyle = theme.footerMuted;
-            ctx.fillText((g.inning || "FINAL").toUpperCase(), W / 2, cy + 34);
+            ctx.fillText((g.inning || "FINAL").toUpperCase(), W / 2, cy + 28);
           } else {
             ctx.fillStyle = "#b3161a";
-            drawRoundedRect(ctx, W / 2 - 80, cy - 24, 160, 48, 24);
+            drawRoundedRect(ctx, W / 2 - 78, cy - 22, 156, 44, 22);
             ctx.fill();
-            ctx.font = '700 28px "Barlow Condensed", sans-serif';
+            ctx.font = '700 26px "Barlow Condensed", sans-serif';
             ctx.fillStyle = "#ffffff";
-            ctx.fillText(g.time || "7:00 PM", W / 2, cy + 1);
+            ctx.fillText(gTime, W / 2, cy + 1);
+          }
+
+          // Bottom Stadium + TV strip inside each game row
+          if (showVenueAndTv && (gVenue || gTv)) {
+            const barY = ry + mainH;
+            ctx.strokeStyle = theme.isDark
+              ? "rgba(255,255,255,0.10)"
+              : "rgba(18,23,52,0.07)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(rx + 24, barY);
+            ctx.lineTo(rx + rw - 24, barY);
+            ctx.stroke();
+
+            const stripCy = barY + 18;
+            ctx.font = '700 19px "Barlow Condensed", sans-serif';
+            if (gVenue) {
+              drawPinIcon(
+                rx + 36,
+                stripCy,
+                15,
+                theme.isDark ? "#f87171" : "#b3161a"
+              );
+              ctx.fillStyle = theme.footerMuted;
+              ctx.textAlign = "left";
+              ctx.textBaseline = "middle";
+              ctx.fillText(gVenue.toUpperCase(), rx + 50, stripCy + 1);
+            }
+            if (gTv) {
+              const tvStr = `TV: ${gTv.toUpperCase()}`;
+              ctx.fillStyle = theme.isDark ? "#fbbf24" : "#b3161a";
+              ctx.textAlign = "right";
+              ctx.textBaseline = "middle";
+              ctx.fillText(tvStr, rx + rw - 28, stripCy + 1);
+            }
           }
           ctx.restore();
         });
@@ -1161,7 +1364,6 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
             const { w: lw, h: lh } = fitInside(sponsor, maxLogoW, maxLogoH);
 
             if (sponsorLayout === "adaptive_card") {
-              // Card that hugs the logo: no empty dark sides
               const padX = 22;
               const padY = 14;
               const cw = lw + padX * 2;
@@ -1185,7 +1387,6 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
               ctx.shadowColor = "transparent";
               ctx.drawImage(sponsor, cx + padX, cy + padY, lw, lh);
             } else {
-              // Floating: logo sits directly on the poster, right-aligned
               const ly = areaBottom - lh;
               ctx.fillText("PRESENTADO POR", rightX, ly - 12);
               if (theme.isDark) {
@@ -1195,7 +1396,6 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
               ctx.drawImage(sponsor, rightX - lw, ly, lw, lh);
             }
           } else if (activeSponsorLabel.trim()) {
-            // Text-only sponsor chip
             const text = activeSponsorLabel.trim();
             ctx.font = '800 34px "Montserrat", sans-serif';
             const tw = ctx.measureText(text).width;
@@ -1237,6 +1437,7 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
     backgroundTheme,
     medallionStyle,
     showTeamNames,
+    showVenueAndTv,
     headlineWord1,
     headlineWord2,
     templateMode,
@@ -1245,8 +1446,11 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
     awayScore,
     homeScore,
     statusPillText,
+    venueText,
+    tvChannelsText,
     subInfoText,
     gamesForDate,
+    slateOverrides,
     centerBadgeLine1,
     centerBadgeLine2,
     sponsorMode,
@@ -1297,7 +1501,7 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Crea y descarga artes de <strong>Resultado Final</strong> o{" "}
-                <strong>Juegos de Hoy</strong> con escudos oficiales en alta definición.
+                <strong>Juegos de Hoy</strong> con escudos oficiales, estadio y canales de TV.
               </p>
             </div>
 
@@ -1308,7 +1512,7 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
                   { id: "final_single", label: "Resultado Final", sub: "1 Juego (Ej. 8 - 5)" },
-                  { id: "preview_single", label: "Juego de Hoy", sub: "Previa y Hora" },
+                  { id: "preview_single", label: "Juego de Hoy", sub: "Previa, Estadio y TV" },
                   { id: "live_single", label: "En Vivo", sub: "Pizarra Parcial" },
                   { id: "slate_all", label: "Jornada Completa", sub: "Todos los Juegos" },
                 ].map((item) => (
@@ -1427,12 +1631,12 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
             </div>
           </section>
 
-          {/* 2. GAME & SCOREBOARD */}
+          {/* 2. GAME, STADIUM & TV CHANNELS */}
           <section className="rounded-2xl bg-white border border-slate-200 p-5 shadow-2xs space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-sm font-black text-slate-950 flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-rose-600" />
-                <span>3. Elegir Partido o Editar Marcador</span>
+                <span>3. Partido, Estadio y Canales de TV</span>
               </h3>
               <button
                 type="button"
@@ -1493,27 +1697,36 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
               </div>
             </div>
 
-            {templateMode !== "slate_all" && (
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold uppercase text-slate-600">
-                    Equipos y Pizarra
-                  </span>
-                  <label className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={showTeamNames}
-                      onChange={(e) => setShowTeamNames(e.target.checked)}
-                      className="rounded border-slate-300"
-                    />
-                    <span>Mostrar nombres de los equipos</span>
-                  </label>
-                </div>
+            <div className="flex flex-wrap items-center gap-4 pt-1">
+              <label className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showVenueAndTv}
+                  onChange={(e) => setShowVenueAndTv(e.target.checked)}
+                  className="rounded border-slate-300"
+                />
+                <span>Mostrar Estadio y Canales de TV en el arte</span>
+              </label>
 
+              {templateMode !== "slate_all" && (
+                <label className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showTeamNames}
+                    onChange={(e) => setShowTeamNames(e.target.checked)}
+                    className="rounded border-slate-300"
+                  />
+                  <span>Mostrar nombres de equipos</span>
+                </label>
+              )}
+            </div>
+
+            {templateMode !== "slate_all" ? (
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 items-end">
                   <div className="sm:col-span-2">
                     <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                      Equipo Izquierda
+                      Equipo Visitante (Izquierda)
                     </label>
                     <select
                       value={awayCode}
@@ -1555,7 +1768,7 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
                   </div>
                   <div className="col-span-2 sm:col-span-1">
                     <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                      Centro (Ej. FINAL)
+                      Centro / Hora
                     </label>
                     <input
                       type="text"
@@ -1570,11 +1783,18 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                      Equipo Derecha
+                      Equipo Home Club (Derecha)
                     </label>
                     <select
                       value={homeCode}
-                      onChange={(e) => setHomeCode(e.target.value)}
+                      onChange={(e) => {
+                        const code = e.target.value;
+                        setHomeCode(code);
+                        const meta = LVBP_TEAMS[code];
+                        if (meta) {
+                          setVenueText(`${meta.venue} · ${meta.venueCity}`);
+                        }
+                      }}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900"
                     >
                       {TEAM_LIST.map((t) => (
@@ -1584,19 +1804,146 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
                       ))}
                     </select>
                   </div>
+
                   <div>
                     <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                      Texto extra debajo (opcional: Estadio / TV)
+                      📍 Estadio (Sede del Juego)
                     </label>
                     <input
                       type="text"
-                      value={subInfoText}
-                      onChange={(e) => setSubInfoText(e.target.value)}
-                      placeholder="Ej. Estadio Antonio Herrera Gutiérrez"
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-800"
+                      value={venueText}
+                      onChange={(e) => setVenueText(e.target.value)}
+                      placeholder="Ej. Estadio Monumental Simón Bolívar · Caracas"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900"
                     />
                   </div>
                 </div>
+
+                {/* TV CHANNELS INPUT + QUICK PICK CHIPS */}
+                <div className="space-y-2 pt-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="block text-[11px] font-bold text-slate-600">
+                      📺 Canales que transmiten el juego (haz clic para activar/quitar)
+                    </label>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {VENEZUELA_TV_CHANNELS.map((ch) => {
+                      const active = tvChannelsText
+                        .toLowerCase()
+                        .split(/[·,|/]/)
+                        .map((s) => s.trim())
+                        .includes(ch.toLowerCase());
+                      return (
+                        <button
+                          key={ch}
+                          type="button"
+                          onClick={() => toggleTvChannelChip(ch)}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold border transition cursor-pointer ${
+                            active
+                              ? "bg-slate-900 text-white border-slate-900"
+                              : "bg-white hover:bg-slate-100 text-slate-700 border-slate-300"
+                          }`}
+                        >
+                          {active ? `✓ ${ch}` : `+ ${ch}`}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <input
+                    type="text"
+                    value={tvChannelsText}
+                    onChange={(e) => setTvChannelsText(e.target.value)}
+                    placeholder="Ej. IVC · Televen · 1Baseball · BeisbolPlay"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900"
+                  />
+                </div>
+              </div>
+            ) : (
+              /* SLATE PER-GAME VENUE & TV EDITOR */
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                <div className="text-xs font-extrabold uppercase text-slate-600">
+                  Editar Estadio, Hora y TV de cada partido de la jornada
+                </div>
+                {gamesForDate.slice(0, 4).map((g) => {
+                  const ov = slateOverrides[g.id] || {};
+                  const homeMeta = LVBP_TEAMS[g.homeTeam.code];
+                  const valVenue =
+                    ov.venue !== undefined
+                      ? ov.venue
+                      : g.venue || (homeMeta ? homeMeta.venue : "");
+                  const valTv =
+                    ov.tv !== undefined
+                      ? ov.tv
+                      : g.tvChannels && g.tvChannels.length > 0
+                        ? g.tvChannels.join(" · ")
+                        : g.tv || "BeisbolPlay";
+                  const valTime = ov.time !== undefined ? ov.time : g.time || "7:00 PM";
+
+                  return (
+                    <div
+                      key={g.id}
+                      className="p-3 rounded-xl bg-white border border-slate-200 space-y-2"
+                    >
+                      <div className="text-xs font-black text-slate-900">
+                        {g.awayTeam.name} ({g.awayTeam.code}) vs {g.homeTeam.name} (
+                        {g.homeTeam.code})
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500">
+                            📍 Estadio
+                          </label>
+                          <input
+                            type="text"
+                            value={valVenue}
+                            onChange={(e) =>
+                              setSlateOverrides((prev) => ({
+                                ...prev,
+                                [g.id]: { ...prev[g.id], venue: e.target.value },
+                              }))
+                            }
+                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-bold"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500">
+                            📺 Canales de TV
+                          </label>
+                          <input
+                            type="text"
+                            value={valTv}
+                            onChange={(e) =>
+                              setSlateOverrides((prev) => ({
+                                ...prev,
+                                [g.id]: { ...prev[g.id], tv: e.target.value },
+                              }))
+                            }
+                            placeholder="Ej. IVC · Televen"
+                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-bold"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500">
+                            🕒 Hora
+                          </label>
+                          <input
+                            type="text"
+                            value={valTime}
+                            onChange={(e) =>
+                              setSlateOverrides((prev) => ({
+                                ...prev,
+                                [g.id]: { ...prev[g.id], time: e.target.value },
+                              }))
+                            }
+                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-bold"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
 

@@ -28,32 +28,11 @@ export interface CommunityPostItem {
   createdAt?: number;
 }
 
-interface KVNamespaceLike {
-  get(key: string): Promise<string | null>;
-  put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
-}
+import { getAdminKv, type HybridKVStore } from "@/lib/admin-store";
 
-const memoryKv = new Map<string, string>();
-
-async function getKvStore(): Promise<KVNamespaceLike> {
-  try {
-    const ctx = await getCloudflareContext({ async: true });
-    const env = ctx?.env as Record<string, any> | undefined;
-    if (env?.ENJUEGO_KV && typeof env.ENJUEGO_KV.get === "function") {
-      return env.ENJUEGO_KV as KVNamespaceLike;
-    }
-  } catch {
-    // Fallback to in-memory store in local Node dev mode
-  }
-
-  return {
-    async get(key: string) {
-      return memoryKv.get(key) ?? null;
-    },
-    async put(key: string, value: string) {
-      memoryKv.set(key, value);
-    },
-  };
+async function getKvStore(): Promise<HybridKVStore> {
+  const { kv } = await getAdminKv();
+  return kv;
 }
 
 function getVenezuelaTimeString(): string {
@@ -99,8 +78,8 @@ export async function getGameInteractiveState(
     }
   }
 
-  // 3. Real Active Presence
-  const rawPresence = await kv.get(`presence:v2:${cleanId}`);
+  // 3. Real Active Presence (Stored in Edge Cache + Memory - 0 KV quota consumed!)
+  const rawPresence = await kv.get(`presence:v2:${cleanId}`, { skipKv: true });
   const now = Date.now();
   let presenceMap: Record<string, number> = {};
   if (rawPresence) {
@@ -117,7 +96,10 @@ export async function getGameInteractiveState(
   }
   if (sessionId) {
     presenceMap[sessionId] = now;
-    await kv.put(`presence:v2:${cleanId}`, JSON.stringify(presenceMap), { expirationTtl: 3600 });
+    await kv.put(`presence:v2:${cleanId}`, JSON.stringify(presenceMap), {
+      expirationTtl: 3600,
+      persistToKv: false,
+    });
   }
   const activeRealSessions = Math.max(1, Object.keys(presenceMap).length);
 

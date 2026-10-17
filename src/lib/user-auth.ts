@@ -1,5 +1,4 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { indexRegisteredUser } from "@/lib/admin-store";
+import { getAdminKv, indexRegisteredUser, type HybridKVStore } from "@/lib/admin-store";
 
 export interface UserProfile {
   id: string;
@@ -17,32 +16,9 @@ interface StoredUserAccount {
   passwordHash?: string;
 }
 
-interface KVNamespaceLike {
-  get(key: string): Promise<string | null>;
-  put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
-}
-
-const memoryKv = new Map<string, string>();
-
-async function getKvStore(): Promise<KVNamespaceLike> {
-  try {
-    const ctx = await getCloudflareContext({ async: true });
-    const env = ctx?.env as Record<string, any> | undefined;
-    if (env?.ENJUEGO_KV && typeof env.ENJUEGO_KV.get === "function") {
-      return env.ENJUEGO_KV as KVNamespaceLike;
-    }
-  } catch {
-    // Fallback in local Node dev mode
-  }
-
-  return {
-    async get(key: string) {
-      return memoryKv.get(key) ?? null;
-    },
-    async put(key: string, value: string) {
-      memoryKv.set(key, value);
-    },
-  };
+async function getKvStore(): Promise<HybridKVStore> {
+  const { kv } = await getAdminKv();
+  return kv;
 }
 
 async function hashPassword(password: string): Promise<string> {

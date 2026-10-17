@@ -1581,6 +1581,11 @@ export function EnJuegoPortal({
             gameId={selectedGameId}
             onBack={() => router.push("/resultados")}
             onSelectTeam={openTeamPage}
+            currentUser={currentUser}
+            onRequireAuth={() => {
+              setAuthModalTab("quick");
+              setAuthModalOpen(true);
+            }}
           />
         )}
 

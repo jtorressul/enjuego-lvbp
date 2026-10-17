@@ -29,7 +29,9 @@ import {
   Check,
   ExternalLink,
   Info,
+  Sparkles,
 } from "lucide-react";
+import type { UserProfile } from "@/lib/user-auth";
 
 const HIT_TYPES = new Set(["single", "double", "triple", "home_run"]);
 
@@ -156,10 +158,14 @@ export function GamedayView({
   gameId,
   onBack,
   onSelectTeam,
+  currentUser,
+  onRequireAuth,
 }: {
   gameId: string;
   onBack: () => void;
   onSelectTeam?: (teamCode: string) => void;
+  currentUser?: UserProfile | null;
+  onRequireAuth?: () => void;
 }) {
   const [game, setGame] = useState<GamedayData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -414,20 +420,23 @@ export function GamedayView({
 
   const handleSendChat = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser) {
+      if (onRequireAuth) onRequireAuth();
+      return;
+    }
     const cleanText = chatInput.trim();
     if (!cleanText) return;
     setChatInput("");
-    const authorHandle = chatUser.trim() || "@fanatico_lvbp";
-    try {
-      localStorage.setItem("enjuego_nick", authorHandle);
-    } catch {
-      // ignore
-    }
+    const rawHandle = currentUser.handle
+      ? currentUser.handle.replace(/^@/, "")
+      : currentUser.name.toLowerCase().replace(/[^a-z0-9]/g, "_") || "fan";
+    const authorHandle = `@${rawHandle}`;
+    const authorTeam = currentUser.favoriteTeam || game.homeTeam.code;
 
     const optimisticMsg = {
       id: `opt-${Date.now()}`,
-      author: authorHandle.startsWith("@") ? authorHandle : `@${authorHandle}`,
-      team: game.homeTeam.shortName,
+      author: authorHandle,
+      team: authorTeam,
       time: "Ahora",
       text: cleanText,
     };
@@ -442,8 +451,8 @@ export function GamedayView({
           gameId,
           away: game.awayTeam.code,
           home: game.homeTeam.code,
-          user: authorHandle,
-          team: game.homeTeam.code,
+          user: rawHandle,
+          team: authorTeam,
           text: cleanText,
         }),
       });
@@ -693,9 +702,9 @@ export function GamedayView({
       </section>
 
       {/* MAIN TWO-COLUMN GAMEDAY LAYOUT */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* Left/Center Main Area (8 cols) */}
-        <div className="lg:col-span-8 space-y-5">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
+        {/* Left/Center Main Area (8 cols on large screens, full width below) */}
+        <div className="xl:col-span-8 space-y-5">
           {/* 1. SITUACIÓN DEL JUEGO (SI ESTÁ EN VIVO) */}
           {isLive && game.matchup && (
             <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs space-y-4">
@@ -1439,8 +1448,8 @@ export function GamedayView({
           </section>
         </div>
 
-        {/* Right Sidebar (4 cols): TV Streaming, Radio, Quiniela & Live Chat */}
-        <aside className="lg:col-span-4 space-y-5">
+        {/* Right Sidebar (4 cols on xl): TV Streaming, Radio, Quiniela & Live Chat */}
+        <aside className="xl:col-span-4 space-y-5">
           {/* 1. SEÑAL DE TV EN VIVO (TV ABIERTA CON VENTANITA PIP / CABLE CON GUÍA) */}
           {(() => {
             const rawChannels = (game.tvChannels && game.tvChannels.length > 0)
@@ -1793,33 +1802,48 @@ export function GamedayView({
               )}
             </div>
 
-            <form onSubmit={handleSendChat} className="mt-3 space-y-2">
-              <input
-                type="text"
-                value={chatUser}
-                onChange={(e) => setChatUser(e.target.value)}
-                placeholder="Tu nombre o @usuario"
-                maxLength={24}
-                className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-amber-400 focus:bg-white transition"
-              />
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  placeholder="Escribe un comentario sobre el juego…"
-                  maxLength={180}
-                  className="flex-1 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-amber-400 focus:bg-white transition"
-                />
+            {currentUser ? (
+              <form onSubmit={handleSendChat} className="mt-3 space-y-2 border-t border-slate-100 pt-2.5">
+                <div className="flex items-center gap-1.5 px-1 text-[11px] text-slate-500 font-bold truncate">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                  <span>Comentando como </span>
+                  <span className="text-slate-900 font-black">{currentUser.name}</span>
+                  <span className="text-amber-600 font-bold">({currentUser.handle || "@fan"})</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder="Escribe un comentario sobre el juego…"
+                    maxLength={180}
+                    className="flex-1 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-amber-400 focus:bg-white transition"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!chatInput.trim()}
+                    className="rounded-xl bg-amber-400 hover:bg-amber-300 disabled:opacity-40 text-slate-950 p-2 font-bold transition cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                    aria-label="Enviar comentario"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="mt-3 pt-3 border-t border-slate-100 text-center space-y-2">
+                <p className="text-[11px] text-slate-500 leading-snug">
+                  Para participar en los comentarios en vivo de este juego debes tener una cuenta activa.
+                </p>
                 <button
-                  type="submit"
-                  className="rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 p-2 font-bold transition cursor-pointer shadow-2xs"
-                  aria-label="Enviar comentario"
+                  type="button"
+                  onClick={() => onRequireAuth && onRequireAuth()}
+                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs transition cursor-pointer shadow-2xs active:scale-95"
                 >
-                  <Send className="w-4 h-4" />
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Iniciar Sesión / Cuenta Fan</span>
                 </button>
               </div>
-            </form>
+            )}
           </section>
         </aside>
       </div>

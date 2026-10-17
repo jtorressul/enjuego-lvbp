@@ -53,7 +53,10 @@ const EVENT_ES: Record<string, string> = {
   "Wild Pitch": "Envío descontrolado",
   "Passed Ball": "Pasbol",
   "Stolen Base 2B": "Base robada (2B)",
-  "Stolen Base 3B": "Base robada (3B)",
+  "Status Change - Delayed: Power": "Demora (Luz)",
+  "Status Change - Delayed: Rain": "Demora (Lluvia)",
+  "Status Change - Delayed": "Demorado",
+  "Game Advisory": "Aviso oficial",
 };
 
 const PITCH_CALL_ES: Record<string, string> = {
@@ -88,6 +91,31 @@ const PITCH_TYPE_ES: Record<string, string> = {
 function translatePlayText(text = ""): string {
   if (!text) return "";
   return text
+    .replace(/Status Change - Delayed:\s*Power/gi, "Demora por falla eléctrica / luminarias en el estadio")
+    .replace(/Status Change - Delayed:\s*Rain/gi, "Demora por lluvia")
+    .replace(/Status Change - Delayed:\s*Weather/gi, "Demora por condiciones climáticas")
+    .replace(/Status Change - Delayed:\s*Field Condition/gi, "Demora por acondicionamiento del terreno")
+    .replace(/Status Change - Delayed:\s*(.+)/gi, "Demora del juego: $1")
+    .replace(/Status Change - Delayed/gi, "Juego demorado")
+    .replace(/Status Change - In Progress/gi, "Juego reanudado")
+    .replace(/Status Change - Suspended/gi, "Juego suspendido")
+    .replace(/Status Change - Postponed/gi, "Juego pospuesto")
+    .replace(/Status Change - Warmup/gi, "Calentamiento previo a reanudación")
+    .replace(/Status Change - Final/gi, "Juego finalizado")
+    .replace(/Delayed: Power/gi, "Demora por falla eléctrica")
+    .replace(/Delayed: Rain/gi, "Demora por lluvia")
+    .replace(/Delayed: Weather/gi, "Demora por clima")
+    .replace(/Game Advisory/gi, "Aviso oficial del juego")
+    .replace(/Mound Visit/gi, "Visita al montículo")
+    .replace(/Coaching Visit/gi, "Visita técnica al montículo")
+    .replace(/Injury Delay/gi, "Pausa por atención médica")
+    .replace(/Umpire Review/gi, "Revisión arbitral")
+    .replace(/Stolen Base/gi, "Base robada")
+    .replace(/Caught Stealing/gi, "Out en intento de robo")
+    .replace(/Wild Pitch/gi, "Lanzamiento desviado (Wild Pitch)")
+    .replace(/Passed Ball/gi, "Pasbol")
+    .replace(/Balk/gi, "Balk (movimiento ilegal)")
+    .replace(/Pickoff/gi, "Revirada")
     .replace(/homers \((\d+)\) on a fly ball to/gi, "conecta JONRÓN ($1) con elevado hacia el")
     .replace(/homers \((\d+)\) on a line drive to/gi, "conecta JONRÓN ($1) con línea hacia el")
     .replace(/singles on a ground ball to/gi, "conecta sencillo con rodado al")

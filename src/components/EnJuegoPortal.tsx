@@ -209,11 +209,19 @@ export function EnJuegoPortal({
         setTeamsDropdownOpen(false);
       }
     };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setTeamsDropdownOpen(false);
+        setMobileDrawerOpen(false);
+      }
+    };
     if (teamsDropdownOpen) {
       document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleKeyDown);
     }
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, [teamsDropdownOpen]);
 

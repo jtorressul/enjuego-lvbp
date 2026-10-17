@@ -19,6 +19,17 @@ export function BroadcastChannelsRow({
 }: BroadcastChannelsRowProps) {
   const [selectedCableChannel, setSelectedCableChannel] = useState<BroadcastChannelInfo | null>(null);
 
+  React.useEffect(() => {
+    if (!selectedCableChannel) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setSelectedCableChannel(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedCableChannel]);
+
   if (!channels || channels.length === 0) return null;
 
   const handleChannelClick = (e: React.MouseEvent, ch: string) => {

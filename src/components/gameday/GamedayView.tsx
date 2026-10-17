@@ -988,29 +988,58 @@ export function GamedayView({
               {/* TAB 1: JUGADA A JUGADA */}
               {tab === "feed" && (
                 <div className="space-y-4">
-                  {/* Filters */}
-                  <div className="flex flex-wrap gap-1.5">
-                    {(
-                      [
-                        ["all", "Todas"],
-                        ["scoring", "Anotaciones"],
-                        ["hits", "Hits"],
-                        ["changes", "Cambios"],
-                      ] as const
-                    ).map(([fKey, fLabel]) => (
+                  {/* Top Bar: Feed Filters + Expand/Collapse All Buttons */}
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap gap-1.5">
+                      {(
+                        [
+                          ["all", "Todas"],
+                          ["scoring", "Anotaciones"],
+                          ["hits", "Hits"],
+                          ["changes", "Cambios"],
+                        ] as const
+                      ).map(([fKey, fLabel]) => (
+                        <button
+                          key={fKey}
+                          type="button"
+                          onClick={() => setFeedFilter(fKey)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                            feedFilter === fKey
+                              ? "bg-amber-500 text-slate-950 font-black shadow-2xs"
+                              : "bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200/60"
+                          }`}
+                        >
+                          {fLabel}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
                       <button
-                        key={fKey}
                         type="button"
-                        onClick={() => setFeedFilter(fKey)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                          feedFilter === fKey
-                            ? "bg-amber-500 text-slate-950 font-black shadow-2xs"
-                            : "bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200/60"
-                        }`}
+                        onClick={() => {
+                          const allOpen: Record<string, boolean> = {};
+                          for (const g of groups) allOpen[g.key] = true;
+                          setOpenInnings(allOpen);
+                        }}
+                        className="px-2.5 py-1 rounded-md text-[11px] font-bold text-slate-600 hover:text-slate-950 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition cursor-pointer"
+                        title="Abrir todas las entradas"
                       >
-                        {fLabel}
+                        Abrir todas
                       </button>
-                    ))}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const allClosed: Record<string, boolean> = {};
+                          for (const g of groups) allClosed[g.key] = false;
+                          setOpenInnings(allClosed);
+                        }}
+                        className="px-2.5 py-1 rounded-md text-[11px] font-bold text-slate-600 hover:text-slate-950 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition cursor-pointer"
+                        title="Cerrar todas las entradas"
+                      >
+                        Cerrar todas
+                      </button>
+                    </div>
                   </div>
 
                   {/* Half-inning accordions (newest first) */}
@@ -1025,21 +1054,26 @@ export function GamedayView({
                       if (!plays.length) return null;
 
                       const team = grp.top ? game.awayTeam : game.homeTeam;
-                      const isOpen =
-                        feedFilter !== "all" ||
-                        (openInnings[grp.key] !== undefined ? openInnings[grp.key] : grpIdx < 2);
+                      const isExplicit = openInnings[grp.key] !== undefined;
+                      const isOpen = isExplicit ? openInnings[grp.key] : grpIdx < 2;
 
                       return (
                         <div
                           key={grp.key}
-                          className="rounded-xl border border-slate-200 bg-slate-50/40 overflow-hidden"
+                          className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-2xs transition-shadow"
                         >
                           <button
                             type="button"
-                            onClick={() =>
-                              setOpenInnings((prev) => ({ ...prev, [grp.key]: !isOpen }))
-                            }
-                            className="w-full flex items-center justify-between gap-2 px-4 py-2.5 bg-slate-50 hover:bg-slate-100/90 text-xs transition cursor-pointer border-b border-slate-200/80"
+                            onClick={() => {
+                              setOpenInnings((prev) => {
+                                const current = prev[grp.key] !== undefined ? prev[grp.key] : grpIdx < 2;
+                                return { ...prev, [grp.key]: !current };
+                              });
+                            }}
+                            aria-expanded={isOpen}
+                            className={`w-full flex items-center justify-between gap-2 px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-xs transition cursor-pointer select-none ${
+                              isOpen ? "border-b border-slate-200" : ""
+                            }`}
                           >
                             <div className="flex items-center gap-2.5">
                               <img src={team.logoUrl} alt="" className="w-5 h-5 object-contain" />
@@ -1059,8 +1093,8 @@ export function GamedayView({
                                 {grp.endHome}
                               </strong>
                               <ChevronDown
-                                className={`w-4 h-4 text-slate-500 transition-transform ${
-                                  isOpen ? "rotate-180" : ""
+                                className={`w-4 h-4 transition-transform duration-200 ${
+                                  isOpen ? "rotate-180 text-amber-600" : "text-slate-400"
                                 }`}
                               />
                             </div>
@@ -1070,19 +1104,44 @@ export function GamedayView({
                             <div className="divide-y divide-slate-100 p-3 space-y-2.5 bg-white">
                               {[...plays].reverse().map((play) => {
                                 const tone = eventTone(play.eventType);
+                                const isDelayOrStatus =
+                                  play.text.toLowerCase().includes("demora") ||
+                                  play.text.toLowerCase().includes("status change") ||
+                                  play.actions.some(
+                                    (a) => a.trim().toLowerCase() === play.text.trim().toLowerCase()
+                                  );
+                                const displayText = isDelayOrStatus
+                                  ? play.complete
+                                    ? play.text
+                                    : `En turno al bate · Cuenta ${play.balls}-${play.strikes} · ${play.outs} out(s)`
+                                  : play.text ||
+                                    `Cuenta ${play.balls}-${play.strikes} · ${play.outs} out(s)`;
+
                                 return (
                                   <article
                                     key={play.i}
                                     className={`pt-2.5 first:pt-0 pl-3 rounded-r-lg ${tone.border}`}
                                   >
-                                    {play.actions.map((act, i) => (
-                                      <p
-                                        key={i}
-                                        className="mb-1.5 text-[11px] text-amber-800 bg-amber-50 px-2.5 py-1 rounded border border-amber-200"
-                                      >
-                                        ⇄ {act}
-                                      </p>
-                                    ))}
+                                    {play.actions.map((act, i) => {
+                                      const isDelay =
+                                        act.toLowerCase().includes("demora") ||
+                                        act.toLowerCase().includes("falla eléctrica") ||
+                                        act.toLowerCase().includes("lluvia") ||
+                                        act.toLowerCase().includes("delayed");
+                                      return (
+                                        <p
+                                          key={i}
+                                          className={`mb-1.5 text-[11px] font-bold px-2.5 py-1 rounded border flex items-center gap-1.5 ${
+                                            isDelay
+                                              ? "bg-amber-100 text-amber-950 border-amber-300 shadow-2xs"
+                                              : "bg-amber-50 text-amber-800 border-amber-200"
+                                          }`}
+                                        >
+                                          <span>⇄</span>
+                                          <span>{act}</span>
+                                        </p>
+                                      );
+                                    })}
                                     <div className="flex items-start justify-between gap-3">
                                       <div className="flex items-start gap-2.5">
                                         <img
@@ -1107,8 +1166,7 @@ export function GamedayView({
                                             )}
                                           </div>
                                           <p className="text-xs text-slate-700 leading-relaxed font-medium">
-                                            {play.text ||
-                                              `Cuenta ${play.balls}-${play.strikes} · ${play.outs} out(s)`}
+                                            {displayText}
                                           </p>
                                           <div className="flex flex-wrap items-center gap-2 pt-0.5">
                                             <span className="text-[11px] text-slate-500 font-medium">

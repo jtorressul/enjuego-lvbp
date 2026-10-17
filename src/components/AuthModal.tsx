@@ -213,9 +213,14 @@ export function AuthModal({
           className="p-5 border-b flex items-center justify-between text-white"
           style={{ backgroundColor: "#060a12", borderColor: "#1e293b" }}
         >
-          <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="En Juego" className="h-7 w-auto object-contain" />
-            <span className="text-xs font-bold text-slate-400 border-l border-slate-700 pl-3">
+          <div className="flex items-center gap-2.5">
+            <img src="/logo.png" alt="En Juego" className="h-6 sm:h-7 w-auto object-contain" />
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-black italic tracking-tight bg-gradient-to-r from-red-950/70 via-slate-900/90 to-slate-900/90 border border-red-500/40 text-white shadow-[0_0_8px_rgba(239,68,68,0.25)] select-none">
+              <span className="text-red-500 font-black text-xs leading-none mr-0.5 drop-shadow-[0_0_6px_rgba(239,68,68,0.8)]">.</span>
+              <span className="text-white font-black tracking-wide">online</span>
+              <span className="ml-1 w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_6px_#ef4444]" />
+            </span>
+            <span className="text-xs font-bold text-slate-400 border-l border-slate-700 pl-2.5">
               Comunidad LVBP
             </span>
           </div>

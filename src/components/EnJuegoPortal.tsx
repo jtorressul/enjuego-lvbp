@@ -869,14 +869,19 @@ export function EnJuegoPortal({
           <div className="flex items-center shrink-0">
             <Link
               href="/inicio"
-              className="flex items-center py-1 group cursor-pointer"
-              aria-label="En Juego - Inicio"
+              className="flex items-center gap-1.5 sm:gap-2 py-1 group cursor-pointer select-none"
+              aria-label="En Juego Online - Inicio"
             >
               <img
                 src="/logo.png"
                 alt="En Juego · Béisbol Venezolano"
-                className="h-8 sm:h-9 md:h-10 w-auto max-w-[155px] sm:max-w-[190px] object-contain transition-transform group-hover:scale-102"
+                className="h-7 sm:h-8 md:h-9 w-auto max-w-[135px] sm:max-w-[165px] md:max-w-[180px] object-contain transition-transform group-hover:scale-102"
               />
+              <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-md text-[10px] sm:text-xs font-black italic tracking-tight bg-gradient-to-r from-red-950/70 via-slate-900/90 to-slate-900/90 border border-red-500/40 text-white shadow-[0_0_10px_rgba(239,68,68,0.3)] group-hover:border-red-400 group-hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] transition-all">
+                <span className="text-red-500 font-black text-xs sm:text-sm leading-none mr-0.5 drop-shadow-[0_0_6px_rgba(239,68,68,0.8)]">.</span>
+                <span className="text-white font-black tracking-wide">online</span>
+                <span className="ml-1 sm:ml-1.5 w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_6px_#ef4444]" />
+              </span>
             </Link>
           </div>
 
@@ -1234,8 +1239,13 @@ export function EnJuegoPortal({
                 paddingTop: "max(1rem, env(safe-area-inset-top, 1rem))",
               }}
             >
-              <div className="flex items-center gap-2.5">
-                <img src="/logo.png" alt="En Juego" className="h-8 w-auto object-contain" />
+              <div className="flex items-center gap-2">
+                <img src="/logo.png" alt="En Juego" className="h-7 w-auto object-contain" />
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-black italic tracking-tight bg-gradient-to-r from-red-950/70 via-slate-900/90 to-slate-900/90 border border-red-500/40 text-white shadow-[0_0_10px_rgba(239,68,68,0.3)] select-none">
+                  <span className="text-red-500 font-black text-xs leading-none mr-0.5 drop-shadow-[0_0_6px_rgba(239,68,68,0.8)]">.</span>
+                  <span className="text-white font-black tracking-wide">online</span>
+                  <span className="ml-1 w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_6px_#ef4444]" />
+                </span>
               </div>
               <button
                 type="button"

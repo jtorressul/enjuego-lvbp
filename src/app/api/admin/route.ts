@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
 import {
+  AD_SLOTS_CATALOG,
   DEFAULT_5_CAMPAIGNS,
   getAdCampaigns,
   getAdminKv,
   getLivePresenceSummary,
   getRegisteredUsersList,
-  getRotationSeconds,
+  isAdCampaignLive,
   saveAdCampaigns,
-  setRotationSeconds,
   updateAdminPassword,
   verifyAdminPassword,
   type AdCampaign,
+  type AdSlotType,
 } from "@/lib/admin-store";
 
 export const dynamic = "force-dynamic";
@@ -30,18 +31,15 @@ export async function GET(request: Request) {
     const [
       { isCloudflareKv },
       campaigns,
-      rotationSeconds,
       presence,
       registeredUsers,
     ] = await Promise.all([
       getAdminKv(),
       getAdCampaigns(),
-      getRotationSeconds(),
       getLivePresenceSummary(),
       getRegisteredUsersList(),
     ]);
 
-    // Quick MLB API reachability check
     let mlbApiStatus: "online" | "degraded" = "online";
     let mlbLatencyMs = 0;
     try {
@@ -56,9 +54,14 @@ export async function GET(request: Request) {
       mlbApiStatus = "degraded";
     }
 
+    const enrichedCampaigns = campaigns.map((c) => ({
+      ...c,
+      live: isAdCampaignLive(c),
+    }));
+
     return NextResponse.json({
-      campaigns,
-      rotationSeconds,
+      slots: AD_SLOTS_CATALOG,
+      campaigns: enrichedCampaigns,
       presence,
       registeredUsers,
       systemHealth: {
@@ -99,6 +102,103 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     }
 
+    // Create a new ad directly from the "Nuevo anuncio" form (like jugadaenvivo.com)
+    if (action === "create_ad") {
+      const campaigns = await getAdCampaigns();
+      const slot = (body.slot || "general") as AdSlotType;
+      const newAd: AdCampaign = {
+        id: `ad_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        companyName: String(body.companyName || "Nuevo Anunciante").slice(0, 80),
+        slot,
+        slots: [slot],
+        title: String(
+          body.title || body.companyName || "Anuncio en EnJuego.online"
+        ).slice(0, 90),
+        subtitle: String(
+          body.subtitle || "Patrocinador en EnJuego.online"
+        ).slice(0, 130),
+        ctaText: String(body.ctaText || "Visitar").slice(0, 24),
+        linkUrl: String(body.linkUrl || "").trim(),
+        imageUrl: body.imageUrl ? String(body.imageUrl) : "",
+        accentColor: String(body.accentColor || "#e11d48"),
+        startsOn: body.startsOn ? String(body.startsOn).trim() : "",
+        endsOn: body.endsOn ? String(body.endsOn).trim() : "",
+        active: true,
+        impressions: 0,
+        clicks: 0,
+        updatedAt: Date.now(),
+      };
+      const updated = [newAd, ...campaigns];
+      const saved = await saveAdCampaigns(updated);
+      return NextResponse.json({
+        ok: true,
+        campaigns: saved.map((c) => ({ ...c, live: isAdCampaignLive(c) })),
+      });
+    }
+
+    // Update a single ad (toggle active, change dates, slot, link, etc.)
+    if (action === "update_ad") {
+      const adId = String(body.id || "");
+      const campaigns = await getAdCampaigns();
+      const updated = campaigns.map((c) => {
+        if (c.id !== adId) return c;
+        const nextSlot = (body.slot ?? c.slot ?? "general") as AdSlotType;
+        return {
+          ...c,
+          companyName:
+            body.companyName !== undefined
+              ? String(body.companyName).slice(0, 80)
+              : c.companyName,
+          slot: nextSlot,
+          slots: [nextSlot],
+          title:
+            body.title !== undefined
+              ? String(body.title).slice(0, 90)
+              : c.title,
+          subtitle:
+            body.subtitle !== undefined
+              ? String(body.subtitle).slice(0, 130)
+              : c.subtitle,
+          ctaText:
+            body.ctaText !== undefined
+              ? String(body.ctaText).slice(0, 24)
+              : c.ctaText,
+          linkUrl:
+            body.linkUrl !== undefined
+              ? String(body.linkUrl).trim()
+              : c.linkUrl,
+          imageUrl:
+            body.imageUrl !== undefined ? String(body.imageUrl) : c.imageUrl,
+          startsOn:
+            body.startsOn !== undefined
+              ? String(body.startsOn).trim()
+              : c.startsOn,
+          endsOn:
+            body.endsOn !== undefined ? String(body.endsOn).trim() : c.endsOn,
+          active:
+            body.active !== undefined ? Boolean(body.active) : c.active,
+          updatedAt: Date.now(),
+        };
+      });
+      const saved = await saveAdCampaigns(updated);
+      return NextResponse.json({
+        ok: true,
+        campaigns: saved.map((c) => ({ ...c, live: isAdCampaignLive(c) })),
+      });
+    }
+
+    // Delete a single ad
+    if (action === "delete_ad") {
+      const adId = String(body.id || "");
+      const campaigns = await getAdCampaigns();
+      const updated = campaigns.filter((c) => c.id !== adId);
+      const saved = await saveAdCampaigns(updated);
+      return NextResponse.json({
+        ok: true,
+        campaigns: saved.map((c) => ({ ...c, live: isAdCampaignLive(c) })),
+      });
+    }
+
     if (action === "save_campaigns") {
       const incoming = body?.campaigns as AdCampaign[];
       if (!Array.isArray(incoming)) {
@@ -108,37 +208,41 @@ export async function POST(request: Request) {
         );
       }
 
-      const sanitized: AdCampaign[] = incoming.map((c, idx) => ({
-        id: String(c.id || `emp_${Date.now()}_${idx}`),
-        companyName: String(c.companyName || `Empresa #${idx + 1}`).slice(0, 60),
-        title: String(c.title || "Anuncia tu marca en EnJuego.online").slice(0, 90),
-        subtitle: String(
-          c.subtitle || "Espacio publicitario disponible."
-        ).slice(0, 130),
-        ctaText: String(c.ctaText || "Pautar").slice(0, 24),
-        linkUrl: String(c.linkUrl || "https://wa.me/").trim(),
-        imageUrl: c.imageUrl ? String(c.imageUrl) : "",
-        accentColor: String(c.accentColor || "#e11d48"),
-        slots:
-          Array.isArray(c.slots) && c.slots.length > 0
-            ? c.slots
-            : ["top-leaderboard", "in-feed", "gameday-sidebar"],
-        active: Boolean(c.active),
-        impressions: Number(c.impressions) || 0,
-        clicks: Number(c.clicks) || 0,
-        updatedAt: Date.now(),
-      }));
+      const sanitized: AdCampaign[] = incoming.map((c, idx) => {
+        const slot = (c.slot ||
+          (Array.isArray(c.slots) && c.slots[0]) ||
+          "general") as AdSlotType;
+        return {
+          id: String(c.id || `emp_${Date.now()}_${idx}`),
+          companyName: String(c.companyName || `Empresa #${idx + 1}`).slice(
+            0,
+            80
+          ),
+          slot,
+          slots: [slot],
+          title: String(
+            c.title || "Anuncia tu marca en EnJuego.online"
+          ).slice(0, 90),
+          subtitle: String(
+            c.subtitle || "Espacio publicitario disponible."
+          ).slice(0, 130),
+          ctaText: String(c.ctaText || "Pautar").slice(0, 24),
+          linkUrl: String(c.linkUrl || "").trim(),
+          imageUrl: c.imageUrl ? String(c.imageUrl) : "",
+          accentColor: String(c.accentColor || "#e11d48"),
+          startsOn: c.startsOn ? String(c.startsOn).trim() : "",
+          endsOn: c.endsOn ? String(c.endsOn).trim() : "",
+          active: Boolean(c.active),
+          impressions: Number(c.impressions) || 0,
+          clicks: Number(c.clicks) || 0,
+          updatedAt: Date.now(),
+        };
+      });
 
       const saved = await saveAdCampaigns(sanitized);
-      let rotationSeconds = await getRotationSeconds();
-      if (body?.rotationSeconds !== undefined) {
-        rotationSeconds = await setRotationSeconds(Number(body.rotationSeconds));
-      }
-
       return NextResponse.json({
         ok: true,
-        campaigns: saved,
-        rotationSeconds,
+        campaigns: saved.map((c) => ({ ...c, live: isAdCampaignLive(c) })),
       });
     }
 
@@ -152,12 +256,18 @@ export async function POST(request: Request) {
         return c;
       });
       const saved = await saveAdCampaigns(updated);
-      return NextResponse.json({ ok: true, campaigns: saved });
+      return NextResponse.json({
+        ok: true,
+        campaigns: saved.map((c) => ({ ...c, live: isAdCampaignLive(c) })),
+      });
     }
 
     if (action === "restore_defaults") {
       const saved = await saveAdCampaigns(DEFAULT_5_CAMPAIGNS);
-      return NextResponse.json({ ok: true, campaigns: saved });
+      return NextResponse.json({
+        ok: true,
+        campaigns: saved.map((c) => ({ ...c, live: isAdCampaignLive(c) })),
+      });
     }
 
     if (action === "change_password") {

@@ -1,18 +1,66 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import type { UserProfile } from "@/lib/user-auth";
 
-export type AdSlotType = "top-leaderboard" | "in-feed" | "gameday-sidebar";
+export type AdSlotType =
+  | "general"
+  | "top-leaderboard"
+  | "in-feed"
+  | "home-bottom"
+  | "gameday-sidebar";
+
+export interface AdSlotInfo {
+  key: AdSlotType;
+  label: string;
+  where: string;
+  size: string;
+}
+
+export const AD_SLOTS_CATALOG: AdSlotInfo[] = [
+  {
+    key: "general",
+    label: "Rotativo · Todo el sitio",
+    where: "Cubre cualquier espacio libre sin repetirlo en la misma página",
+    size: "970x90",
+  },
+  {
+    key: "top-leaderboard",
+    label: "Inicio · Arriba",
+    where: "Debajo de la cabecera y tira de juegos en el inicio",
+    size: "970x90",
+  },
+  {
+    key: "in-feed",
+    label: "Inicio · Medio",
+    where: "Entre la pizarra de juegos y las noticias / secciones",
+    size: "970x90",
+  },
+  {
+    key: "home-bottom",
+    label: "Inicio · Abajo",
+    where: "Antes del pie de página en todo el portal",
+    size: "970x90",
+  },
+  {
+    key: "gameday-sidebar",
+    label: "Gameday · Pizarra en Vivo",
+    where: "Dentro de la transmisión jugada a jugada del partido",
+    size: "970x90",
+  },
+];
 
 export interface AdCampaign {
   id: string;
   companyName: string;
+  slot: AdSlotType;
+  slots: AdSlotType[];
   title: string;
   subtitle: string;
   ctaText: string;
   linkUrl: string;
   imageUrl?: string;
   accentColor: string;
-  slots: AdSlotType[];
+  startsOn?: string;
+  endsOn?: string;
   active: boolean;
   impressions: number;
   clicks: number;
@@ -49,7 +97,6 @@ export interface HybridKVStore {
   ): Promise<void>;
 }
 
-// Global memory store across Worker isolate invocations (0ms, unlimited)
 const globalRef = globalThis as unknown as {
   __ENJUEGO_MEM_STORE__?: Map<string, string>;
 };
@@ -58,7 +105,6 @@ if (!globalRef.__ENJUEGO_MEM_STORE__) {
 }
 const memoryKv = globalRef.__ENJUEGO_MEM_STORE__;
 
-// Cloudflare Edge Cache API helper (UNLIMITED reads & writes on Free Tier)
 function getEdgeCache(): Cache | null {
   try {
     const c = (globalThis as any).caches?.default;
@@ -98,13 +144,11 @@ export async function getAdminKv(): Promise<{
 
   const hybridKv: HybridKVStore = {
     async get(key: string, options?: { skipKv?: boolean }): Promise<string | null> {
-      // 1. Check fast memory isolate store first
       const memVal = memoryKv.get(key);
       if (memVal !== undefined) {
         return memVal;
       }
 
-      // 2. Check Cloudflare Edge Cache API (unlimited reads/writes)
       if (edgeCache) {
         try {
           const cachedRes = await edgeCache.match(makeCacheUrl(key));
@@ -114,11 +158,10 @@ export async function getAdminKv(): Promise<{
             return text;
           }
         } catch {
-          // ignore cache read error
+          // ignore
         }
       }
 
-      // 3. Check Cloudflare KV (100,000 reads/day free)
       if (rawKv && !options?.skipKv) {
         try {
           const kvVal = await rawKv.get(key);
@@ -140,7 +183,7 @@ export async function getAdminKv(): Promise<{
             return kvVal;
           }
         } catch {
-          // ignore KV read error
+          // ignore
         }
       }
 
@@ -152,10 +195,8 @@ export async function getAdminKv(): Promise<{
       value: string,
       options?: { expirationTtl?: number; persistToKv?: boolean }
     ): Promise<void> {
-      // 1. Always write to fast isolate memory immediately
       memoryKv.set(key, value);
 
-      // 2. Always write to Cloudflare Edge Cache API (UNLIMITED free writes!)
       if (edgeCache) {
         try {
           const ttl = options?.expirationTtl || 86400 * 30;
@@ -169,18 +210,17 @@ export async function getAdminKv(): Promise<{
             })
           );
         } catch {
-          // ignore edge cache error
+          // ignore
         }
       }
 
-      // 3. Only write to Cloudflare KV when persistToKv !== false, and NEVER throw if daily quota is exceeded
       if (rawKv && options?.persistToKv !== false) {
         try {
           await rawKv.put(key, value, {
             expirationTtl: options?.expirationTtl || 86400 * 365,
           });
         } catch {
-          // Gracefully absorb "KV put() limit exceeded for the day" so the app keeps working 100% via Edge Cache + Memory!
+          // Gracefully absorb KV daily quota limit
         }
       }
     },
@@ -192,27 +232,75 @@ export async function getAdminKv(): Promise<{
   };
 }
 
-const CAMPAIGNS_KEY = "admin:ads:campaigns:v1";
-const METRICS_KEY = "admin:ads:metrics:v1";
+const CAMPAIGNS_KEY = "admin:ads:campaigns:v2";
+const METRICS_KEY = "admin:ads:metrics:v2";
 const PRESENCE_KEY = "admin:presence:sessions:v1";
 const USERS_INDEX_KEY = "admin:users:index:v1";
 const ADMIN_PASS_KEY = "admin:config:password:v1";
-const ROTATION_SECONDS_KEY = "admin:config:rotation_sec:v1";
 
 export const DEFAULT_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "enjuego2026";
+
+export function getTodayCaracasKey(): string {
+  const d = new Date(Date.now() - 4 * 3600 * 1000);
+  return d.toISOString().slice(0, 10);
+}
+
+// Generates a crisp 970x90 SVG banner data URI for announcements that don't have a custom image file yet
+export function buildGeneratedBannerSvgDataUri(
+  companyName: string,
+  title: string,
+  subtitle: string,
+  ctaText: string,
+  accentColor: string
+): string {
+  const esc = (s: string) =>
+    String(s || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 970 90" width="970" height="90">
+    <defs>
+      <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#0b1324"/>
+        <stop offset="65%" stop-color="#111c33"/>
+        <stop offset="100%" stop-color="#1e293b"/>
+      </linearGradient>
+      <linearGradient id="accent" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="${esc(accentColor)}"/>
+        <stop offset="100%" stop-color="#f59e0b"/>
+      </linearGradient>
+    </defs>
+    <rect width="970" height="90" rx="10" fill="url(#bg)"/>
+    <rect x="0" y="0" width="10" height="90" rx="4" fill="url(#accent)"/>
+    <circle cx="910" cy="-10" r="95" fill="${esc(accentColor)}" opacity="0.14"/>
+    <rect x="28" y="16" width="170" height="20" rx="5" fill="${esc(accentColor)}"/>
+    <text x="113" y="30" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="900" text-anchor="middle" letter-spacing="0.8">${esc(companyName.toUpperCase().slice(0, 22))}</text>
+    <text x="28" y="57" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="900">${esc(title.slice(0, 56))}</text>
+    <text x="28" y="77" fill="#cbd5e1" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600">${esc(subtitle.slice(0, 80))}</text>
+    <rect x="805" y="23" width="142" height="44" rx="10" fill="${esc(accentColor)}"/>
+    <text x="876" y="50" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="900" text-anchor="middle">${esc(ctaText.slice(0, 14))} →</text>
+  </svg>`;
+
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
 
 export const DEFAULT_5_CAMPAIGNS: AdCampaign[] = [
   {
     id: "emp_1",
-    companyName: "Empresa #1 · Disponible",
-    title: "Impulsa tu marca en EnJuego.online",
-    subtitle: "Espacio preferencial #1 visible en toda la jornada en vivo.",
-    ctaText: "Pautar",
+    companyName: "Espacio #1 · EnJuego.online",
+    slot: "top-leaderboard",
+    slots: ["top-leaderboard"],
+    title: "Anuncia tu marca en la cabecera de EnJuego.online",
+    subtitle: "Banner 970x90 px de máxima visibilidad en cada jornada · Escríbenos por WhatsApp",
+    ctaText: "Anúnciate",
     linkUrl:
-      "https://wa.me/?text=Hola%20EnJuego.online,%20me%20interesa%20el%20Espacio%20Publicitario%20%231",
+      "https://wa.me/?text=Hola%20EnJuego.online,%20me%20interesa%20el%20Banner%20Inicio%20Arriba%20(970x90)",
     imageUrl: "",
     accentColor: "#e11d48",
-    slots: ["top-leaderboard", "in-feed", "gameday-sidebar"],
+    startsOn: "",
+    endsOn: "",
     active: true,
     impressions: 0,
     clicks: 0,
@@ -220,15 +308,18 @@ export const DEFAULT_5_CAMPAIGNS: AdCampaign[] = [
   },
   {
     id: "emp_2",
-    companyName: "Empresa #2 · Disponible",
-    title: "Conecta con miles de fanáticos del béisbol",
-    subtitle: "Destaca tu negocio o servicio durante cada inning de la liga.",
-    ctaText: "Anunciar",
+    companyName: "Espacio #2 · EnJuego.online",
+    slot: "in-feed",
+    slots: ["in-feed"],
+    title: "Destaca tu negocio o servicio ante miles de fanáticos",
+    subtitle: "Ubicación intermedia entre la pizarra en vivo y las estadísticas de la liga",
+    ctaText: "Pautar",
     linkUrl:
-      "https://wa.me/?text=Hola%20EnJuego.online,%20me%20interesa%20el%20Espacio%20Publicitario%20%232",
+      "https://wa.me/?text=Hola%20EnJuego.online,%20me%20interesa%20el%20Banner%20Inicio%20Medio%20(970x90)",
     imageUrl: "",
     accentColor: "#d97706",
-    slots: ["top-leaderboard", "in-feed", "gameday-sidebar"],
+    startsOn: "",
+    endsOn: "",
     active: true,
     impressions: 0,
     clicks: 0,
@@ -236,15 +327,18 @@ export const DEFAULT_5_CAMPAIGNS: AdCampaign[] = [
   },
   {
     id: "emp_3",
-    companyName: "Empresa #3 · Disponible",
-    title: "Patrocina la Pizarra y el Jugada a Jugada",
-    subtitle: "Presencia directa frente a la audiencia deportiva en móvil y PC.",
-    ctaText: "Contactar",
+    companyName: "Espacio #3 · EnJuego.online",
+    slot: "home-bottom",
+    slots: ["home-bottom"],
+    title: "Promociona tu tienda, restaurante o marca aquí",
+    subtitle: "Banners gráficos PNG, JPG, WebP o GIF animados con enlace directo a tu negocio",
+    ctaText: "Reservar",
     linkUrl:
-      "https://wa.me/?text=Hola%20EnJuego.online,%20me%20interesa%20el%20Espacio%20Publicitario%20%233",
+      "https://wa.me/?text=Hola%20EnJuego.online,%20me%20interesa%20el%20Banner%20Inicio%20Abajo%20(970x90)",
     imageUrl: "",
     accentColor: "#0284c7",
-    slots: ["top-leaderboard", "in-feed", "gameday-sidebar"],
+    startsOn: "",
+    endsOn: "",
     active: true,
     impressions: 0,
     clicks: 0,
@@ -252,15 +346,18 @@ export const DEFAULT_5_CAMPAIGNS: AdCampaign[] = [
   },
   {
     id: "emp_4",
-    companyName: "Empresa #4 · Disponible",
-    title: "Promociona tu tienda, restaurante o app aquí",
-    subtitle: "Banners dinámicos con enlace directo a tu WhatsApp o Instagram.",
-    ctaText: "Reservar",
+    companyName: "Espacio #4 · EnJuego.online",
+    slot: "gameday-sidebar",
+    slots: ["gameday-sidebar"],
+    title: "Patrocina la Pizarra en Vivo y el Jugada a Jugada",
+    subtitle: "Presencia exclusiva dentro de la transmisión en tiempo real de cada partido",
+    ctaText: "Contactar",
     linkUrl:
-      "https://wa.me/?text=Hola%20EnJuego.online,%20me%20interesa%20el%20Espacio%20Publicitario%20%234",
+      "https://wa.me/?text=Hola%20EnJuego.online,%20me%20interesa%20el%20Banner%20Gameday%20(970x90)",
     imageUrl: "",
     accentColor: "#059669",
-    slots: ["top-leaderboard", "in-feed", "gameday-sidebar"],
+    startsOn: "",
+    endsOn: "",
     active: true,
     impressions: 0,
     clicks: 0,
@@ -268,21 +365,36 @@ export const DEFAULT_5_CAMPAIGNS: AdCampaign[] = [
   },
   {
     id: "emp_5",
-    companyName: "Empresa #5 · Disponible",
-    title: "Alianzas comerciales temporada 2026-2027",
-    subtitle: "Reserva tu espacio en el carrusel de patrocinadores de EnJuego.online.",
-    ctaText: "Info",
+    companyName: "Espacio #5 · Rotativo",
+    slot: "general",
+    slots: ["general"],
+    title: "Alianzas Comerciales Temporada 2026-2027",
+    subtitle: "Espacio rotativo en todo el sitio sin repetirse en la misma página",
+    ctaText: "Más Info",
     linkUrl:
-      "https://wa.me/?text=Hola%20EnJuego.online,%20me%20interesa%20el%20Espacio%20Publicitario%20%235",
+      "https://wa.me/?text=Hola%20EnJuego.online,%20me%20interesa%20el%20Banner%20Rotativo%20Todo%20el%20Sitio",
     imageUrl: "",
     accentColor: "#7c3aed",
-    slots: ["top-leaderboard", "in-feed", "gameday-sidebar"],
+    startsOn: "",
+    endsOn: "",
     active: true,
     impressions: 0,
     clicks: 0,
     updatedAt: Date.now(),
   },
 ];
+
+export function isAdCampaignLive(ad: AdCampaign): boolean {
+  if (!ad.active) return false;
+  const today = getTodayCaracasKey();
+  if (ad.startsOn && ad.startsOn.trim() !== "" && today < ad.startsOn.trim()) {
+    return false;
+  }
+  if (ad.endsOn && ad.endsOn.trim() !== "" && today > ad.endsOn.trim()) {
+    return false;
+  }
+  return true;
+}
 
 export async function verifyAdminPassword(inputPassword: string): Promise<boolean> {
   if (!inputPassword) return false;
@@ -306,23 +418,6 @@ export async function updateAdminPassword(newPassword: string): Promise<void> {
   });
 }
 
-export async function getRotationSeconds(): Promise<number> {
-  const { kv } = await getAdminKv();
-  const raw = await kv.get(ROTATION_SECONDS_KEY);
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) && parsed >= 3 && parsed <= 60 ? parsed : 6;
-}
-
-export async function setRotationSeconds(seconds: number): Promise<number> {
-  const clamped = Math.max(3, Math.min(60, Math.round(seconds || 6)));
-  const { kv } = await getAdminKv();
-  await kv.put(ROTATION_SECONDS_KEY, String(clamped), {
-    expirationTtl: 86400 * 365,
-    persistToKv: true,
-  });
-  return clamped;
-}
-
 async function getBannerMetricsMap(): Promise<
   Record<string, { impressions: number; clicks: number }>
 > {
@@ -338,7 +433,6 @@ async function getBannerMetricsMap(): Promise<
 
 export async function getAdCampaigns(): Promise<AdCampaign[]> {
   const { kv } = await getAdminKv();
-  // Read-only! Never call kv.put() inside getAdCampaigns()
   const [raw, metricsMap] = await Promise.all([
     kv.get(CAMPAIGNS_KEY),
     getBannerMetricsMap(),
@@ -348,7 +442,7 @@ export async function getAdCampaigns(): Promise<AdCampaign[]> {
   if (raw) {
     try {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         list = parsed;
       }
     } catch {
@@ -358,12 +452,69 @@ export async function getAdCampaigns(): Promise<AdCampaign[]> {
 
   return list.map((c) => {
     const m = metricsMap[c.id];
+    const primarySlot: AdSlotType =
+      c.slot || (Array.isArray(c.slots) && c.slots[0]) || "general";
     return {
       ...c,
+      slot: primarySlot,
+      slots: [primarySlot],
       impressions: Math.max(c.impressions || 0, m?.impressions || 0),
       clicks: Math.max(c.clicks || 0, m?.clicks || 0),
     };
   });
+}
+
+/**
+ * Exact jugadaenvivo.com ad assignment algorithm:
+ * - Each slot shows one live ad at a time; if multiple ads share the same slot, they rotate at random per page load.
+ * - Slots without their own ad pull one from "general" ("Todo el sitio") or any active ad, NEVER repeating the same ad on the same page.
+ */
+export async function pickAdsForPageSlots(
+  requestedSlots: AdSlotType[]
+): Promise<Record<string, AdCampaign | null>> {
+  const allCampaigns = await getAdCampaigns();
+  const liveAds = allCampaigns.filter(isAdCampaignLive);
+  const usedIds = new Set<string>();
+  const result: Record<string, AdCampaign | null> = {};
+
+  function pickRandom(pool: AdCampaign[]): AdCampaign | null {
+    if (pool.length === 0) return null;
+    const idx = Math.floor(Math.random() * pool.length);
+    return pool[idx];
+  }
+
+  // Pass 1: Assign slots that have dedicated ads
+  for (const slot of requestedSlots) {
+    const dedicatedPool = liveAds.filter(
+      (ad) => ad.slot === slot && !usedIds.has(ad.id)
+    );
+    const chosen = pickRandom(dedicatedPool);
+    if (chosen) {
+      result[slot] = chosen;
+      usedIds.add(chosen.id);
+    } else {
+      result[slot] = null;
+    }
+  }
+
+  // Pass 2: Fill remaining empty slots from "general" ("Todo el sitio") or any unused live ad without repeating on the same page
+  for (const slot of requestedSlots) {
+    if (result[slot]) continue;
+    const generalPool = liveAds.filter(
+      (ad) => ad.slot === "general" && !usedIds.has(ad.id)
+    );
+    let chosen = pickRandom(generalPool);
+    if (!chosen) {
+      const anyUnusedPool = liveAds.filter((ad) => !usedIds.has(ad.id));
+      chosen = pickRandom(anyUnusedPool);
+    }
+    if (chosen) {
+      result[slot] = chosen;
+      usedIds.add(chosen.id);
+    }
+  }
+
+  return result;
 }
 
 export async function saveAdCampaigns(campaigns: AdCampaign[]): Promise<AdCampaign[]> {
@@ -390,7 +541,6 @@ export async function recordBannerMetric(
   }
   metricsMap[campaignId] = current;
 
-  // Store high-frequency metrics in Edge Cache + Memory only (0 KV writes used!)
   await kv.put(METRICS_KEY, JSON.stringify(metricsMap), {
     expirationTtl: 86400 * 30,
     persistToKv: false,
@@ -398,14 +548,9 @@ export async function recordBannerMetric(
 }
 
 // ============================================================================
-// LIVE PRESENCE (USUARIOS CONECTADOS EN VIVO - 0 KV WRITES CONSUMED)
+// LIVE PRESENCE (USUARIOS CONECTADOS EN VIVO)
 // ============================================================================
-const LIVE_WINDOW_MS = 75_000; // 75 seconds active window
-
-function getTodayCaracasKey(): string {
-  const d = new Date(Date.now() - 4 * 3600 * 1000);
-  return d.toISOString().slice(0, 10);
-}
+const LIVE_WINDOW_MS = 75_000;
 
 export async function recordPresenceHeartbeat(
   input: Omit<LiveSession, "firstSeen" | "lastSeen">
@@ -423,7 +568,6 @@ export async function recordPresenceHeartbeat(
     }
   }
 
-  // Keep only active sessions within LIVE_WINDOW_MS
   sessions = sessions.filter((s) => now - s.lastSeen <= LIVE_WINDOW_MS);
 
   const existingIdx = sessions.findIndex((s) => s.sessionId === input.sessionId);
@@ -445,13 +589,11 @@ export async function recordPresenceHeartbeat(
     sessions = sessions.slice(0, 300);
   }
 
-  // Persist to Edge Cache + Memory (persistToKv: false so heartbeats NEVER consume KV quota!)
   await kv.put(PRESENCE_KEY, JSON.stringify(sessions), {
     expirationTtl: 3600,
     persistToKv: false,
   });
 
-  // Update today's traffic stats in Edge Cache + Memory
   const dateKey = getTodayCaracasKey();
   const statsKey = `admin:traffic:${dateKey}`;
   const rawStats = await kv.get(statsKey, { skipKv: true });
@@ -542,9 +684,6 @@ export async function getLivePresenceSummary(): Promise<{
   };
 }
 
-// ============================================================================
-// REGISTERED USERS DIRECTORY INDEX
-// ============================================================================
 export async function indexRegisteredUser(profile: UserProfile): Promise<void> {
   const { kv } = await getAdminKv();
   const raw = await kv.get(USERS_INDEX_KEY);

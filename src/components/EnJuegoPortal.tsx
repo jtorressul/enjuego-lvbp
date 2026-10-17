@@ -2731,6 +2731,11 @@ export function EnJuegoPortal({
             onToggleFavoriteTeam={toggleFavoriteTeam}
           />
         )}
+
+        {/* BOTTOM AD SLOT (Inicio · Abajo — like jugadaenvivo.com home_bottom) */}
+        <div className="pt-2">
+          <AdBanner slot="home-bottom" />
+        </div>
       </main>
 
       {/* MOBILE BOTTOM NAVIGATION BAR (NATIVE APP STYLE FOR PHONES WITH REAL LINKS) */}

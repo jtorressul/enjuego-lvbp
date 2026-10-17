@@ -1,24 +1,45 @@
 import { NextResponse } from "next/server";
 import {
   getAdCampaigns,
-  getRotationSeconds,
+  isAdCampaignLive,
+  pickAdsForPageSlots,
   recordBannerMetric,
   recordPresenceHeartbeat,
+  type AdSlotType,
 } from "@/lib/admin-store";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const [campaigns, rotationSeconds] = await Promise.all([
-      getAdCampaigns(),
-      getRotationSeconds(),
+    const { searchParams } = new URL(request.url);
+    const slotsParam = searchParams.get("slots");
+
+    if (slotsParam) {
+      const requested = slotsParam
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean) as AdSlotType[];
+      const assigned = await pickAdsForPageSlots(requested);
+      return NextResponse.json(
+        { slots: assigned },
+        { headers: { "Cache-Control": "no-store, max-age=0" } }
+      );
+    }
+
+    const campaigns = await getAdCampaigns();
+    const activeCampaigns = campaigns.filter(isAdCampaignLive);
+    const assigned = await pickAdsForPageSlots([
+      "top-leaderboard",
+      "in-feed",
+      "home-bottom",
+      "gameday-sidebar",
     ]);
-    const activeCampaigns = campaigns.filter((c) => c.active);
+
     return NextResponse.json(
       {
         campaigns: activeCampaigns,
-        rotationSeconds,
+        slots: assigned,
       },
       {
         headers: {

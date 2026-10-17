@@ -7,57 +7,56 @@ import {
   ArrowLeft,
   BarChart3,
   CheckCircle2,
-  Clock,
-  Eye,
+  ExternalLink,
   Globe,
-  Image as ImageIcon,
   KeyRound,
   Lock,
   LogOut,
   Megaphone,
   Monitor,
-  MousePointerClick,
+  Pause,
+  Play,
   Plus,
   RefreshCw,
   RotateCcw,
-  Save,
   Search,
   ShieldCheck,
   Smartphone,
-  Sparkles,
   Trash2,
   Upload,
   Users,
   Zap,
 } from "lucide-react";
-import type { AdCampaign, AdSlotType, LiveSession } from "@/lib/admin-store";
+import {
+  AD_SLOTS_CATALOG,
+  type AdCampaign,
+  type AdSlotInfo,
+  type AdSlotType,
+  type LiveSession,
+} from "@/lib/admin-store";
 import type { UserProfile } from "@/lib/user-auth";
 
-const SLOT_LABELS: Record<AdSlotType, string> = {
-  "top-leaderboard": "Superior (Inicio)",
-  "in-feed": "Intermedio (Secciones)",
-  "gameday-sidebar": "Pizarra en Vivo",
-};
+type EnrichedCampaign = AdCampaign & { live?: boolean };
 
-const PRESET_COLORS = [
-  "#e11d48", // Crimson EnJuego
-  "#d97706", // Amber LVBP
-  "#0284c7", // Sky Blue
-  "#059669", // Emerald Green
-  "#7c3aed", // Violet
-  "#dc2626", // Red
-  "#0f172a", // Slate Dark
-];
+// Processes uploaded banner images: keeps animated GIFs intact, and optimizes PNG/JPG/WebP to 970x90 friendly size
+async function processBannerImageFile(file: File): Promise<string> {
+  // If it's a GIF, preserve it as data URL so animated GIFs keep their animation (like Mi Odontologo on jugadaenvivo.com)
+  if (file.type === "image/gif") {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(String(e.target?.result || ""));
+      reader.onerror = () => reject(new Error("Error al leer el archivo GIF"));
+      reader.readAsDataURL(file);
+    });
+  }
 
-// Client-side image compressor so uploaded banners fit cleanly and load fast from Cloudflare KV
-async function compressImageFile(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement("canvas");
-        const maxW = 1100;
+        const maxW = 1150;
         const maxH = 360;
         let width = img.width;
         let height = img.height;
@@ -79,7 +78,7 @@ async function compressImageFile(file: File): Promise<string> {
           return;
         }
         ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL("image/webp", 0.82);
+        const dataUrl = canvas.toDataURL("image/webp", 0.86);
         resolve(dataUrl);
       };
       img.onerror = () => reject(new Error("Imagen inválida"));
@@ -95,15 +94,14 @@ export default function AdminDashboardPage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [authError, setAuthError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
 
-  const [activeTab, setActiveTab] = useState<"banners" | "users" | "system">("banners");
+  const [activeTab, setActiveTab] = useState<"ads" | "users" | "system">("ads");
   const [autoRefresh, setAutoRefresh] = useState(true);
 
   // Dashboard Data
-  const [campaigns, setCampaigns] = useState<AdCampaign[]>([]);
-  const [rotationSeconds, setRotationSeconds] = useState<number>(6);
+  const [slots, setSlots] = useState<AdSlotInfo[]>(AD_SLOTS_CATALOG);
+  const [campaigns, setCampaigns] = useState<EnrichedCampaign[]>([]);
   const [presence, setPresence] = useState<{
     sessions: LiveSession[];
     onlineCount: number;
@@ -129,6 +127,18 @@ export default function AdminDashboardPage() {
     kvLatencyMs: number;
     serverTimeCaracas: string;
   } | null>(null);
+
+  // "Nuevo anuncio" Form State (Exact jugadaenvivo.com/panel fields)
+  const [newSlot, setNewSlot] = useState<AdSlotType>("top-leaderboard");
+  const [newName, setNewName] = useState("");
+  const [newLinkUrl, setNewLinkUrl] = useState("");
+  const [newStartsOn, setNewStartsOn] = useState("");
+  const [newEndsOn, setNewEndsOn] = useState("");
+  const [newImageUrl, setNewImageUrl] = useState("");
+  const [newFileName, setNewFileName] = useState("");
+  const [newTitle, setNewTitle] = useState("");
+  const [newSubtitle, setNewSubtitle] = useState("");
+  const [publishingNew, setPublishingNew] = useState(false);
 
   const [userSearch, setUserSearch] = useState("");
   const [newAdminPass, setNewAdminPass] = useState("");
@@ -163,27 +173,8 @@ export default function AdminDashboardPage() {
         setAuthError("");
         window.localStorage.setItem("enjuego_admin_pwd", pwdToUse);
 
-        if (!silent && Array.isArray(data.campaigns)) {
-          setCampaigns(data.campaigns);
-        } else if (silent && Array.isArray(data.campaigns)) {
-          // Update only live metrics (impressions/clicks) without overwriting unsaved form edits
-          setCampaigns((prev) =>
-            prev.map((item) => {
-              const fresh = data.campaigns.find((f: AdCampaign) => f.id === item.id);
-              return fresh
-                ? {
-                    ...item,
-                    impressions: fresh.impressions,
-                    clicks: fresh.clicks,
-                  }
-                : item;
-            })
-          );
-        }
-
-        if (!silent && data.rotationSeconds) {
-          setRotationSeconds(Number(data.rotationSeconds) || 6);
-        }
+        if (Array.isArray(data.slots)) setSlots(data.slots);
+        if (Array.isArray(data.campaigns)) setCampaigns(data.campaigns);
         if (data.presence) setPresence(data.presence);
         if (Array.isArray(data.registeredUsers)) setRegisteredUsers(data.registeredUsers);
         if (data.systemHealth) setSystemHealth(data.systemHealth);
@@ -196,7 +187,6 @@ export default function AdminDashboardPage() {
     []
   );
 
-  // Restore saved admin password on mount
   useEffect(() => {
     const saved = window.localStorage.getItem("enjuego_admin_pwd");
     if (saved) {
@@ -205,7 +195,6 @@ export default function AdminDashboardPage() {
     }
   }, [fetchAdminData]);
 
-  // Auto-refresh live presence & click counters every 10 seconds
   useEffect(() => {
     if (!authenticated || !autoRefresh || !password) return;
     const timer = setInterval(() => {
@@ -226,76 +215,31 @@ export default function AdminDashboardPage() {
     setPassword("");
   };
 
-  const handleCampaignChange = <K extends keyof AdCampaign>(
-    id: string,
-    field: K,
-    value: AdCampaign[K]
-  ) => {
-    setCampaigns((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, [field]: value } : c))
-    );
-  };
+  const selectedSlotInfo = useMemo(
+    () => slots.find((s) => s.key === newSlot) || slots[0],
+    [slots, newSlot]
+  );
 
-  const handleToggleSlot = (id: string, slot: AdSlotType) => {
-    setCampaigns((prev) =>
-      prev.map((c) => {
-        if (c.id !== id) return c;
-        const exists = c.slots.includes(slot);
-        const nextSlots = exists
-          ? c.slots.filter((s) => s !== slot)
-          : [...c.slots, slot];
-        return {
-          ...c,
-          slots: nextSlots.length > 0 ? nextSlots : ["top-leaderboard"],
-        };
-      })
-    );
-  };
-
-  const handleImageUpload = async (id: string, file: File | undefined) => {
+  const handleNewFileSelect = async (file: File | undefined) => {
     if (!file) return;
     try {
-      const compressed = await compressImageFile(file);
-      handleCampaignChange(id, "imageUrl", compressed);
-      setSaveMessage(
-        "Imagen cargada y optimizada. Recuerda pulsar 'Guardar y Publicar'."
-      );
+      const dataUrl = await processBannerImageFile(file);
+      setNewImageUrl(dataUrl);
+      setNewFileName(file.name);
     } catch (err: any) {
-      alert(err?.message || "No se pudo procesar la imagen");
+      alert(err?.message || "No se pudo leer la imagen");
     }
   };
 
-  const handleAddCompany = () => {
-    const nextNum = campaigns.length + 1;
-    const newCompany: AdCampaign = {
-      id: `emp_${Date.now()}`,
-      companyName: `Empresa #${nextNum}`,
-      title: "Anuncia tu marca en EnJuego.online",
-      subtitle: "Espacio publicitario activo en toda la jornada.",
-      ctaText: "Pautar",
-      linkUrl: "https://wa.me/",
-      imageUrl: "",
-      accentColor: PRESET_COLORS[(nextNum - 1) % PRESET_COLORS.length],
-      slots: ["top-leaderboard", "in-feed", "gameday-sidebar"],
-      active: true,
-      impressions: 0,
-      clicks: 0,
-      updatedAt: Date.now(),
-    };
-    setCampaigns((prev) => [...prev, newCompany]);
-  };
-
-  const handleDeleteCompany = (id: string) => {
-    if (campaigns.length <= 1) {
-      alert("Debes mantener al menos 1 empresa en la lista.");
+  // Publish new ad (like #ad-form in jugadaenvivo.com)
+  const handleCreateAd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newName.trim()) {
+      alert("Escribe el nombre del anunciante o campaña.");
       return;
     }
-    setCampaigns((prev) => prev.filter((c) => c.id !== id));
-  };
-
-  const handleSaveCampaigns = async () => {
-    setSaving(true);
-    setSaveMessage("");
+    setPublishingNew(true);
+    setStatusMessage("");
     try {
       const res = await fetch("/api/admin", {
         method: "POST",
@@ -304,21 +248,99 @@ export default function AdminDashboardPage() {
           "x-admin-password": password,
         },
         body: JSON.stringify({
-          action: "save_campaigns",
-          campaigns,
-          rotationSeconds,
+          action: "create_ad",
+          slot: newSlot,
+          companyName: newName.trim(),
+          linkUrl: newLinkUrl.trim(),
+          startsOn: newStartsOn,
+          endsOn: newEndsOn,
+          imageUrl: newImageUrl,
+          title: newTitle.trim() || newName.trim(),
+          subtitle:
+            newSubtitle.trim() || "Patrocinador en EnJuego.online",
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error al guardar");
+      if (!res.ok) throw new Error(data.error || "No se pudo publicar el anuncio");
       setCampaigns(data.campaigns);
-      setRotationSeconds(data.rotationSeconds);
-      setSaveMessage("¡Banners y empresas publicados en vivo exitosamente!");
-      setTimeout(() => setSaveMessage(""), 4500);
+      setNewName("");
+      setNewLinkUrl("");
+      setNewStartsOn("");
+      setNewEndsOn("");
+      setNewImageUrl("");
+      setNewFileName("");
+      setNewTitle("");
+      setNewSubtitle("");
+      setStatusMessage("¡Anuncio publicado y en emisión!");
+      setTimeout(() => setStatusMessage(""), 4500);
     } catch (err: any) {
-      alert(err?.message || "Error al guardar cambios");
+      alert(err?.message || "Error al publicar anuncio");
     } finally {
-      setSaving(false);
+      setPublishingNew(false);
+    }
+  };
+
+  // Update a field on an existing ad immediately (like jugadaenvivo.com)
+  const handleUpdateAd = async (
+    id: string,
+    updates: Partial<AdCampaign>
+  ) => {
+    try {
+      const res = await fetch("/api/admin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": password,
+        },
+        body: JSON.stringify({
+          action: "update_ad",
+          id,
+          ...updates,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.campaigns)) {
+        setCampaigns(data.campaigns);
+        setStatusMessage("Cambios guardados en el anuncio.");
+        setTimeout(() => setStatusMessage(""), 3000);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleReplaceAdImage = async (id: string, file: File | undefined) => {
+    if (!file) return;
+    try {
+      const dataUrl = await processBannerImageFile(file);
+      await handleUpdateAd(id, { imageUrl: dataUrl });
+    } catch (err: any) {
+      alert(err?.message || "Error al subir imagen");
+    }
+  };
+
+  const handleDeleteAd = async (id: string, name: string) => {
+    if (!window.confirm(`¿Eliminar el anuncio "${name}" y sus estadísticas?`)) {
+      return;
+    }
+    try {
+      const res = await fetch("/api/admin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": password,
+        },
+        body: JSON.stringify({
+          action: "delete_ad",
+          id,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.campaigns)) {
+        setCampaigns(data.campaigns);
+      }
+    } catch {
+      // ignore
     }
   };
 
@@ -378,8 +400,8 @@ export default function AdminDashboardPage() {
     () => campaigns.reduce((acc, c) => acc + (c.clicks || 0), 0),
     [campaigns]
   );
-  const activeCompaniesCount = useMemo(
-    () => campaigns.filter((c) => c.active).length,
+  const liveAdsCount = useMemo(
+    () => campaigns.filter((c) => c.live !== false && c.active).length,
     [campaigns]
   );
 
@@ -427,7 +449,7 @@ export default function AdminDashboardPage() {
               Panel de Administración
             </h1>
             <p className="text-xs text-slate-400 mt-0.5">
-              Monitoreo en vivo y gestión de empresas anunciantes
+              Publicidad por espacios, usuarios en línea y estado del portal
             </p>
           </div>
 
@@ -489,7 +511,7 @@ export default function AdminDashboardPage() {
   }
 
   // ============================================================================
-  // MAIN ADMIN DASHBOARD VIEW
+  // MAIN ADMIN DASHBOARD VIEW (JUGADAENVIVO.COM /PANEL WORKFLOW)
   // ============================================================================
   return (
     <div className="min-h-dvh bg-slate-100 text-slate-900 pb-20">
@@ -521,7 +543,7 @@ export default function AdminDashboardPage() {
               </span>
             </Link>
             <span className="text-xs font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-amber-400/15 text-amber-300 border border-amber-400/30">
-              Admin
+              Panel
             </span>
           </div>
 
@@ -534,6 +556,7 @@ export default function AdminDashboardPage() {
                   ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40"
                   : "bg-slate-800 text-slate-400 border-slate-700"
               }`}
+              title="Activar o pausar actualización automática cada 10 segundos"
             >
               <span
                 className={`w-2 h-2 rounded-full ${
@@ -547,7 +570,7 @@ export default function AdminDashboardPage() {
               type="button"
               onClick={() => fetchAdminData(password, false)}
               className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 transition cursor-pointer"
-              title="Refrescar datos ahora"
+              title="Refrescar datos ahora mismo"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
             </button>
@@ -575,11 +598,10 @@ export default function AdminDashboardPage() {
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
         {/* TOP KPI CARDS */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {/* KPI 1: Online Now */}
           <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-2xs">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
-                Usuarios en Vivo
+                Usuarios en Línea
               </span>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -606,11 +628,10 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* KPI 2: Today Traffic & Registered */}
           <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-2xs">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
-                Comunidad y Tráfico
+                Registros y Visitas
               </span>
               <Users className="w-4 h-4 text-amber-500" />
             </div>
@@ -619,7 +640,7 @@ export default function AdminDashboardPage() {
                 {registeredUsers.length}
               </span>
               <span className="text-xs font-bold text-slate-500">
-                cuentas creadas
+                usuarios registrados
               </span>
             </div>
             <div className="mt-2 flex items-center gap-3 text-[11px] font-bold text-slate-500">
@@ -628,32 +649,30 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* KPI 3: Active Companies */}
           <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-2xs">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
-                Empresas en Banners
+                Anuncios en Emisión
               </span>
               <Megaphone className="w-4 h-4 text-rose-600" />
             </div>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-2xl sm:text-3xl font-black text-slate-950">
-                {activeCompaniesCount}
+                {liveAdsCount}
               </span>
               <span className="text-xs font-bold text-slate-500">
-                de {campaigns.length} activas
+                de {campaigns.length} publicados
               </span>
             </div>
             <div className="mt-2 text-[11px] font-bold text-slate-500">
-              Banners fijos por espacio · <strong className="text-emerald-700">Sin carrusel</strong>
+              5 espacios fijos · <strong className="text-emerald-700">970x90 px</strong>
             </div>
           </div>
 
-          {/* KPI 4: Total Banner Performance */}
           <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-2xs">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
-                Rendimiento Banners
+                Impresiones y Clics
               </span>
               <BarChart3 className="w-4 h-4 text-emerald-600" />
             </div>
@@ -667,7 +686,7 @@ export default function AdminDashboardPage() {
                 </span>
               </div>
               <div className="text-xs font-bold text-slate-400">
-                / {totalImpressions} vistas
+                / {totalImpressions} impresiones
               </div>
             </div>
             <div className="mt-2 text-[11px] font-bold text-emerald-700">
@@ -680,19 +699,19 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* NAVIGATION TABS */}
+        {/* NAVIGATION MENU (Like jugadaenvivo.com/panel) */}
         <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3">
           <button
             type="button"
-            onClick={() => setActiveTab("banners")}
+            onClick={() => setActiveTab("ads")}
             className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer ${
-              activeTab === "banners"
-                ? "bg-slate-950 text-white shadow-sm"
+              activeTab === "ads"
+                ? "bg-rose-600 text-white shadow-sm"
                 : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
             }`}
           >
-            <Megaphone className="w-4 h-4 text-rose-500" />
-            <span>Empresas y Banners ({campaigns.length})</span>
+            <Megaphone className="w-4 h-4" />
+            <span>Publicidad ({campaigns.length})</span>
           </button>
 
           <button
@@ -700,13 +719,13 @@ export default function AdminDashboardPage() {
             onClick={() => setActiveTab("users")}
             className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer ${
               activeTab === "users"
-                ? "bg-slate-950 text-white shadow-sm"
+                ? "bg-rose-600 text-white shadow-sm"
                 : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
             }`}
           >
-            <Activity className="w-4 h-4 text-emerald-500" />
+            <Activity className="w-4 h-4" />
             <span>
-              Usuarios en Vivo ({presence.onlineCount}) y Registrados (
+              Usuarios en línea ({presence.onlineCount}) y registros (
               {registeredUsers.length})
             </span>
           </button>
@@ -716,482 +735,541 @@ export default function AdminDashboardPage() {
             onClick={() => setActiveTab("system")}
             className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer ${
               activeTab === "system"
-                ? "bg-slate-950 text-white shadow-sm"
+                ? "bg-rose-600 text-white shadow-sm"
                 : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
             }`}
           >
-            <Zap className="w-4 h-4 text-amber-500" />
-            <span>Monitoreo y Seguridad</span>
+            <Zap className="w-4 h-4" />
+            <span>Estado y Ajustes</span>
           </button>
         </div>
 
-        {/* ===================================================================
-            TAB 1: GESTIÓN DE EMPRESAS Y BANNERS DINÁMICOS
-           =================================================================== */}
-        {activeTab === "banners" && (
-          <div className="space-y-6">
-            {/* Global Controls Bar */}
-            <div className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="space-y-1">
-                <h2 className="text-base sm:text-lg font-black text-slate-950">
-                  Gestor de Empresas y Banners Fijos
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Cada empresa se muestra de forma fija y elegante en su espacio publicitario asignado, sin saltos ni carrusel.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleAddCompany}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black transition cursor-pointer"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Agregar Empresa</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleSaveCampaigns}
-                  disabled={saving}
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-white text-xs sm:text-sm font-black shadow-md transition cursor-pointer active:scale-98"
-                  style={{
-                    background: "linear-gradient(135deg, #e11d48 0%, #be123c 100%)",
-                  }}
-                >
-                  <Save className="w-4 h-4" />
-                  <span>{saving ? "Guardando..." : "Guardar y Publicar"}</span>
-                </button>
-              </div>
-            </div>
-
-            {saveMessage && (
-              <div className="rounded-2xl bg-emerald-50 border border-emerald-300 p-4 flex items-center gap-2.5 text-xs sm:text-sm font-black text-emerald-900 shadow-xs">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                <span>{saveMessage}</span>
-              </div>
-            )}
-
-            {/* List of Companies (Default 5 Companies) */}
-            <div className="grid grid-cols-1 gap-5">
-              {campaigns.map((camp, index) => {
-                const ctr =
-                  camp.impressions > 0
-                    ? ((camp.clicks / camp.impressions) * 100).toFixed(1)
-                    : "0.0";
-
-                return (
-                  <div
-                    key={camp.id}
-                    className={`rounded-2xl bg-white border transition-all shadow-2xs overflow-hidden ${
-                      camp.active
-                        ? "border-slate-200"
-                        : "border-slate-200 opacity-70 bg-slate-50"
-                    }`}
-                  >
-                    {/* Card Top Header */}
-                    <div className="px-4 sm:px-5 py-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5">
-                        <span
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white shadow-2xs"
-                          style={{ backgroundColor: camp.accentColor }}
-                        >
-                          #{index + 1}
-                        </span>
-                        <span className="font-black text-sm text-slate-950">
-                          {camp.companyName || `Empresa #${index + 1}`}
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                            camp.active
-                              ? "bg-emerald-100 text-emerald-800"
-                              : "bg-slate-200 text-slate-600"
-                          }`}
-                        >
-                          {camp.active ? "Activa en Carrusel" : "Pausada"}
-                        </span>
-                      </div>
-
-                      {/* Metrics & Quick Actions */}
-                      <div className="flex flex-wrap items-center gap-3">
-                        <div className="flex items-center gap-3 text-xs font-bold text-slate-600 bg-white px-3 py-1.5 rounded-xl border border-slate-200">
-                          <span className="inline-flex items-center gap-1">
-                            <Eye className="w-3.5 h-3.5 text-slate-400" />
-                            {camp.impressions} vistas
-                          </span>
-                          <span className="inline-flex items-center gap-1">
-                            <MousePointerClick className="w-3.5 h-3.5 text-rose-500" />
-                            {camp.clicks} clics
-                          </span>
-                          <span className="text-emerald-700 font-black">
-                            ({ctr}%)
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleResetMetrics(camp.id)}
-                            className="text-slate-400 hover:text-slate-700 ml-1 cursor-pointer"
-                            title="Reiniciar contador de vistas y clics de esta empresa"
-                          >
-                            <RotateCcw className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-
-                        <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                          <input
-                            type="checkbox"
-                            checked={camp.active}
-                            onChange={(e) =>
-                              handleCampaignChange(
-                                camp.id,
-                                "active",
-                                e.target.checked
-                              )
-                            }
-                            className="w-4 h-4 accent-emerald-600 rounded cursor-pointer"
-                          />
-                          <span className="text-xs font-extrabold text-slate-700">
-                            Mostrar
-                          </span>
-                        </label>
-
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteCompany(camp.id)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
-                          title="Eliminar empresa"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Card Body: Form + Live Preview */}
-                    <div className="p-4 sm:p-5 grid grid-cols-1 lg:grid-cols-12 gap-5">
-                      {/* Form Fields (7 cols) */}
-                      <div className="lg:col-span-7 space-y-3.5">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1">
-                              Nombre de la Empresa / Cliente
-                            </label>
-                            <input
-                              type="text"
-                              value={camp.companyName}
-                              onChange={(e) =>
-                                handleCampaignChange(
-                                  camp.id,
-                                  "companyName",
-                                  e.target.value
-                                )
-                              }
-                              placeholder="Ej. Empresas Polar / Tienda X"
-                              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm font-bold text-slate-900"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1">
-                              Texto del Botón (CTA)
-                            </label>
-                            <input
-                              type="text"
-                              value={camp.ctaText}
-                              onChange={(e) =>
-                                handleCampaignChange(
-                                  camp.id,
-                                  "ctaText",
-                                  e.target.value
-                                )
-                              }
-                              placeholder="Ej. Pautar / Ver Oferta / WhatsApp"
-                              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm font-bold text-slate-900"
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1">
-                            Título Principal del Anuncio
-                          </label>
-                          <input
-                            type="text"
-                            value={camp.title}
-                            onChange={(e) =>
-                              handleCampaignChange(camp.id, "title", e.target.value)
-                            }
-                            placeholder="Ej. 20% de descuento en gorras y camisas para fanáticos"
-                            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm font-bold text-slate-900"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1">
-                            Subtítulo / Descripción Corta
-                          </label>
-                          <input
-                            type="text"
-                            value={camp.subtitle}
-                            onChange={(e) =>
-                              handleCampaignChange(
-                                camp.id,
-                                "subtitle",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Ej. Envíos a toda Venezuela · Escríbenos por WhatsApp"
-                            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm font-medium text-slate-700"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1">
-                            Enlace de Destino (WhatsApp, Instagram o Página Web)
-                          </label>
-                          <input
-                            type="url"
-                            value={camp.linkUrl}
-                            onChange={(e) =>
-                              handleCampaignChange(
-                                camp.id,
-                                "linkUrl",
-                                e.target.value
-                              )
-                            }
-                            placeholder="https://wa.me/58412..."
-                            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono text-slate-800"
-                          />
-                        </div>
-
-                        {/* Image Upload or URL + Brand Color */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                          <div>
-                            <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1">
-                              Banner Gráfico (Opcional: Subir o URL)
-                            </label>
-                            <div className="flex items-center gap-2">
-                              <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-xs font-black text-slate-800 cursor-pointer shrink-0">
-                                <Upload className="w-3.5 h-3.5 text-rose-600" />
-                                <span>Subir Imagen</span>
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  className="hidden"
-                                  onChange={(e) =>
-                                    handleImageUpload(camp.id, e.target.files?.[0])
-                                  }
-                                />
-                              </label>
-                              {camp.imageUrl ? (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleCampaignChange(camp.id, "imageUrl", "")
-                                  }
-                                  className="px-2.5 py-2 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold cursor-pointer"
-                                >
-                                  Quitar Imagen
-                                </button>
-                              ) : (
-                                <input
-                                  type="text"
-                                  value={camp.imageUrl || ""}
-                                  onChange={(e) =>
-                                    handleCampaignChange(
-                                      camp.id,
-                                      "imageUrl",
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder="O pega URL https://..."
-                                  className="w-full px-2.5 py-2 rounded-xl border border-slate-300 text-xs"
-                                />
-                              )}
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1">
-                              Color de Marca
-                            </label>
-                            <div className="flex items-center gap-1.5 pt-0.5">
-                              {PRESET_COLORS.map((col) => (
-                                <button
-                                  key={col}
-                                  type="button"
-                                  onClick={() =>
-                                    handleCampaignChange(
-                                      camp.id,
-                                      "accentColor",
-                                      col
-                                    )
-                                  }
-                                  className={`w-6 h-6 rounded-full border-2 transition cursor-pointer ${
-                                    camp.accentColor === col
-                                      ? "scale-115 border-slate-950"
-                                      : "border-transparent"
-                                  }`}
-                                  style={{ backgroundColor: col }}
-                                />
-                              ))}
-                              <input
-                                type="color"
-                                value={camp.accentColor}
-                                onChange={(e) =>
-                                  handleCampaignChange(
-                                    camp.id,
-                                    "accentColor",
-                                    e.target.value
-                                  )
-                                }
-                                className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent"
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Slot Checkboxes */}
-                        <div className="pt-1">
-                          <span className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1.5">
-                            Ubicaciones donde aparece esta empresa:
-                          </span>
-                          <div className="flex flex-wrap gap-2">
-                            {(
-                              [
-                                "top-leaderboard",
-                                "in-feed",
-                                "gameday-sidebar",
-                              ] as AdSlotType[]
-                            ).map((slotKey) => {
-                              const checked = camp.slots.includes(slotKey);
-                              return (
-                                <button
-                                  key={slotKey}
-                                  type="button"
-                                  onClick={() => handleToggleSlot(camp.id, slotKey)}
-                                  className={`px-3 py-1.5 rounded-xl text-xs font-extrabold border transition cursor-pointer ${
-                                    checked
-                                      ? "bg-slate-900 text-white border-slate-900"
-                                      : "bg-slate-50 text-slate-500 border-slate-200"
-                                  }`}
-                                >
-                                  {checked ? "✓ " : ""}
-                                  {SLOT_LABELS[slotKey]}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Live Banner Preview (5 cols) */}
-                      <div className="lg:col-span-5 flex flex-col justify-center bg-slate-50 rounded-2xl p-3.5 border border-slate-200/80">
-                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1">
-                          <ImageIcon className="w-3.5 h-3.5" /> Vista Previa en Vivo
-                        </span>
-
-                        {camp.imageUrl ? (
-                          <div className="relative w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 aspect-[21/9] max-h-[120px]">
-                            <img
-                              src={camp.imageUrl}
-                              alt={camp.companyName}
-                              className="w-full h-full object-cover"
-                            />
-                            <span
-                              className="absolute top-2 left-2 rounded-md px-2 py-0.5 text-[9px] font-black uppercase"
-                              style={{
-                                backgroundColor: "rgba(15,23,42,0.8)",
-                                color: "#ffffff",
-                              }}
-                            >
-                              {camp.companyName}
-                            </span>
-                          </div>
-                        ) : (
-                          <div
-                            className="relative w-full overflow-hidden rounded-2xl p-3.5 shadow-2xs"
-                            style={{
-                              background:
-                                "linear-gradient(110deg, #ffffff 0%, #f8fafc 65%, #fff1f2 100%)",
-                              border: "1px solid #e2e8f0",
-                            }}
-                          >
-                            <div
-                              className="absolute inset-y-0 left-0 w-1.5"
-                              style={{
-                                background: `linear-gradient(180deg, ${camp.accentColor} 0%, #0f172a 100%)`,
-                              }}
-                            />
-                            <div className="pl-2.5 flex items-center justify-between gap-2.5">
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-1.5 mb-0.5">
-                                  <span
-                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase"
-                                    style={{
-                                      backgroundColor: `${camp.accentColor}18`,
-                                      color: camp.accentColor,
-                                    }}
-                                  >
-                                    <Sparkles className="w-2.5 h-2.5" />
-                                    <span>{camp.companyName}</span>
-                                  </span>
-                                </div>
-                                <h4 className="text-xs font-black text-slate-950 leading-snug">
-                                  {camp.title}
-                                </h4>
-                                <p className="text-[11px] text-slate-600 leading-snug mt-0.5">
-                                  {camp.subtitle}
-                                </p>
-                              </div>
-                              <span
-                                className="px-3 py-1.5 rounded-xl text-[11px] font-black shrink-0"
-                                style={{
-                                  backgroundColor: camp.accentColor,
-                                  color: "#ffffff",
-                                }}
-                              >
-                                {camp.ctaText} →
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+        {statusMessage && (
+          <div className="rounded-2xl bg-emerald-50 border border-emerald-300 p-3.5 flex items-center gap-2.5 text-xs sm:text-sm font-black text-emerald-900 shadow-xs">
+            <CheckCircle2 className="w-4.5 h-4.5 text-emerald-600 shrink-0" />
+            <span>{statusMessage}</span>
           </div>
         )}
 
         {/* ===================================================================
-            TAB 2: USUARIOS EN VIVO Y DIRECTORIO DE REGISTRADOS
+            TAB 1: PUBLICIDAD (EXACT JUGADAENVIVO.COM /PANEL SYSTEM)
+           =================================================================== */}
+        {activeTab === "ads" && (
+          <div className="space-y-6">
+            {/* Section 1: Espacios Publicitarios (#ad-slots) */}
+            <section className="rounded-2xl bg-white border border-slate-200 p-5 shadow-2xs space-y-4">
+              <div>
+                <h2 className="text-lg font-black text-slate-950">Publicidad</h2>
+                <p className="text-xs sm:text-sm text-slate-600 mt-1 leading-relaxed">
+                  Cada espacio muestra un anuncio vigente a la vez; si hay varios
+                  en el mismo espacio, rotan al azar al cargar la página. Los
+                  espacios sin anuncio propio muestran uno del rotativo{" "}
+                  <strong>&ldquo;Todo el sitio&rdquo;</strong> (o cualquier
+                  anuncio activo), sin repetirlo en la misma página.
+                </p>
+              </div>
+
+              <ul className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                {slots.map((slotItem) => {
+                  const countInSlot = campaigns.filter(
+                    (ad) => ad.slot === slotItem.key && ad.live !== false && ad.active
+                  ).length;
+
+                  return (
+                    <li
+                      key={slotItem.key}
+                      className="flex items-center justify-between gap-3 p-3.5 rounded-xl border border-slate-200 bg-slate-50/70"
+                    >
+                      <div className="min-w-0">
+                        <strong className="block text-xs sm:text-sm font-black text-slate-900">
+                          {slotItem.label}
+                        </strong>
+                        <span className="block text-[11px] text-slate-500 mt-0.5">
+                          {slotItem.where} · <b>{slotItem.size} px</b>
+                        </span>
+                      </div>
+                      <em
+                        className={`shrink-0 not-italic text-xs font-extrabold px-2.5 py-1 rounded-full ${
+                          countInSlot > 0
+                            ? "bg-rose-50 text-rose-700 border border-rose-200"
+                            : "bg-slate-200/70 text-slate-600"
+                        }`}
+                      >
+                        {countInSlot > 0
+                          ? `${countInSlot} en emisión`
+                          : slotItem.key === "general"
+                            ? "Vacío"
+                            : "Libre · usa el rotativo"}
+                      </em>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+
+            {/* Section 2: Nuevo anuncio (#ad-form) */}
+            <section className="rounded-2xl bg-white border border-slate-200 p-5 shadow-2xs space-y-4">
+              <h2 className="text-lg font-black text-slate-950">
+                Nuevo anuncio
+              </h2>
+
+              <form onSubmit={handleCreateAd} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-extrabold uppercase text-slate-600 mb-1">
+                      Espacio
+                    </label>
+                    <select
+                      value={newSlot}
+                      onChange={(e) => setNewSlot(e.target.value as AdSlotType)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs sm:text-sm font-bold text-slate-900"
+                    >
+                      {slots.map((s) => (
+                        <option key={s.key} value={s.key}>
+                          {s.label} ({s.size})
+                        </option>
+                      ))}
+                    </select>
+                    {selectedSlotInfo && (
+                      <p className="text-[11px] text-slate-500 mt-1">
+                        Medida recomendada: <b>{selectedSlotInfo.size} px</b>.{" "}
+                        {selectedSlotInfo.where}.
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-extrabold uppercase text-slate-600 mb-1">
+                      Anunciante o campaña
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      maxLength={80}
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      placeholder="Ej. San Ignacio / Fly251 / Mi Odontólogo – Octubre"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm font-bold text-slate-900"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-1">
+                    <label className="block text-xs font-extrabold uppercase text-slate-600 mb-1">
+                      Enlace al hacer clic (opcional)
+                    </label>
+                    <input
+                      type="url"
+                      value={newLinkUrl}
+                      onChange={(e) => setNewLinkUrl(e.target.value)}
+                      placeholder="https://wa.me/... o https://..."
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm font-mono text-slate-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-extrabold uppercase text-slate-600 mb-1">
+                      Desde (opcional)
+                    </label>
+                    <input
+                      type="date"
+                      value={newStartsOn}
+                      onChange={(e) => setNewStartsOn(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm font-bold text-slate-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-extrabold uppercase text-slate-600 mb-1">
+                      Hasta (opcional)
+                    </label>
+                    <input
+                      type="date"
+                      value={newEndsOn}
+                      onChange={(e) => setNewEndsOn(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm font-bold text-slate-900"
+                    />
+                  </div>
+                </div>
+
+                {/* Image Upload (PNG, JPG, WebP or Animated GIF) */}
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <span className="block text-xs font-extrabold uppercase text-slate-700">
+                        Imagen del Banner (PNG, JPG, WebP o GIF animado · 970x90 px)
+                      </span>
+                      <span className="text-[11px] text-slate-500">
+                        Sube el arte gráfico horizontal del cliente o pega su URL directa.
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <label className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black cursor-pointer transition">
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Elegir archivo (PNG/JPG/GIF)</span>
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp,image/gif"
+                          className="hidden"
+                          onChange={(e) =>
+                            handleNewFileSelect(e.target.files?.[0])
+                          }
+                        />
+                      </label>
+                      {newImageUrl && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNewImageUrl("");
+                            setNewFileName("");
+                          }}
+                          className="px-3 py-2 rounded-xl bg-rose-100 text-rose-800 text-xs font-bold cursor-pointer"
+                        >
+                          Quitar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {newFileName && (
+                    <p className="text-xs font-bold text-emerald-700">
+                      ✓ Archivo listo: {newFileName}
+                    </p>
+                  )}
+
+                  {newImageUrl && (
+                    <div className="pt-1">
+                      <img
+                        src={newImageUrl}
+                        alt="Vista previa"
+                        className="max-h-[90px] w-auto rounded-lg border border-slate-300 bg-white object-contain"
+                      />
+                    </div>
+                  )}
+
+                  {!newImageUrl && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      <input
+                        type="text"
+                        value={newTitle}
+                        onChange={(e) => setNewTitle(e.target.value)}
+                        placeholder="Si no tienes imagen aún: Título del banner..."
+                        className="px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-bold"
+                      />
+                      <input
+                        type="text"
+                        value={newSubtitle}
+                        onChange={(e) => setNewSubtitle(e.target.value)}
+                        placeholder="Subtítulo opcional..."
+                        className="px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <button
+                    type="submit"
+                    disabled={publishingNew}
+                    className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-white text-xs sm:text-sm font-black shadow-md transition cursor-pointer active:scale-98"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, #e11d48 0%, #be123c 100%)",
+                    }}
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>
+                      {publishingNew
+                        ? "Publicando…"
+                        : "Publicar anuncio"}
+                    </span>
+                  </button>
+                </div>
+              </form>
+            </section>
+
+            {/* Section 3: Anuncios publicados (#ad-list - exact jugadaenvivo.com .ad-row layout) */}
+            <section className="rounded-2xl bg-white border border-slate-200 p-5 shadow-2xs space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-black text-slate-950">
+                  Anuncios ({campaigns.length})
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => handleResetMetrics()}
+                  className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-slate-900 cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" /> Reiniciar todas las estadísticas
+                </button>
+              </div>
+
+              {campaigns.length === 0 ? (
+                <p className="text-xs font-bold text-slate-500 py-6 text-center">
+                  Aún no hay anuncios. Sube el primero arriba.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {campaigns.map((ad) => {
+                    const isLive = ad.live !== false && ad.active;
+                    const stateLabel = !ad.active
+                      ? "Pausado"
+                      : isLive
+                        ? "En emisión"
+                        : "Fuera de fechas";
+                    const ctr =
+                      ad.impressions > 0
+                        ? ((ad.clicks / ad.impressions) * 100).toFixed(1)
+                        : "0.0";
+
+                    return (
+                      <article
+                        key={ad.id}
+                        className={`rounded-2xl border p-4 grid grid-cols-1 md:grid-cols-12 gap-4 items-start transition ${
+                          isLive
+                            ? "border-rose-200 bg-white"
+                            : "border-slate-200 bg-slate-50/80 opacity-80"
+                        }`}
+                      >
+                        {/* Left Preview Thumbnail (3 cols) */}
+                        <div className="md:col-span-3 flex flex-col gap-2">
+                          {ad.imageUrl ? (
+                            <img
+                              src={ad.imageUrl}
+                              alt={ad.companyName}
+                              className="w-full h-[90px] object-contain rounded-lg bg-slate-100 border border-slate-200 p-1"
+                            />
+                          ) : (
+                            <div
+                              className="w-full h-[90px] rounded-lg p-2.5 flex flex-col justify-center border border-slate-200"
+                              style={{
+                                background:
+                                  "linear-gradient(110deg, #0b1324 0%, #1e293b 100%)",
+                                borderLeft: `4px solid ${ad.accentColor}`,
+                                color: "#ffffff",
+                              }}
+                            >
+                              <span
+                                className="inline-block self-start px-1.5 py-0.5 rounded text-[8px] font-black uppercase mb-1"
+                                style={{ backgroundColor: ad.accentColor }}
+                              >
+                                {ad.companyName}
+                              </span>
+                              <p className="text-[11px] font-black text-white line-clamp-2 leading-tight">
+                                {ad.title}
+                              </p>
+                            </div>
+                          )}
+
+                          <label className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-300 text-[11px] font-bold text-slate-700 cursor-pointer text-center">
+                            <Upload className="w-3 h-3" />
+                            <span>
+                              {ad.imageUrl
+                                ? "Cambiar imagen (970x90)"
+                                : "Subir imagen (970x90)"}
+                            </span>
+                            <input
+                              type="file"
+                              accept="image/png,image/jpeg,image/webp,image/gif"
+                              className="hidden"
+                              onChange={(e) =>
+                                handleReplaceAdImage(ad.id, e.target.files?.[0])
+                              }
+                            />
+                          </label>
+                        </div>
+
+                        {/* Center Details (7 cols) */}
+                        <div className="md:col-span-7 space-y-2.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <input
+                              type="text"
+                              value={ad.companyName}
+                              onChange={(e) =>
+                                setCampaigns((prev) =>
+                                  prev.map((item) =>
+                                    item.id === ad.id
+                                      ? { ...item, companyName: e.target.value }
+                                      : item
+                                  )
+                                )
+                              }
+                              onBlur={(e) =>
+                                handleUpdateAd(ad.id, {
+                                  companyName: e.target.value,
+                                })
+                              }
+                              className="text-sm sm:text-base font-black text-slate-950 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-rose-500 focus:outline-none px-1 -ml-1"
+                            />
+                            <span
+                              className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${
+                                isLive
+                                  ? "bg-rose-100 text-rose-800"
+                                  : "bg-slate-200 text-slate-700"
+                              }`}
+                            >
+                              {stateLabel}
+                            </span>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                            <select
+                              value={ad.slot || "general"}
+                              onChange={(e) =>
+                                handleUpdateAd(ad.id, {
+                                  slot: e.target.value as AdSlotType,
+                                })
+                              }
+                              className="px-2.5 py-1 rounded-lg border border-slate-300 bg-white text-xs font-bold text-slate-800"
+                            >
+                              {slots.map((s) => (
+                                <option key={s.key} value={s.key}>
+                                  {s.label}
+                                </option>
+                              ))}
+                            </select>
+
+                            <span>·</span>
+
+                            <input
+                              type="url"
+                              value={ad.linkUrl}
+                              onChange={(e) =>
+                                setCampaigns((prev) =>
+                                  prev.map((item) =>
+                                    item.id === ad.id
+                                      ? { ...item, linkUrl: e.target.value }
+                                      : item
+                                  )
+                                )
+                              }
+                              onBlur={(e) =>
+                                handleUpdateAd(ad.id, {
+                                  linkUrl: e.target.value,
+                                })
+                              }
+                              placeholder="https://enlace-del-cliente..."
+                              className="flex-1 min-w-[180px] px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 text-xs font-mono text-slate-700"
+                            />
+
+                            {ad.linkUrl && (
+                              <a
+                                href={ad.linkUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-rose-600 font-bold hover:underline"
+                              >
+                                <span>abrir</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
+                          </div>
+
+                          <p className="text-xs text-slate-700">
+                            <b>{ad.impressions}</b> impresiones ·{" "}
+                            <b>{ad.clicks}</b> clics · CTR <b>{ctr}%</b>
+                          </p>
+
+                          {/* Date range inputs (Desde / Hasta) like jugadaenvivo.com */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 max-w-md">
+                            <label className="block text-[11px] font-bold text-slate-500">
+                              Desde
+                              <input
+                                type="date"
+                                value={ad.startsOn || ""}
+                                onChange={(e) =>
+                                  handleUpdateAd(ad.id, {
+                                    startsOn: e.target.value,
+                                  })
+                                }
+                                className="mt-0.5 block w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-bold text-slate-800"
+                              />
+                            </label>
+                            <label className="block text-[11px] font-bold text-slate-500">
+                              Hasta
+                              <input
+                                type="date"
+                                value={ad.endsOn || ""}
+                                onChange={(e) =>
+                                  handleUpdateAd(ad.id, {
+                                    endsOn: e.target.value,
+                                  })
+                                }
+                                className="mt-0.5 block w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-bold text-slate-800"
+                              />
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Right Actions (2 cols: Pausar/Activar & Eliminar) */}
+                        <div className="md:col-span-2 flex md:flex-col items-end justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleUpdateAd(ad.id, { active: !ad.active })
+                            }
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold border transition cursor-pointer ${
+                              ad.active
+                                ? "bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100"
+                                : "bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-500"
+                            }`}
+                          >
+                            {ad.active ? (
+                              <>
+                                <Pause className="w-3.5 h-3.5" />
+                                <span>Pausar</span>
+                              </>
+                            ) : (
+                              <>
+                                <Play className="w-3.5 h-3.5" />
+                                <span>Activar</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleDeleteAd(ad.id, ad.companyName)
+                            }
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Eliminar</span>
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          </div>
+        )}
+
+        {/* ===================================================================
+            TAB 2: USUARIOS EN LÍNEA Y REGISTROS
            =================================================================== */}
         {activeTab === "users" && (
           <div className="space-y-6">
-            {/* Live Sessions Right Now */}
             <div className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5 shadow-2xs space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <h2 className="text-base sm:text-lg font-black text-slate-950">
-                      Usuarios Conectados en este Instante ({presence.onlineCount})
-                    </h2>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Muestra todas las personas con{" "}
-                    <strong>enjuego.online</strong> abierto en los últimos 75
-                    segundos y qué sección están viendo.
-                  </p>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <h2 className="text-base sm:text-lg font-black text-slate-950">
+                    Usuarios en línea ahora mismo ({presence.onlineCount})
+                  </h2>
                 </div>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Visitantes activos en los últimos 75 segundos en{" "}
+                  <strong>enjuego.online</strong>.
+                </p>
               </div>
 
               {presence.sessions.length === 0 ? (
                 <div className="rounded-xl bg-slate-50 border border-slate-200 p-6 text-center text-xs font-bold text-slate-500">
-                  No hay sesiones activas reportadas en los últimos 75 segundos.
-                  Abre otra pestaña en <strong>enjuego.online</strong> para verla
-                  aparecer en tiempo real.
+                  No hay sesiones activas en los últimos 75 segundos.
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -1202,7 +1280,7 @@ export default function AdminDashboardPage() {
                         <th className="py-2.5 px-3">Equipo</th>
                         <th className="py-2.5 px-3">Viendo Ahora</th>
                         <th className="py-2.5 px-3">Dispositivo</th>
-                        <th className="py-2.5 px-3">Último Pulso</th>
+                        <th className="py-2.5 px-3">Actividad</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -1256,26 +1334,24 @@ export default function AdminDashboardPage() {
               )}
             </div>
 
-            {/* Registered Users Directory */}
             <div className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5 shadow-2xs space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 className="text-base sm:text-lg font-black text-slate-950">
-                    Directorio de Usuarios Registrados ({registeredUsers.length})
+                    Usuarios registrados ({registeredUsers.length})
                   </h2>
                   <p className="text-xs text-slate-500">
-                    Todos los fanáticos que han creado cuenta o ingresado en{" "}
-                    <strong>enjuego.online</strong>.
+                    Busca por nombre, correo, @usuario o equipo favorito.
                   </p>
                 </div>
 
-                <div className="relative w-full sm:w-64">
+                <div className="relative w-full sm:w-72">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     value={userSearch}
                     onChange={(e) => setUserSearch(e.target.value)}
-                    placeholder="Buscar por nombre, correo o equipo..."
+                    placeholder="Buscar por nombre, correo, @..."
                     className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 text-xs font-bold"
                   />
                 </div>
@@ -1283,7 +1359,7 @@ export default function AdminDashboardPage() {
 
               {filteredUsers.length === 0 ? (
                 <div className="rounded-xl bg-slate-50 border border-slate-200 p-6 text-center text-xs font-bold text-slate-500">
-                  Aún no hay usuarios que coincidan con la búsqueda.
+                  Aún no hay usuarios registrados que coincidan.
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -1294,7 +1370,7 @@ export default function AdminDashboardPage() {
                         <th className="py-2.5 px-3">Usuario</th>
                         <th className="py-2.5 px-3">Correo</th>
                         <th className="py-2.5 px-3">Equipo</th>
-                        <th className="py-2.5 px-3">Registro</th>
+                        <th className="py-2.5 px-3">Fecha</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -1328,11 +1404,10 @@ export default function AdminDashboardPage() {
         )}
 
         {/* ===================================================================
-            TAB 3: MONITOREO DE LA WEB Y SEGURIDAD
+            TAB 3: ESTADO Y AJUSTES
            =================================================================== */}
         {activeTab === "system" && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* System Health Card */}
             <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-2xs space-y-4">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-emerald-600" />
@@ -1344,12 +1419,12 @@ export default function AdminDashboardPage() {
               <div className="space-y-3 text-xs">
                 <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
                   <span className="font-bold text-slate-700">
-                    Base de Datos Cloudflare KV (ENJUEGO_KV)
+                    Almacenamiento Híbrido (Edge Cache + KV)
                   </span>
                   <span className="px-2.5 py-1 rounded-full font-black bg-emerald-100 text-emerald-800">
                     {systemHealth?.kvConnected
                       ? `Conectado (${systemHealth.kvLatencyMs} ms)`
-                      : "Modo Local / Memoria"}
+                      : "Modo Local"}
                   </span>
                 </div>
 
@@ -1366,7 +1441,7 @@ export default function AdminDashboardPage() {
                   >
                     {systemHealth?.mlbApiStatus === "online"
                       ? `En Línea (${systemHealth.mlbLatencyMs} ms)`
-                      : "Lento / Degradado"}
+                      : "Lento"}
                   </span>
                 </div>
 
@@ -1381,12 +1456,11 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            {/* Change Admin Password Card */}
             <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-2xs space-y-4">
               <div className="flex items-center gap-2">
                 <KeyRound className="w-5 h-5 text-rose-600" />
                 <h2 className="text-base font-black text-slate-950">
-                  Cambiar Contraseña de Administrador
+                  Cambiar Contraseña del Panel
                 </h2>
               </div>
 

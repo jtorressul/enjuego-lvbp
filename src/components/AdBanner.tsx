@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Sparkles, ExternalLink, MessageCircle, ArrowRight } from "lucide-react";
 import type { AdCampaign, AdSlotType } from "@/lib/admin-store";
 
 export interface AdBannerProps {
@@ -17,32 +16,29 @@ export interface AdBannerProps {
   className?: string;
 }
 
-// Shared client-side cache so multiple AdBanners on the same page only fetch once
-let cachedCampaigns: AdCampaign[] | null = null;
-let cachedRotationSec = 6;
-let fetchPromise: Promise<{ campaigns: AdCampaign[]; rotationSeconds: number }> | null = null;
+// Single per-page-load assignment cache so all slots on the page get non-repeating ads (like jugadaenvivo.com's /api/ads?slots=...)
+let assignedSlotsCache: Record<string, AdCampaign | null> | null = null;
+let fetchPromise: Promise<Record<string, AdCampaign | null>> | null = null;
 const trackedImpressionsInSession = new Set<string>();
 
-async function loadDynamicBanners(): Promise<{
-  campaigns: AdCampaign[];
-  rotationSeconds: number;
-}> {
-  if (cachedCampaigns) {
-    return { campaigns: cachedCampaigns, rotationSeconds: cachedRotationSec };
+async function loadPageSlotAds(): Promise<Record<string, AdCampaign | null>> {
+  if (assignedSlotsCache) {
+    return assignedSlotsCache;
   }
   if (!fetchPromise) {
-    fetchPromise = fetch("/api/banners", { cache: "no-store" })
+    fetchPromise = fetch(
+      "/api/banners?slots=top-leaderboard,in-feed,home-bottom,gameday-sidebar",
+      { cache: "no-store" }
+    )
       .then(async (res) => {
         if (!res.ok) throw new Error("Failed");
         const data = await res.json();
-        const loaded: AdCampaign[] = Array.isArray(data.campaigns) ? data.campaigns : [];
-        const rot = Number(data.rotationSeconds) || 6;
-        cachedCampaigns = loaded;
-        cachedRotationSec = rot;
-        return { campaigns: loaded, rotationSeconds: rot };
+        const map: Record<string, AdCampaign | null> = data?.slots || {};
+        assignedSlotsCache = map;
+        return map;
       })
       .catch(() => {
-        return { campaigns: [] as AdCampaign[], rotationSeconds: 6 };
+        return {} as Record<string, AdCampaign | null>;
       })
       .finally(() => {
         setTimeout(() => {
@@ -70,7 +66,7 @@ export function AdBanner({
   slot = "top-leaderboard",
   imageUrl: propImageUrl,
   linkUrl: propLinkUrl,
-  alt = "Espacio Comercial en EnJuego.online",
+  alt = "Publicidad",
   title: propTitle,
   subtitle: propSubtitle,
   ctaText: propCtaText,
@@ -79,66 +75,47 @@ export function AdBanner({
   className = "",
 }: AdBannerProps) {
   const [campaign, setCampaign] = useState<AdCampaign | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
-
-  // Stagger initial index by slot so top-leaderboard, in-feed, and gameday-sidebar show different companies
-  const slotOffset = slot === "top-leaderboard" ? 0 : slot === "in-feed" ? 1 : 2;
 
   useEffect(() => {
     let mounted = true;
-    loadDynamicBanners().then(({ campaigns: loaded }) => {
+    loadPageSlotAds().then((slotsMap) => {
       if (!mounted) return;
-      const matching = loaded.filter(
-        (c) => c.active && (!Array.isArray(c.slots) || c.slots.includes(slot))
-      );
-      if (matching.length > 0) {
-        // Pick fixed company for this slot on page load (stable like jugadaenvivo.com, no carousel jumping)
-        const selected = matching[slotOffset % matching.length];
-        setCampaign(selected);
-      }
+      setCampaign(slotsMap[slot] || null);
+      setLoaded(true);
     });
     return () => {
       mounted = false;
     };
-  }, [slot, slotOffset]);
+  }, [slot]);
 
-  // Record impression when the banner renders
   useEffect(() => {
     if (campaign?.id) {
       sendBannerMetric(campaign.id, "impression");
     }
   }, [campaign?.id]);
 
+  // If loaded and no active ad exists for this slot and no explicit props were passed, hide the slot (like jugadaenvivo.com)
+  if (loaded && !campaign && !propImageUrl && !propTitle) {
+    return null;
+  }
+
   const activeImageUrl = propImageUrl ?? campaign?.imageUrl ?? "";
-  const activeLinkUrl =
-    propLinkUrl ||
-    campaign?.linkUrl ||
-    "https://wa.me/?text=Hola%20EnJuego.online,%20deseo%20informaci%C3%B3n%20para%20publicitar%20mi%20marca";
+  const activeLinkUrl = propLinkUrl ?? campaign?.linkUrl ?? "";
   const activeCompanyName =
-    propCompanyName || campaign?.companyName || "enjuego.online";
+    propCompanyName || campaign?.companyName || alt || "Publicidad";
   const activeAccentColor =
     propAccentColor || campaign?.accentColor || "#e11d48";
-
   const activeTitle =
     propTitle ||
     campaign?.title ||
-    (slot === "in-feed"
-      ? "Impulsa tu marca en cada jornada"
-      : slot === "gameday-sidebar"
-        ? "Patrocina el Jugada a Jugada"
-        : "Tu marca aquí en EnJuego.online");
-
+    "Anuncia tu marca en EnJuego.online · Espacio 970x90 px";
   const activeSubtitle =
     propSubtitle ||
     campaign?.subtitle ||
-    (slot === "in-feed"
-      ? "Conecta con miles de fanáticos del béisbol en vivo."
-      : slot === "gameday-sidebar"
-        ? "Presencia directa junto a la pizarra en tiempo real."
-        : "Espacio disponible para banners y alianzas comerciales.");
-
+    "Publicidad directa por espacio o rotativa en todo el sitio.";
   const activeCta = propCtaText || campaign?.ctaText || "Pautar";
-  const isSidebar = slot === "gameday-sidebar";
 
   const handleBannerClick = () => {
     if (campaign?.id) {
@@ -146,137 +123,88 @@ export function AdBanner({
     }
   };
 
-  return (
-    <div className={`w-full ${className}`}>
-      {activeImageUrl && !imageError ? (
-        /* FIXED GRAPHIC BANNER IMAGE (ESTÁTICO, SIN CARRUSEL) */
-        <div className="relative group w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 shadow-xs">
-          <a
-            href={activeLinkUrl}
-            target="_blank"
-            rel="sponsored noopener noreferrer"
-            onClick={handleBannerClick}
-            className="block w-full aspect-[21/9] sm:aspect-[32/9] max-h-[120px]"
-            aria-label={`${activeCompanyName} - ${alt}`}
-          >
-            <img
-              src={activeImageUrl}
-              alt={activeCompanyName || alt}
-              onError={() => setImageError(true)}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-101"
-            />
+  // Exact jugadaenvivo.com .ad-box structure:
+  // Clean white card with 14px radius, centered 970x90 graphic banner inside, and "PUBLICIDAD" label underneath
+  const bannerGraphic =
+    activeImageUrl && !imageError ? (
+      <img
+        src={activeImageUrl}
+        alt={activeCompanyName}
+        loading="lazy"
+        decoding="async"
+        onError={() => setImageError(true)}
+        className="block w-full max-w-[970px] h-auto max-h-[115px] object-contain rounded-[8px] mx-auto"
+      />
+    ) : (
+      /* Crisp 970x90 Graphic Banner when no image file was uploaded yet */
+      <div
+        className="w-full max-w-[970px] rounded-[8px] px-3.5 py-2.5 sm:px-5 sm:py-3 flex items-center justify-between gap-3 mx-auto"
+        style={{
+          background: "linear-gradient(110deg, #0b1324 0%, #13203c 65%, #1e293b 100%)",
+          borderLeft: `5px solid ${activeAccentColor}`,
+          color: "#ffffff",
+        }}
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 mb-0.5">
             <span
-              className="absolute top-2 left-2 rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-wider backdrop-blur-xs"
-              style={{ backgroundColor: "rgba(15, 23, 42, 0.78)", color: "#ffffff" }}
+              className="inline-block px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider leading-none"
+              style={{
+                backgroundColor: activeAccentColor,
+                color: "#ffffff",
+              }}
             >
               {activeCompanyName}
             </span>
-            <div
-              className="absolute bottom-2 right-2 rounded-lg px-2.5 py-1 text-[10px] font-black flex items-center gap-1 backdrop-blur-xs shadow-xs"
-              style={{ backgroundColor: activeAccentColor, color: "#ffffff" }}
-            >
-              <span>{activeCta}</span>
-              <ExternalLink className="w-2.5 h-2.5" />
-            </div>
-          </a>
+          </div>
+          <p
+            className="text-xs sm:text-sm font-black tracking-tight leading-snug truncate"
+            style={{ color: "#ffffff" }}
+          >
+            {activeTitle}
+          </p>
+          <p
+            className="text-[10px] sm:text-xs font-medium leading-snug truncate mt-0.5"
+            style={{ color: "#cbd5e1" }}
+          >
+            {activeSubtitle}
+          </p>
         </div>
-      ) : (
-        /* ENJUEGO.ONLINE ORIGINAL BROADCAST TICKET BANNER (ESTÁTICO, SIN CARRUSEL NI PUNTITOS) */
-        <div
-          className="relative w-full overflow-hidden rounded-2xl transition-all hover:shadow-md"
+
+        <span
+          className="shrink-0 inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-black whitespace-nowrap shadow-xs"
           style={{
-            background: "linear-gradient(110deg, #ffffff 0%, #f8fafc 65%, #fff1f2 100%)",
-            border: "1px solid #e2e8f0",
+            backgroundColor: activeAccentColor,
+            color: "#ffffff",
           }}
         >
-          {/* Left Signature Brand Accent Bar */}
-          <div
-            className="absolute inset-y-0 left-0 w-1.5"
-            style={{
-              background: `linear-gradient(180deg, ${activeAccentColor} 0%, #0f172a 100%)`,
-            }}
-          />
+          {activeCta} →
+        </span>
+      </div>
+    );
 
-          {/* Subtle Baseball Diamond SVG Watermark on the Right */}
-          <svg
-            viewBox="0 0 100 100"
-            className="pointer-events-none absolute -right-4 -bottom-6 w-28 h-28 opacity-[0.05] rotate-12"
-            style={{ color: activeAccentColor }}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="6"
-          >
-            <rect x="20" y="20" width="60" height="60" rx="8" transform="rotate(45 50 50)" />
-            <circle cx="50" cy="50" r="10" fill="currentColor" />
-          </svg>
-
+  return (
+    <div className={`w-full my-2 ${className}`} data-ad-slot={slot}>
+      <div className="grid justify-items-center gap-1 p-2 pb-1.5 rounded-[14px] border border-slate-200/90 bg-white shadow-2xs">
+        {activeLinkUrl ? (
           <a
             href={activeLinkUrl}
             target="_blank"
             rel="sponsored noopener noreferrer"
             onClick={handleBannerClick}
-            className={`group relative pl-4 pr-3 py-2.5 sm:px-5 sm:py-3.5 flex ${
-              isSidebar
-                ? "flex-col items-start gap-2.5"
-                : "flex-row items-center justify-between gap-2.5 sm:gap-4"
-            }`}
-            aria-label={`${activeCompanyName} - ${activeTitle}`}
+            className="block w-full max-w-[970px] leading-none"
           >
-            {/* Left Content: Brand Pill + Full Unclipped Copy */}
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
-                <span
-                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider leading-none"
-                  style={{
-                    backgroundColor: `${activeAccentColor}18`,
-                    color: activeAccentColor,
-                  }}
-                >
-                  <Sparkles className="w-2.5 h-2.5 shrink-0" />
-                  <span>{activeCompanyName}</span>
-                </span>
-                <span
-                  className="text-[9px] font-extrabold uppercase tracking-widest"
-                  style={{ color: "#94a3b8" }}
-                >
-                  · Patrocinador
-                </span>
-              </div>
-
-              <h3
-                className="text-xs sm:text-sm font-black tracking-tight leading-snug"
-                style={{ color: "#0f172a" }}
-              >
-                {activeTitle}
-              </h3>
-
-              <p
-                className="text-[11px] sm:text-xs font-medium leading-snug mt-0.5"
-                style={{ color: "#475569" }}
-              >
-                {activeSubtitle}
-              </p>
-            </div>
-
-            {/* Right CTA Button (Fijo, sin puntitos) */}
-            <div className={`shrink-0 ${isSidebar ? "w-full pt-1" : "self-center"}`}>
-              <span
-                className={`inline-flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl font-black text-[11px] sm:text-xs transition-all group-hover:translate-x-0.5 shadow-2xs whitespace-nowrap ${
-                  isSidebar ? "w-full" : ""
-                }`}
-                style={{
-                  backgroundColor: activeAccentColor,
-                  color: "#ffffff",
-                }}
-              >
-                <MessageCircle className="w-3.5 h-3.5 stroke-[2.3]" />
-                <span>{activeCta}</span>
-                <ArrowRight className="w-3 h-3 stroke-[2.5]" />
-              </span>
-            </div>
+            {bannerGraphic}
           </a>
-        </div>
-      )}
+        ) : (
+          <div className="block w-full max-w-[970px] leading-none">
+            {bannerGraphic}
+          </div>
+        )}
+        <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 leading-none pt-0.5">
+          Publicidad
+        </span>
+      </div>
     </div>
   );
 }

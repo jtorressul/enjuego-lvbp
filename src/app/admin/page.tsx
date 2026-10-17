@@ -56,8 +56,8 @@ async function processBannerImageFile(file: File): Promise<string> {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement("canvas");
-        const maxW = 1150;
-        const maxH = 360;
+        const maxW = 1640;
+        const maxH = 400;
         let width = img.width;
         let height = img.height;
 
@@ -78,7 +78,7 @@ async function processBannerImageFile(file: File): Promise<string> {
           return;
         }
         ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL("image/webp", 0.86);
+        const dataUrl = canvas.toDataURL("image/webp", 0.9);
         resolve(dataUrl);
       };
       img.onerror = () => reject(new Error("Imagen inválida"));
@@ -835,7 +835,7 @@ export default function AdminDashboardPage() {
                         Imagen (PNG, JPG, WebP o GIF)
                       </span>
                       <span className="text-[11px] text-slate-500">
-                        Medida recomendada: 970x90 px (soporta GIF animado).
+                        Medida ideal: 1536×178 px (se muestra a 1102×128 px en PC y 100% en móvil · soporta GIF animado).
                       </span>
                     </div>
 

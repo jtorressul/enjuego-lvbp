@@ -106,34 +106,34 @@ export function AdBanner({
       loading="lazy"
       decoding="async"
       onError={() => setImageError(true)}
-      className="block w-full max-w-[970px] h-auto rounded-[10px] object-contain mx-auto"
+      className="block w-full h-auto rounded-[8px]"
     />
   );
 
   return (
     <div
-      className={`w-full my-2 flex justify-center ${className}`}
+      className={`w-full max-w-[1120px] mx-auto my-2.5 ${className}`}
       data-ad-slot={slot}
     >
       <div
-        className="ad-box w-fit max-w-full mx-auto grid justify-items-center gap-1 p-1.5 pb-1 rounded-[14px] border border-[#e2e8f0] bg-white shadow-2xs"
-        style={{ backgroundColor: "#ffffff", borderColor: "#e2e8f0" }}
+        className="ad-box w-full grid justify-items-center gap-1 pt-2 px-2 pb-1.5 rounded-[14px] border border-[#e4e8ee] bg-white"
+        style={{ backgroundColor: "#ffffff", borderColor: "#e4e8ee" }}
       >
         {finalHref ? (
           <a
             href={finalHref}
             target="_blank"
             rel="noopener sponsored"
-            className="block w-full max-w-[970px] leading-none"
+            className="block w-full leading-none"
           >
             {imgElement}
           </a>
         ) : (
-          imgElement
+          <div className="block w-full leading-none">{imgElement}</div>
         )}
         <span
-          className="ad-label text-[9px] font-bold uppercase tracking-[0.12em] leading-none"
-          style={{ color: "#64748b" }}
+          className="ad-label text-[0.62rem] font-bold uppercase tracking-[0.1em] leading-none"
+          style={{ color: "#667085" }}
         >
           Publicidad
         </span>

@@ -8,6 +8,7 @@ import { LVBP_OFFICIAL_LOGO, LVBP_TEAMS, resolveLvbpTeam } from "@/lib/lvbp-team
 import { GamedayView } from "@/components/gameday/GamedayView";
 import { LeadersWidget } from "@/components/LeadersWidget";
 import { TeamRosterView } from "@/components/TeamRosterView";
+import { BroadcastChannelsRow } from "@/components/BroadcastChannelsRow";
 import {
   ChevronLeft,
   ChevronRight,
@@ -734,22 +735,11 @@ export function EnJuegoPortal({
 
           {/* Broadcast Channels + Venue / Decisions + Share Button Footer */}
           <div className="mt-3 pt-3 border-t border-slate-100 space-y-2.5">
-            {/* TV Broadcast Channels Row */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase text-slate-400 mr-0.5">
-                <Tv className="w-3 h-3 text-amber-600" /> TV:
-              </span>
-              {tvChannels.map((ch) => (
-                <span
-                  key={ch}
-                  className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-extrabold ${tvChannelBadgeStyle(
-                    ch
-                  )}`}
-                >
-                  {ch}
-                </span>
-              ))}
-            </div>
+            {/* TV Broadcast Channels Row with Official Launcher */}
+            <BroadcastChannelsRow
+              channels={tvChannels}
+              gameTitle={`${game.awayTeam.nick} vs ${game.homeTeam.nick}`}
+            />
 
             {game.decisions?.winner ? (
               <p className="text-[11px] text-slate-600 truncate">
@@ -2093,18 +2083,10 @@ export function EnJuegoPortal({
                                   {game.venue}
                                 </span>
 
-                                <div className="flex flex-wrap items-center gap-1">
-                                  {tvList.map((ch) => (
-                                    <span
-                                      key={ch}
-                                      className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-extrabold ${tvChannelBadgeStyle(
-                                        ch
-                                      )}`}
-                                    >
-                                      <Tv className="w-2.5 h-2.5 text-amber-600 shrink-0" /> {ch}
-                                    </span>
-                                  ))}
-                                </div>
+                                <BroadcastChannelsRow
+                                  channels={tvList}
+                                  gameTitle={`${game.awayTeam.nick} vs ${game.homeTeam.nick}`}
+                                />
                               </div>
                             </Link>
                           );

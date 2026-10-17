@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { GamedayData, PlayByPlayItem } from "@/lib/types";
 import { playerHeadshot, LVBP_TEAMS } from "@/lib/lvbp-teams";
+import { BroadcastChannelsRow } from "@/components/BroadcastChannelsRow";
 import {
   Radio,
   Tv,
@@ -481,14 +482,11 @@ export function GamedayView({
               <MapPin className="w-3.5 h-3.5 text-amber-600 shrink-0" /> {game.venue} · {game.venueCity}
             </span>
             <span className="capitalize text-slate-500">· {game.dateLabel}</span>
-            {(game.tvChannels?.length ? game.tvChannels : game.tv ? [game.tv] : []).map((ch) => (
-              <span
-                key={ch}
-                className="inline-flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200/80 px-2 py-0.5 text-[11px] font-extrabold text-amber-900"
-              >
-                <Tv className="w-3 h-3 text-amber-600" /> {ch}
-              </span>
-            ))}
+            <BroadcastChannelsRow
+              channels={game.tvChannels?.length ? game.tvChannels : game.tv ? [game.tv] : []}
+              gameTitle={`${game.awayTeam.name} vs ${game.homeTeam.name}`}
+              badgeSize="md"
+            />
           </div>
           <span className="inline-flex items-center gap-1.5 text-slate-500 font-bold">
             {game.info?.duration ? (

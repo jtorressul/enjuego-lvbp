@@ -645,8 +645,7 @@ export default function AdminDashboardPage() {
               </span>
             </div>
             <div className="mt-2 text-[11px] font-bold text-slate-500">
-              Rotación en carrusel cada{" "}
-              <strong className="text-slate-900">{rotationSeconds}s</strong>
+              Banners fijos por espacio · <strong className="text-emerald-700">Sin carrusel</strong>
             </div>
           </div>
 
@@ -735,31 +734,14 @@ export default function AdminDashboardPage() {
             <div className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="space-y-1">
                 <h2 className="text-base sm:text-lg font-black text-slate-950">
-                  Gestor Multi-Empresa de Banners Dinámicos
+                  Gestor de Empresas y Banners Fijos
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Todas las empresas activas rotan automáticamente en los banners de{" "}
-                  <strong>enjuego.online</strong> sin repetirse al mismo tiempo.
+                  Cada empresa se muestra de forma fija y elegante en su espacio publicitario asignado, sin saltos ni carrusel.
                 </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2 bg-slate-100 px-3 py-2 rounded-xl border border-slate-200">
-                  <Clock className="w-4 h-4 text-slate-500" />
-                  <span className="text-xs font-bold text-slate-700">
-                    Rotar cada:
-                  </span>
-                  <input
-                    type="number"
-                    min={3}
-                    max={60}
-                    value={rotationSeconds}
-                    onChange={(e) => setRotationSeconds(Number(e.target.value))}
-                    className="w-14 px-2 py-1 rounded-lg bg-white border border-slate-300 text-xs font-black text-center"
-                  />
-                  <span className="text-xs font-bold text-slate-500">seg</span>
-                </div>
-
                 <button
                   type="button"
                   onClick={handleAddCompany}

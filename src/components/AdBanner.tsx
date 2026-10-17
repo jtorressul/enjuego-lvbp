@@ -78,24 +78,23 @@ export function AdBanner({
   accentColor: propAccentColor,
   className = "",
 }: AdBannerProps) {
-  const [campaigns, setCampaigns] = useState<AdCampaign[]>([]);
-  const [rotationSec, setRotationSec] = useState<number>(6);
-  // Stagger initial index by slot so top-leaderboard, in-feed, and gameday-sidebar show different companies simultaneously
-  const slotOffset = slot === "top-leaderboard" ? 0 : slot === "in-feed" ? 1 : 2;
-  const [activeIndex, setActiveIndex] = useState<number>(0);
+  const [campaign, setCampaign] = useState<AdCampaign | null>(null);
   const [imageError, setImageError] = useState(false);
+
+  // Stagger initial index by slot so top-leaderboard, in-feed, and gameday-sidebar show different companies
+  const slotOffset = slot === "top-leaderboard" ? 0 : slot === "in-feed" ? 1 : 2;
 
   useEffect(() => {
     let mounted = true;
-    loadDynamicBanners().then(({ campaigns: loaded, rotationSeconds }) => {
+    loadDynamicBanners().then(({ campaigns: loaded }) => {
       if (!mounted) return;
       const matching = loaded.filter(
         (c) => c.active && (!Array.isArray(c.slots) || c.slots.includes(slot))
       );
-      setCampaigns(matching);
-      setRotationSec(rotationSeconds || 6);
       if (matching.length > 0) {
-        setActiveIndex(slotOffset % matching.length);
+        // Pick fixed company for this slot on page load (stable like jugadaenvivo.com, no carousel jumping)
+        const selected = matching[slotOffset % matching.length];
+        setCampaign(selected);
       }
     });
     return () => {
@@ -103,39 +102,26 @@ export function AdBanner({
     };
   }, [slot, slotOffset]);
 
-  // Rotate automatically across all active companies (e.g., all 5 companies)
+  // Record impression when the banner renders
   useEffect(() => {
-    if (campaigns.length <= 1) return;
-    const timer = setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % campaigns.length);
-      setImageError(false);
-    }, Math.max(3, rotationSec) * 1000);
-    return () => clearInterval(timer);
-  }, [campaigns.length, rotationSec]);
-
-  const currentCampaign =
-    campaigns.length > 0 ? campaigns[activeIndex % campaigns.length] : null;
-
-  // Record impression when a campaign becomes visible
-  useEffect(() => {
-    if (currentCampaign?.id) {
-      sendBannerMetric(currentCampaign.id, "impression");
+    if (campaign?.id) {
+      sendBannerMetric(campaign.id, "impression");
     }
-  }, [currentCampaign?.id]);
+  }, [campaign?.id]);
 
-  const activeImageUrl = propImageUrl ?? currentCampaign?.imageUrl ?? "";
+  const activeImageUrl = propImageUrl ?? campaign?.imageUrl ?? "";
   const activeLinkUrl =
     propLinkUrl ||
-    currentCampaign?.linkUrl ||
+    campaign?.linkUrl ||
     "https://wa.me/?text=Hola%20EnJuego.online,%20deseo%20informaci%C3%B3n%20para%20publicitar%20mi%20marca";
   const activeCompanyName =
-    propCompanyName || currentCampaign?.companyName || "enjuego.online";
+    propCompanyName || campaign?.companyName || "enjuego.online";
   const activeAccentColor =
-    propAccentColor || currentCampaign?.accentColor || "#e11d48";
+    propAccentColor || campaign?.accentColor || "#e11d48";
 
   const activeTitle =
     propTitle ||
-    currentCampaign?.title ||
+    campaign?.title ||
     (slot === "in-feed"
       ? "Impulsa tu marca en cada jornada"
       : slot === "gameday-sidebar"
@@ -144,31 +130,31 @@ export function AdBanner({
 
   const activeSubtitle =
     propSubtitle ||
-    currentCampaign?.subtitle ||
+    campaign?.subtitle ||
     (slot === "in-feed"
       ? "Conecta con miles de fanáticos del béisbol en vivo."
       : slot === "gameday-sidebar"
         ? "Presencia directa junto a la pizarra en tiempo real."
         : "Espacio disponible para banners y alianzas comerciales.");
 
-  const activeCta = propCtaText || currentCampaign?.ctaText || "Pautar";
+  const activeCta = propCtaText || campaign?.ctaText || "Pautar";
   const isSidebar = slot === "gameday-sidebar";
 
   const handleBannerClick = () => {
-    if (currentCampaign?.id) {
-      sendBannerMetric(currentCampaign.id, "click");
+    if (campaign?.id) {
+      sendBannerMetric(campaign.id, "click");
     }
   };
 
   return (
     <div className={`w-full ${className}`}>
       {activeImageUrl && !imageError ? (
-        /* CUSTOM GRAPHIC BANNER IMAGE (WITH MULTI-COMPANY CAROUSEL CONTROLS) */
+        /* FIXED GRAPHIC BANNER IMAGE (ESTÁTICO, SIN CARRUSEL) */
         <div className="relative group w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 shadow-xs">
           <a
             href={activeLinkUrl}
             target="_blank"
-            rel="noopener noreferrer"
+            rel="sponsored noopener noreferrer"
             onClick={handleBannerClick}
             className="block w-full aspect-[21/9] sm:aspect-[32/9] max-h-[120px]"
             aria-label={`${activeCompanyName} - ${alt}`}
@@ -177,7 +163,7 @@ export function AdBanner({
               src={activeImageUrl}
               alt={activeCompanyName || alt}
               onError={() => setImageError(true)}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-102"
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-101"
             />
             <span
               className="absolute top-2 left-2 rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-wider backdrop-blur-xs"
@@ -193,36 +179,9 @@ export function AdBanner({
               <ExternalLink className="w-2.5 h-2.5" />
             </div>
           </a>
-
-          {campaigns.length > 1 && (
-            <div
-              className="absolute top-2 right-2 z-10 flex items-center gap-1 rounded-full px-2 py-1 backdrop-blur-xs"
-              style={{ backgroundColor: "rgba(15, 23, 42, 0.65)" }}
-            >
-              {campaigns.map((c, idx) => {
-                const isCurrent = idx === activeIndex % campaigns.length;
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setActiveIndex(idx);
-                      setImageError(false);
-                    }}
-                    className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                      isCurrent ? "w-4 bg-white" : "w-1.5 bg-white/45 hover:bg-white/80"
-                    }`}
-                    aria-label={`Ver anunciante ${idx + 1}: ${c.companyName}`}
-                  />
-                );
-              })}
-            </div>
-          )}
         </div>
       ) : (
-        /* ENJUEGO.ONLINE ORIGINAL BROADCAST TICKET BANNER (WITH MULTI-COMPANY ROTATION) */
+        /* ENJUEGO.ONLINE ORIGINAL BROADCAST TICKET BANNER (ESTÁTICO, SIN CARRUSEL NI PUNTITOS) */
         <div
           className="relative w-full overflow-hidden rounded-2xl transition-all hover:shadow-md"
           style={{
@@ -230,9 +189,9 @@ export function AdBanner({
             border: "1px solid #e2e8f0",
           }}
         >
-          {/* Left Signature Brand Accent Bar (Dynamic per Company) */}
+          {/* Left Signature Brand Accent Bar */}
           <div
-            className="absolute inset-y-0 left-0 w-1.5 transition-colors duration-300"
+            className="absolute inset-y-0 left-0 w-1.5"
             style={{
               background: `linear-gradient(180deg, ${activeAccentColor} 0%, #0f172a 100%)`,
             }}
@@ -254,7 +213,7 @@ export function AdBanner({
           <a
             href={activeLinkUrl}
             target="_blank"
-            rel="noopener noreferrer"
+            rel="sponsored noopener noreferrer"
             onClick={handleBannerClick}
             className={`group relative pl-4 pr-3 py-2.5 sm:px-5 sm:py-3.5 flex ${
               isSidebar
@@ -299,12 +258,8 @@ export function AdBanner({
               </p>
             </div>
 
-            {/* Right CTA Pill + Carousel Dots */}
-            <div
-              className={`shrink-0 flex flex-col items-end gap-1.5 ${
-                isSidebar ? "w-full pt-1 items-stretch" : "self-center"
-              }`}
-            >
+            {/* Right CTA Button (Fijo, sin puntitos) */}
+            <div className={`shrink-0 ${isSidebar ? "w-full pt-1" : "self-center"}`}>
               <span
                 className={`inline-flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl font-black text-[11px] sm:text-xs transition-all group-hover:translate-x-0.5 shadow-2xs whitespace-nowrap ${
                   isSidebar ? "w-full" : ""
@@ -318,42 +273,6 @@ export function AdBanner({
                 <span>{activeCta}</span>
                 <ArrowRight className="w-3 h-3 stroke-[2.5]" />
               </span>
-
-              {campaigns.length > 1 && (
-                <div
-                  className="flex items-center justify-center gap-1 pt-0.5"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                >
-                  {campaigns.map((c, idx) => {
-                    const isCurrent = idx === activeIndex % campaigns.length;
-                    return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setActiveIndex(idx);
-                        }}
-                        className="p-0.5 cursor-pointer"
-                        title={c.companyName}
-                        aria-label={`Ver ${c.companyName}`}
-                      >
-                        <span
-                          className="block h-1.5 rounded-full transition-all"
-                          style={{
-                            width: isCurrent ? "14px" : "6px",
-                            backgroundColor: isCurrent ? activeAccentColor : "#cbd5e1",
-                          }}
-                        />
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
             </div>
           </a>
         </div>

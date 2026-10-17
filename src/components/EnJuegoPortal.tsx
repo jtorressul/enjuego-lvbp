@@ -2697,7 +2697,7 @@ export function EnJuegoPortal({
             ["resultados", "/resultados", "Pizarra", Activity],
             ["calendario", "/calendario", "Calendario", Calendar],
             ["posiciones", "/posiciones", "Posiciones", Trophy],
-            ["equipos", `/equipos/${TEAM_CODE_TO_SLUG[selectedTeamCode] || "leones"}`, "Equipos", Users],
+            ["equipos", `/teams?team=${LVBP_TEAMS[selectedTeamCode]?.slug || "leones"}`, "Equipos", Users],
           ] as const
         ).map(([key, href, label, Icon]) => {
           const active = section === key || (section === "juego" && key === "resultados");

@@ -867,7 +867,7 @@ export function EnJuegoPortal({
           paddingTop: "env(safe-area-inset-top, 0px)",
         }}
       >
-        <div className="max-w-7xl mx-auto px-2.5 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-3">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 h-16 sm:h-18 flex items-center justify-between gap-2.5 sm:gap-3">
           {/* Brand Horizontal Logo + .online Pill */}
           <div className="flex items-center shrink-0 min-w-0">
             <Link
@@ -878,10 +878,10 @@ export function EnJuegoPortal({
               <img
                 src="/logo.png"
                 alt="En Juego · Béisbol Venezolano"
-                className="h-6 sm:h-8 md:h-9 w-auto max-w-[118px] sm:max-w-[160px] md:max-w-[180px] object-contain transition-transform group-hover:scale-102 shrink-0"
+                className="h-9 sm:h-11 md:h-12 w-auto object-contain transition-transform group-hover:scale-102 shrink-0"
               />
               <span
-                className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md text-[10px] sm:text-xs font-black italic tracking-tight shadow-sm transition-transform group-hover:scale-105 shrink-0"
+                className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[11px] sm:text-xs font-black italic tracking-tight shadow-sm transition-transform group-hover:scale-105 shrink-0 -ml-0.5"
                 style={{
                   background: "linear-gradient(135deg, #e11d48 0%, #be123c 100%)",
                   color: "#ffffff",
@@ -896,7 +896,7 @@ export function EnJuegoPortal({
 
           {/* Desktop Main Navigation with Real URLs (lg+ to match right controls) */}
           <nav
-            className="hidden lg:flex items-center gap-1 p-1 rounded-xl border border-slate-800"
+            className="hidden lg:flex items-center gap-1 p-1.5 rounded-xl border border-slate-800"
             style={{ backgroundColor: "#0f172a", borderColor: "#1e293b" }}
             aria-label="Navegación Principal"
           >
@@ -913,7 +913,7 @@ export function EnJuegoPortal({
               <Link
                 key={key}
                 href={href}
-                className={`px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer ${
+                className={`px-3.5 py-2 rounded-lg text-xs font-black transition cursor-pointer ${
                   section === key
                     ? "bg-amber-400 text-slate-950 shadow-2xs"
                     : "text-slate-300 hover:text-white hover:bg-slate-800"
@@ -925,12 +925,12 @@ export function EnJuegoPortal({
           </nav>
 
           {/* Desktop Right Quick Bar: Equipos Dropdown + Quick Icon Strip */}
-          <div className="hidden lg:flex items-center gap-2 shrink-0" ref={teamsDropdownRef}>
+          <div className="hidden lg:flex items-center gap-2.5 shrink-0" ref={teamsDropdownRef}>
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setTeamsDropdownOpen((prev) => !prev)}
-                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-black transition border cursor-pointer ${
+                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black transition border cursor-pointer ${
                   teamsDropdownOpen
                     ? "bg-amber-400 text-slate-950 border-amber-400 shadow-2xs"
                     : "text-slate-200 hover:text-white"
@@ -946,11 +946,11 @@ export function EnJuegoPortal({
                 <img
                   src={LVBP_TEAMS[selectedTeamCode]?.logoSvg || LVBP_OFFICIAL_LOGO}
                   alt=""
-                  className="w-4 h-4 object-contain"
+                  className="w-5 h-5 object-contain"
                 />
                 <span>{LVBP_TEAMS[selectedTeamCode]?.nick || "Equipos"}</span>
                 <ChevronDown
-                  className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                  className={`w-4 h-4 transition-transform duration-200 ${
                     teamsDropdownOpen ? "rotate-180 text-slate-950" : "text-slate-400"
                   }`}
                 />
@@ -1046,7 +1046,7 @@ export function EnJuegoPortal({
                   setAuthModalTab("profile");
                   setAuthModalOpen(true);
                 }}
-                className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-white border text-xs font-bold transition cursor-pointer shadow-2xs hover:border-amber-400"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-white border text-xs font-bold transition cursor-pointer shadow-2xs hover:border-amber-400"
                 style={{ backgroundColor: "#0f172a", borderColor: "#1e293b", color: "#ffffff" }}
                 title="Ver tu perfil de fanático y equipo favorito"
               >
@@ -1075,9 +1075,9 @@ export function EnJuegoPortal({
                   setAuthModalTab("quick");
                   setAuthModalOpen(true);
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
               >
-                <User className="w-3.5 h-3.5" />
+                <User className="w-4 h-4" />
                 <span>Iniciar Sesión</span>
                 <span className="hidden xl:inline text-[10px] font-extrabold bg-slate-950/10 px-1.5 py-0.5 rounded-md">
                   Fan LVBP
@@ -1086,21 +1086,21 @@ export function EnJuegoPortal({
             )}
           </div>
 
-          {/* Mobile & Tablet Right Controls (<1024px): Equipos Dropdown Button + Profile + Hamburger Button */}
-          <div className="flex lg:hidden items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Mobile & Tablet Right Controls (<1024px): Large, Clear Touch Buttons */}
+          <div className="flex lg:hidden items-center gap-2 shrink-0">
             <button
               ref={mobileTeamsButtonRef}
               type="button"
               onClick={() => setTeamsDropdownOpen((prev) => !prev)}
-              className={`inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-bold transition border cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-black transition border cursor-pointer ${
                 teamsDropdownOpen
-                  ? "bg-amber-400 text-slate-950 border-amber-400 shadow-2xs font-black"
-                  : "text-slate-200 hover:text-white"
+                  ? "bg-amber-400 text-slate-950 border-amber-400 shadow-2xs"
+                  : "text-slate-100 hover:text-white"
               }`}
               style={
                 teamsDropdownOpen
                   ? undefined
-                  : { backgroundColor: "#0f172a", borderColor: "#1e293b", color: "#e2e8f0" }
+                  : { backgroundColor: "#0f172a", borderColor: "#1e293b", color: "#f8fafc" }
               }
               aria-expanded={teamsDropdownOpen}
               aria-label="Desplegable de equipos de la LVBP"
@@ -1108,16 +1108,13 @@ export function EnJuegoPortal({
               <img
                 src={LVBP_TEAMS[selectedTeamCode]?.logoSvg || LVBP_OFFICIAL_LOGO}
                 alt=""
-                className="w-4 h-4 object-contain shrink-0"
+                className="w-5 h-5 object-contain shrink-0"
               />
-              <span className="font-extrabold sm:hidden">
-                {LVBP_TEAMS[selectedTeamCode]?.shortName || "LVBP"}
-              </span>
-              <span className="font-extrabold hidden sm:inline">
+              <span className="font-extrabold">
                 {LVBP_TEAMS[selectedTeamCode]?.nick || "Equipos"}
               </span>
               <ChevronDown
-                className={`w-3 h-3 transition-transform duration-200 shrink-0 ${
+                className={`w-3.5 h-3.5 transition-transform duration-200 shrink-0 ${
                   teamsDropdownOpen ? "rotate-180 text-slate-950" : "text-slate-400"
                 }`}
               />
@@ -1130,7 +1127,7 @@ export function EnJuegoPortal({
                   setAuthModalTab("profile");
                   setAuthModalOpen(true);
                 }}
-                className="w-7 h-7 rounded-xl flex items-center justify-center text-white font-black text-xs shrink-0 shadow-2xs border border-slate-700 cursor-pointer active:scale-95"
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-black text-sm shrink-0 shadow-2xs border border-slate-700 cursor-pointer active:scale-95"
                 style={{
                   backgroundColor:
                     LVBP_TEAMS[currentUser.favoriteTeam]?.color || "#d97706",
@@ -1148,19 +1145,57 @@ export function EnJuegoPortal({
                 setTeamsDropdownOpen(false);
                 setMobileDrawerOpen(true);
               }}
-              className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition cursor-pointer shadow-2xs active:scale-95 shrink-0"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs sm:text-sm font-black transition cursor-pointer shadow-xs active:scale-95 shrink-0"
               aria-label="Abrir Menú Principal"
             >
-              <Menu className="w-4 h-4 shrink-0" />
+              <Menu className="w-4.5 h-4.5 shrink-0 stroke-[2.5]" />
               <span>Menú</span>
             </button>
+          </div>
+        </div>
+
+        {/* MOBILE & TABLET HORIZONTAL NAVIGATION STRIP (LARGE, VISIBLE & TOUCH-FRIENDLY) */}
+        <div
+          className="lg:hidden border-t px-3 py-2 overflow-x-auto no-scrollbar"
+          style={{ backgroundColor: "#0a101d", borderColor: "#1e293b" }}
+        >
+          <div className="flex items-center gap-1.5 min-w-max">
+            {(
+              [
+                ["home", "/inicio", "Inicio", Home],
+                ["resultados", "/resultados", "Resultados", Activity],
+                ["calendario", "/calendario", "Calendario", Calendar],
+                ["posiciones", "/posiciones", "Posiciones", Trophy],
+                ["lideres", "/lideres", "Líderes", BarChart3],
+                ["equipos", `/teams?team=${LVBP_TEAMS[selectedTeamCode]?.slug || "leones"}`, "Equipos", Users],
+              ] as const
+            ).map(([key, href, label, Icon]) => {
+              const active = section === key || (section === "juego" && key === "resultados");
+              return (
+                <Link
+                  key={key}
+                  href={href}
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer shrink-0 ${
+                    active ? "shadow-xs" : ""
+                  }`}
+                  style={
+                    active
+                      ? { backgroundColor: "#f59e0b", color: "#0f172a" }
+                      : { backgroundColor: "#131c2e", color: "#e2e8f0", border: "1px solid #1e293b" }
+                  }
+                >
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <span>{label}</span>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </header>
 
       {/* MOBILE TEAMS SELECTOR MODAL (CENTERED WITH BACKDROP TO PREVENT SCREEN OVERFLOW) */}
       {teamsDropdownOpen && (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center p-3.5 pt-16 sm:pt-20 lg:hidden animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-[100] flex items-start justify-center p-3.5 pt-20 sm:pt-24 lg:hidden animate-in fade-in duration-150">
           {/* Backdrop overlay */}
           <div
             className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs transition-opacity"
@@ -1170,18 +1205,18 @@ export function EnJuegoPortal({
           {/* Modal Dialog Card */}
           <div
             ref={mobileTeamsModalRef}
-            className="relative w-full max-w-sm rounded-2xl bg-white border border-slate-200 shadow-2xl p-4 z-10 text-slate-900 animate-in zoom-in-95 duration-150 max-h-[82dvh] overflow-y-auto"
+            className="relative w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-2xl p-4 z-10 text-slate-900 animate-in zoom-in-95 duration-150 max-h-[82dvh] overflow-y-auto"
           >
             <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center">
-                  <Users className="w-4 h-4" />
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                  <Users className="w-4.5 h-4.5" />
                 </div>
                 <div>
-                  <div className="font-black text-slate-950 text-sm leading-tight">
+                  <div className="font-black text-slate-950 text-base leading-tight">
                     Equipos LVBP
                   </div>
-                  <p className="text-[11px] text-slate-500 font-medium">Toca para filtrar o ver nómina</p>
+                  <p className="text-xs text-slate-500 font-medium">Toca para filtrar o ver nómina</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -1195,7 +1230,7 @@ export function EnJuegoPortal({
                 <button
                   type="button"
                   onClick={() => setTeamsDropdownOpen(false)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
                   aria-label="Cerrar modal de equipos"
                 >
                   <X className="w-5 h-5" />
@@ -1203,7 +1238,7 @@ export function EnJuegoPortal({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2.5">
               {Object.values(LVBP_TEAMS).map((team) => {
                 const isSelected = selectedTeamCode === team.code;
                 const isFav = favoriteTeamCode === team.code;
@@ -1215,14 +1250,14 @@ export function EnJuegoPortal({
                       setSelectedTeamCode(team.code);
                       setTeamsDropdownOpen(false);
                     }}
-                    className={`flex items-center gap-2.5 p-2 rounded-xl border text-xs transition cursor-pointer group ${
+                    className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-xs transition cursor-pointer group ${
                       isSelected
                         ? "bg-amber-50 border-amber-400 ring-2 ring-amber-400/40 text-slate-950 font-black shadow-xs"
                         : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800 font-bold"
                     }`}
                   >
                     <div
-                      className="w-8 h-8 rounded-full p-1 bg-white border border-slate-200 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition"
+                      className="w-9 h-9 rounded-full p-1 bg-white border border-slate-200 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition"
                       style={{ borderColor: isSelected ? team.color : undefined }}
                     >
                       <img
@@ -1232,15 +1267,15 @@ export function EnJuegoPortal({
                       />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-xs font-black leading-tight">
+                      <div className="truncate text-sm font-black leading-tight">
                         {team.nick}
                       </div>
-                      <div className="text-[10px] text-slate-400 truncate font-normal">
+                      <div className="text-[11px] text-slate-500 truncate font-normal">
                         {team.city}
                       </div>
                     </div>
                     {isFav && (
-                      <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                      <Star className="w-4 h-4 text-amber-500 fill-amber-500 shrink-0" />
                     )}
                   </Link>
                 );
@@ -1259,11 +1294,11 @@ export function EnJuegoPortal({
             onClick={() => setMobileDrawerOpen(false)}
           />
 
-          {/* Drawer Panel */}
-          <div className="relative w-full max-w-xs sm:max-w-sm bg-white h-dvh shadow-2xl flex flex-col z-10 overflow-hidden">
+          {/* Drawer Panel (Wider & Larger Touch Targets for Mobile) */}
+          <div className="relative w-full max-w-[86vw] sm:max-w-sm bg-white h-dvh shadow-2xl flex flex-col z-10 overflow-hidden">
             {/* Drawer Header with Dark Theme Contrast for Logo - STICKY & PINNED */}
             <div
-              className="drawer-header p-4 border-b flex items-center justify-between text-white shrink-0 sticky top-0 z-20 shadow-xs"
+              className="drawer-header px-4 py-3.5 border-b flex items-center justify-between text-white shrink-0 sticky top-0 z-20 shadow-xs"
               style={{
                 backgroundColor: "#060a12",
                 borderColor: "#1e293b",
@@ -1271,9 +1306,9 @@ export function EnJuegoPortal({
               }}
             >
               <div className="flex items-center gap-2">
-                <img src="/logo.png" alt="En Juego" className="h-7 w-auto object-contain" />
+                <img src="/logo.png" alt="En Juego" className="h-9 w-auto object-contain" />
                 <span
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black italic tracking-tight shadow-xs select-none"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-black italic tracking-tight shadow-xs select-none -ml-0.5"
                   style={{
                     background: "linear-gradient(135deg, #e11d48 0%, #be123c 100%)",
                     color: "#ffffff",
@@ -1287,7 +1322,7 @@ export function EnJuegoPortal({
               <button
                 type="button"
                 onClick={() => setMobileDrawerOpen(false)}
-                className="p-2 rounded-xl text-slate-300 hover:text-white transition cursor-pointer active:scale-95"
+                className="p-2.5 rounded-xl text-slate-300 hover:text-white transition cursor-pointer active:scale-95"
                 style={{ backgroundColor: "#0f172a", border: "1px solid #1e293b" }}
                 aria-label="Cerrar Menú"
               >
@@ -1299,12 +1334,12 @@ export function EnJuegoPortal({
             <div className="flex-1 overflow-y-auto overscroll-contain pb-10">
 
             {/* Fan Profile / Login Card in Drawer */}
-            <div className="p-3.5 bg-slate-50 border-b border-slate-200">
+            <div className="p-4 bg-slate-50 border-b border-slate-200">
               {currentUser ? (
-                <div className="p-3 rounded-2xl bg-white border border-slate-200/90 shadow-2xs">
+                <div className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs">
                   <div className="flex items-center gap-3">
                     <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-sm shadow-inner shrink-0"
+                      className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-black text-base shadow-inner shrink-0"
                       style={{
                         backgroundColor:
                           LVBP_TEAMS[currentUser.favoriteTeam]?.color || "#d97706",
@@ -1313,17 +1348,17 @@ export function EnJuegoPortal({
                       {currentUser.name.slice(0, 2).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="text-xs font-black text-slate-900 truncate">
+                      <div className="text-sm font-black text-slate-900 truncate">
                         {currentUser.name}
                       </div>
-                      <div className="text-[10px] text-slate-400 truncate">{currentUser.handle}</div>
-                      <div className="text-[10px] text-amber-600 font-extrabold flex items-center gap-1 mt-0.5">
-                        <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
+                      <div className="text-xs text-slate-400 truncate">{currentUser.handle}</div>
+                      <div className="text-xs text-amber-600 font-extrabold flex items-center gap-1 mt-0.5">
+                        <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
                         {LVBP_TEAMS[currentUser.favoriteTeam]?.name || "Fan LVBP"}
                       </div>
                     </div>
                   </div>
-                  <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
+                  <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
                     <button
                       type="button"
                       onClick={() => {
@@ -1331,7 +1366,7 @@ export function EnJuegoPortal({
                         setAuthModalTab("profile");
                         setAuthModalOpen(true);
                       }}
-                      className="text-[11px] font-bold text-amber-600 hover:text-amber-700 hover:underline cursor-pointer"
+                      className="text-xs font-bold text-amber-600 hover:text-amber-700 hover:underline cursor-pointer"
                     >
                       Cambiar Equipo / Perfil
                     </button>
@@ -1341,7 +1376,7 @@ export function EnJuegoPortal({
                         localStorage.removeItem("enjuego_user_session");
                         setCurrentUser(null);
                       }}
-                      className="text-[11px] font-semibold text-slate-400 hover:text-red-500 cursor-pointer"
+                      className="text-xs font-semibold text-slate-400 hover:text-red-500 cursor-pointer"
                     >
                       Cerrar sesión
                     </button>
@@ -1349,30 +1384,30 @@ export function EnJuegoPortal({
                 </div>
               ) : (
                 <div
-                  className="p-3.5 rounded-2xl shadow-xs"
+                  className="p-4 rounded-2xl shadow-xs"
                   style={{
                     background: "linear-gradient(135deg, #0b1324 0%, #162447 100%)",
                     border: "1px solid #1e293b",
                     color: "#ffffff",
                   }}
                 >
-                  <div className="flex items-start gap-2.5">
+                  <div className="flex items-start gap-3">
                     <div
-                      className="w-8 h-8 rounded-xl flex items-center justify-center font-black shrink-0"
+                      className="w-9 h-9 rounded-xl flex items-center justify-center font-black shrink-0"
                       style={{ backgroundColor: "#f59e0b", color: "#0f172a" }}
                     >
-                      <Sparkles className="w-4 h-4" />
+                      <Sparkles className="w-5 h-5" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="text-xs font-black" style={{ color: "#fbbf24" }}>
+                      <div className="text-sm font-black" style={{ color: "#fbbf24" }}>
                         Perfil de Fanático
                       </div>
-                      <p className="text-[11px] leading-snug mt-0.5" style={{ color: "#cbd5e1" }}>
+                      <p className="text-xs leading-snug mt-0.5" style={{ color: "#cbd5e1" }}>
                         Guarda tu equipo, participa en la quiniela y comenta en vivo.
                       </p>
                     </div>
                   </div>
-                  <div className="mt-3 flex gap-2">
+                  <div className="mt-3.5 flex gap-2">
                     <button
                       type="button"
                       onClick={() => {
@@ -1380,7 +1415,7 @@ export function EnJuegoPortal({
                         setAuthModalTab("quick");
                         setAuthModalOpen(true);
                       }}
-                      className="flex-1 py-2 px-2.5 rounded-xl font-black text-xs text-center transition cursor-pointer shadow-xs"
+                      className="flex-1 py-2.5 px-3 rounded-xl font-black text-xs text-center transition cursor-pointer shadow-xs"
                       style={{ backgroundColor: "#f59e0b", color: "#0f172a" }}
                     >
                       Entrar como Fan ⚡
@@ -1392,7 +1427,7 @@ export function EnJuegoPortal({
                         setAuthModalTab("login");
                         setAuthModalOpen(true);
                       }}
-                      className="py-2 px-3 rounded-xl font-bold text-xs transition cursor-pointer"
+                      className="py-2.5 px-3.5 rounded-xl font-bold text-xs transition cursor-pointer"
                       style={{
                         backgroundColor: "#1e293b",
                         color: "#f8fafc",
@@ -1407,8 +1442,8 @@ export function EnJuegoPortal({
             </div>
 
             {/* Navigation Links */}
-            <div className="p-4 space-y-1 border-b border-slate-100">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-3 block mb-2">
+            <div className="p-4 space-y-1.5 border-b border-slate-100">
+              <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 px-3 block mb-2">
                 Navegación Principal
               </span>
               {(
@@ -1427,14 +1462,14 @@ export function EnJuegoPortal({
                     key={key}
                     href={href}
                     onClick={() => setMobileDrawerOpen(false)}
-                    className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-black transition ${
+                    className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-black transition ${
                       active
                         ? "bg-amber-400 text-slate-950 shadow-2xs"
-                        : "text-slate-700 hover:bg-slate-100 hover:text-slate-950"
+                        : "text-slate-800 hover:bg-slate-100 hover:text-slate-950"
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Icon className="w-4 h-4 text-amber-600" />
+                      <Icon className="w-5 h-5 text-amber-600" />
                       <span>{label}</span>
                     </div>
                     <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -1446,18 +1481,18 @@ export function EnJuegoPortal({
             {/* LVBP Teams Directory */}
             <div className="p-4 flex-1">
               <div className="flex items-center justify-between px-1 mb-2.5">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
                   Equipos de la LVBP
                 </span>
-                <span className="text-[10px] font-bold text-amber-600">8 Clubes</span>
+                <span className="text-xs font-bold text-amber-600">8 Clubes</span>
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {Object.values(LVBP_TEAMS).map((team) => {
                   const isFav = favoriteTeamCode === team.code;
                   return (
                     <div
                       key={team.code}
-                      className="flex items-center justify-between p-2 rounded-xl border border-slate-200/80 bg-slate-50/70 hover:bg-amber-50/60 hover:border-amber-300 transition"
+                      className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200/80 bg-slate-50/70 hover:bg-amber-50/60 hover:border-amber-300 transition"
                     >
                       <Link
                         href={`/teams?team=${team.slug}`}
@@ -1465,25 +1500,25 @@ export function EnJuegoPortal({
                           openTeamPage(team.code);
                           setMobileDrawerOpen(false);
                         }}
-                        className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer"
+                        className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
                       >
-                        <img src={team.logoSvg} alt={team.name} className="w-7 h-7 object-contain shrink-0" />
+                        <img src={team.logoSvg} alt={team.name} className="w-8 h-8 object-contain shrink-0" />
                         <div className="min-w-0">
-                          <span className="text-xs font-black text-slate-900 block truncate">{team.name}</span>
-                          <span className="text-[10px] text-slate-500 block truncate">{team.venueCity}</span>
+                          <span className="text-sm font-black text-slate-900 block truncate">{team.name}</span>
+                          <span className="text-xs text-slate-500 block truncate">{team.venueCity}</span>
                         </div>
                       </Link>
                       <button
                         type="button"
                         onClick={() => toggleFavoriteTeam(team.code)}
-                        className={`p-1.5 rounded-lg border transition cursor-pointer ${
+                        className={`p-2 rounded-xl border transition cursor-pointer ${
                           isFav
                             ? "bg-amber-400 text-slate-950 border-amber-400 shadow-2xs"
                             : "bg-white text-slate-400 border-slate-200 hover:text-amber-500"
                         }`}
                         title={isFav ? "Equipo favorito" : "Marcar como favorito"}
                       >
-                        <Star className={`w-3.5 h-3.5 ${isFav ? "fill-slate-950" : ""}`} />
+                        <Star className={`w-4 h-4 ${isFav ? "fill-slate-950" : ""}`} />
                       </button>
                     </div>
                   );
@@ -1492,9 +1527,9 @@ export function EnJuegoPortal({
             </div>
 
             {/* Drawer Bottom info */}
-            <div className="p-4 border-t border-slate-200 bg-slate-50 text-[11px] text-slate-500">
+            <div className="p-4 border-t border-slate-200 bg-slate-50 text-xs text-slate-500">
               <p className="font-extrabold text-slate-800">EN JUEGO · Béisbol Venezolano</p>
-              <p className="text-[10px] text-slate-400 mt-0.5">Marcadores y jugada a jugada en vivo</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Marcadores y jugada a jugada en vivo</p>
             </div>
             </div>
           </div>

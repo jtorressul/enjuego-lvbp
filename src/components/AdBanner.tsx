@@ -106,17 +106,18 @@ export function AdBanner({
       loading="lazy"
       decoding="async"
       onError={() => setImageError(true)}
-      className="block w-full h-auto rounded-[8px]"
+      className="block w-full aspect-[8.63/1] object-fill rounded-[8px]"
+      style={{ width: "100%", display: "block" }}
     />
   );
 
   return (
     <div
-      className={`w-full max-w-[1120px] mx-auto my-2.5 ${className}`}
+      className={`w-full my-2.5 ${className}`}
       data-ad-slot={slot}
     >
       <div
-        className="ad-box w-full grid justify-items-center gap-1 pt-2 px-2 pb-1.5 rounded-[14px] border border-[#e4e8ee] bg-white"
+        className="ad-box w-full flex flex-col items-center gap-1 pt-2 px-2 pb-1.5 rounded-[14px] border border-[#e4e8ee] bg-white shadow-2xs"
         style={{ backgroundColor: "#ffffff", borderColor: "#e4e8ee" }}
       >
         {finalHref ? (
@@ -125,11 +126,14 @@ export function AdBanner({
             target="_blank"
             rel="noopener sponsored"
             className="block w-full leading-none"
+            style={{ width: "100%", display: "block" }}
           >
             {imgElement}
           </a>
         ) : (
-          <div className="block w-full leading-none">{imgElement}</div>
+          <div className="block w-full leading-none" style={{ width: "100%" }}>
+            {imgElement}
+          </div>
         )}
         <span
           className="ad-label text-[0.62rem] font-bold uppercase tracking-[0.1em] leading-none"

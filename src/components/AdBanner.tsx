@@ -35,12 +35,14 @@ async function loadDynamicBanners(): Promise<{
       .then(async (res) => {
         if (!res.ok) throw new Error("Failed");
         const data = await res.json();
-        cachedCampaigns = Array.isArray(data.campaigns) ? data.campaigns : [];
-        cachedRotationSec = Number(data.rotationSeconds) || 6;
-        return { campaigns: cachedCampaigns, rotationSeconds: cachedRotationSec };
+        const loaded: AdCampaign[] = Array.isArray(data.campaigns) ? data.campaigns : [];
+        const rot = Number(data.rotationSeconds) || 6;
+        cachedCampaigns = loaded;
+        cachedRotationSec = rot;
+        return { campaigns: loaded, rotationSeconds: rot };
       })
       .catch(() => {
-        return { campaigns: [], rotationSeconds: 6 };
+        return { campaigns: [] as AdCampaign[], rotationSeconds: 6 };
       })
       .finally(() => {
         setTimeout(() => {

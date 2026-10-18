@@ -939,12 +939,12 @@ export async function fetchLvbpRoster(teamIdOrCode: string, league: "lvbp" | "ml
   season: string;
   players: RosterPlayer[];
 }> {
-  const upper = String(teamIdOrCode || "").trim().toUpperCase();
-  const isMlbTeam = league === "mlb" || Boolean(MLB_TEAMS[upper]) || (Number(teamIdOrCode) >= 108 && Number(teamIdOrCode) <= 158);
+  const resolved = resolveAnyBaseballTeam(teamIdOrCode, "", league);
+  const isMlbTeam = league === "mlb" || Boolean(MLB_TEAMS[resolved.code]);
   const meta = isMlbTeam
-    ? resolveMlbTeam(Number(teamIdOrCode) || teamIdOrCode)
-    : resolveLvbpTeam(Number(teamIdOrCode) || teamIdOrCode);
-  const seasonYear = isMlbTeam ? "2025" : "2026";
+    ? resolveMlbTeam(resolved.id || teamIdOrCode)
+    : resolveLvbpTeam(resolved.id || teamIdOrCode);
+  const seasonYear = "2026";
   const url = `${MLB_BASE}/v1/teams/${meta.id}/roster?season=${seasonYear}&hydrate=person`;
   try {
     const res = await fetch(url, { next: { revalidate: 300 } });
@@ -968,33 +968,40 @@ export async function fetchLvbpRoster(teamIdOrCode: string, league: "lvbp" | "ml
     });
     return {
       team: meta,
-      season: isMlbTeam ? "MLB 2025-2026" : "2026-2027",
+      season: isMlbTeam ? "MLB 2026" : "2026-2027",
       players: players.length ? players : getFallbackRoster(meta.code),
     };
   } catch {
     return {
       team: meta,
-      season: isMlbTeam ? "MLB 2025-2026" : "2026-2027",
+      season: isMlbTeam ? "MLB 2026" : "2026-2027",
       players: getFallbackRoster(meta.code),
     };
   }
 }
 
-export async function fetchMlbSchedule(season = "2025"): Promise<ScheduleGame[]> {
+export async function fetchMlbSchedule(season = "2026"): Promise<ScheduleGame[]> {
   try {
-    const mlbSeason = season === "2026" ? "2025" : season;
-    // Query Postseason + Final Regular Season window from MLB StatsAPI (sportId=1)
+    const mlbSeason = season || "2026";
+    // Query 2026 Postseason + Final Regular Season window from MLB StatsAPI (sportId=1)
     const url = `${MLB_BASE}/v1/schedule?sportId=${MLB_SPORT_ID}&season=${mlbSeason}&startDate=${mlbSeason}-09-25&endDate=${mlbSeason}-11-05&gameType=R,F,D,L,W&hydrate=linescore(runners),team,decisions,probablePitcher,broadcasts`;
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) {
       return getMlbFallbackSchedule();
     }
     const data = await res.json();
-    const games: ScheduleGame[] = [];
+    const gamesByPk = new Map<string, ScheduleGame>();
 
     for (const dateEntry of data.dates || []) {
       const officialDate = dateEntry.date;
       for (const g of dateEntry.games || []) {
+        const awayId = Number(g.teams?.away?.team?.id || 0);
+        const homeId = Number(g.teams?.home?.team?.id || 0);
+        // Skip undecided postseason TBD placeholders (e.g. team id 21 "TB/CLE")
+        if (awayId < 108 || awayId > 158 || homeId < 108 || homeId > 158) {
+          continue;
+        }
+
         const status = mapStatus(g.status);
         const ls = g.linescore || {};
         const awayTeam = buildTeamSummary(g.teams?.away?.team, g.teams?.away?.leagueRecord, "mlb");
@@ -1024,8 +1031,10 @@ export async function fetchMlbSchedule(season = "2025"): Promise<ScheduleGame[]>
           : [];
         const tvChannels = apiTv.length > 0 ? apiTv : ["ESPN", "IVC", "MLB.TV"];
 
-        games.push({
-          id: String(g.gamePk),
+        const pk = String(g.gamePk);
+        // If a postponed game is rescheduled on a later date, overwrite the earlier postponed entry
+        gamesByPk.set(pk, {
+          id: pk,
           date: officialDate,
           startsAt: g.gameDate,
           time: formatCaracasTime(g.gameDate),
@@ -1069,20 +1078,27 @@ export async function fetchMlbSchedule(season = "2025"): Promise<ScheduleGame[]>
       }
     }
 
+    const games = Array.from(gamesByPk.values());
     return games.length ? games : getMlbFallbackSchedule();
   } catch {
     return getMlbFallbackSchedule();
   }
 }
 
-export async function fetchMlbStandingsAndLeaders(season = "2025"): Promise<{
+export async function fetchMlbStandingsAndLeaders(season = "2026"): Promise<{
   standings: StandingRow[];
   leaders: { hitting: LeaderCategory[]; pitching: LeaderCategory[] };
 }> {
   try {
-    const mlbSeason = season === "2026" ? "2025" : season;
-    const url = `${MLB_BASE}/v1/standings?leagueId=103,104&season=${mlbSeason}&standingsTypes=regularSeason&hydrate=team,streak`;
-    const res = await fetch(url, { next: { revalidate: 120 } });
+    const mlbSeason = season || "2026";
+    const standingsUrl = `${MLB_BASE}/v1/standings?leagueId=103,104&season=${mlbSeason}&standingsTypes=regularSeason&hydrate=team,streak`;
+    const leadersUrl = `${MLB_BASE}/v1/stats/leaders?leaderCategories=battingAverage,homeRuns,runsBattedIn,runs,earnedRunAverage,strikeOuts,wins,saves&season=${mlbSeason}&sportId=1&limit=5&hydrate=person,team`;
+
+    const [res, leadersRes] = await Promise.all([
+      fetch(standingsUrl, { next: { revalidate: 120 } }),
+      fetch(leadersUrl, { next: { revalidate: 120 } }).catch(() => null),
+    ]);
+
     if (!res.ok) {
       return {
         standings: getMlbFallbackStandings(),
@@ -1135,9 +1151,62 @@ export async function fetchMlbStandingsAndLeaders(season = "2025"): Promise<{
       }
     }
 
+    let liveLeaders = getMlbLeadersSnapshot();
+    if (leadersRes && leadersRes.ok) {
+      const lData = await leadersRes.json().catch(() => null);
+      if (Array.isArray(lData?.leagueLeaders)) {
+        const mapPlayers = (catKey: string, statGroup: string) => {
+          const found = lData.leagueLeaders.find(
+            (c: any) => c.leaderCategory === catKey && c.statGroup === statGroup
+          );
+          if (!found || !Array.isArray(found.leaders) || found.leaders.length === 0) return null;
+          return found.leaders.slice(0, 5).map((item: any) => {
+            const tMeta = resolveMlbTeam(item.team?.id || item.team?.abbreviation, item.team?.name);
+            const p = item.person || {};
+            return {
+              id: Number(p.id || 0),
+              name: p.fullName || "Pelotero MLB",
+              team: tMeta.code,
+              teamName: tMeta.nick,
+              teamLogo: tMeta.logoSvg,
+              position: statGroup === "pitching" ? "P" : "MLB",
+              photo: playerHeadshot(p.id),
+              value: String(item.value || "0"),
+            };
+          });
+        };
+
+        const avg = mapPlayers("battingAverage", "hitting");
+        const hr = mapPlayers("homeRuns", "hitting");
+        const rbi = mapPlayers("runsBattedIn", "hitting");
+        const runs = mapPlayers("runs", "hitting");
+        const era = mapPlayers("earnedRunAverage", "pitching");
+        const so = mapPlayers("strikeOuts", "pitching") || mapPlayers("strikeouts", "pitching");
+        const winsL = mapPlayers("wins", "pitching");
+        const saves = mapPlayers("saves", "pitching");
+
+        if (avg && hr && rbi && runs && era && winsL && saves) {
+          liveLeaders = {
+            hitting: [
+              { key: "avg", label: "AVE", players: avg },
+              { key: "homeRuns", label: "HR", players: hr },
+              { key: "rbi", label: "CI", players: rbi },
+              { key: "runs", label: "C", players: runs },
+            ],
+            pitching: [
+              { key: "era", label: "EFE", players: era },
+              { key: "strikeOuts", label: "K", players: so || liveLeaders.pitching[1].players },
+              { key: "wins", label: "JG", players: winsL },
+              { key: "saves", label: "JS", players: saves },
+            ],
+          };
+        }
+      }
+    }
+
     return {
       standings: rows.length > 0 ? rows : getMlbFallbackStandings(),
-      leaders: getMlbLeadersSnapshot(),
+      leaders: liveLeaders,
     };
   } catch {
     return {

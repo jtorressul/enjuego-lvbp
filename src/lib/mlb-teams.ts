@@ -790,17 +790,43 @@ export function resolveAnyBaseballTeam(
   preferredLeague: "lvbp" | "mlb" = "lvbp"
 ): LvbpTeamMeta {
   const num = Number(idOrCode);
-  if (!Number.isNaN(num)) {
+  if (!Number.isNaN(num) && String(idOrCode || "").trim() !== "") {
     if (MLB_TEAM_BY_ID[num]) return MLB_TEAM_BY_ID[num];
     if (num >= 690 && num <= 705) return resolveLvbpTeam(num, fallbackName);
   }
-  const upper = String(idOrCode || "").trim().toUpperCase();
+  const raw = String(idOrCode || "").trim();
+  const upper = raw.toUpperCase();
+  const lower = raw.toLowerCase();
+
   if (preferredLeague === "mlb") {
     if (MLB_TEAMS[upper]) return MLB_TEAMS[upper];
+    const mlbBySlug = Object.values(MLB_TEAMS).find(
+      (t) => t.slug === lower || t.nick.toLowerCase() === lower
+    );
+    if (mlbBySlug) return mlbBySlug;
     if (LVBP_TEAMS[upper]) return LVBP_TEAMS[upper];
+    const lvbpBySlug = Object.values(LVBP_TEAMS).find(
+      (t) => t.slug === lower || t.nick.toLowerCase() === lower
+    );
+    if (lvbpBySlug) return lvbpBySlug;
     return resolveMlbTeam(idOrCode, fallbackName);
   }
+
   if (LVBP_TEAMS[upper]) return LVBP_TEAMS[upper];
   if (MLB_TEAMS[upper]) return MLB_TEAMS[upper];
+
+  const lvbpBySlug = Object.values(LVBP_TEAMS).find(
+    (t) => t.slug === lower || t.nick.toLowerCase() === lower
+  );
+  if (lvbpBySlug) return lvbpBySlug;
+
+  const mlbBySlug = Object.values(MLB_TEAMS).find(
+    (t) =>
+      t.slug === lower ||
+      t.nick.toLowerCase() === lower ||
+      (lower.length >= 3 && t.name.toLowerCase().includes(lower))
+  );
+  if (mlbBySlug) return mlbBySlug;
+
   return resolveLvbpTeam(idOrCode, fallbackName);
 }

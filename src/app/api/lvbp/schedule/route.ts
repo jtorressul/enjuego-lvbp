@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const league = searchParams.get("league") === "mlb" ? "mlb" : "lvbp";
-    const season = searchParams.get("season") || (league === "mlb" ? "2025" : "2026");
+    const season = searchParams.get("season") || "2026";
     const games = league === "mlb" ? await fetchMlbSchedule(season) : await fetchLvbpSchedule(season);
     return NextResponse.json(
       { games, league },

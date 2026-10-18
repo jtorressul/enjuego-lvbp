@@ -12,6 +12,7 @@ interface AuthModalProps {
   currentUser: UserProfile | null;
   onUserUpdate: (user: UserProfile | null) => void;
   initialTab?: "quick" | "login" | "register" | "profile";
+  onLoginSuccess?: () => void;
 }
 
 export function AuthModal({
@@ -20,6 +21,7 @@ export function AuthModal({
   currentUser,
   onUserUpdate,
   initialTab = "quick",
+  onLoginSuccess,
 }: AuthModalProps) {
   const [tab, setTab] = useState<"quick" | "login" | "register" | "profile">(
     currentUser ? "profile" : initialTab
@@ -140,6 +142,7 @@ export function AuthModal({
       setSuccessMsg(`¡Bienvenido ${user.name}!`);
       setTimeout(() => {
         onClose();
+        onLoginSuccess?.();
       }, 700);
     } catch (err: any) {
       setErrorMsg(err.message || "Error al conectar con el servidor.");
@@ -181,6 +184,7 @@ export function AuthModal({
       setSuccessMsg("¡Cuenta creada con éxito!");
       setTimeout(() => {
         onClose();
+        onLoginSuccess?.();
       }, 700);
     } catch (err: any) {
       setErrorMsg(err.message || "Error al registrarse.");
@@ -220,6 +224,7 @@ export function AuthModal({
       setSuccessMsg(`¡Hola de nuevo, ${user.name}!`);
       setTimeout(() => {
         onClose();
+        onLoginSuccess?.();
       }, 700);
     } catch (err: any) {
       setErrorMsg(err.message || "Error al iniciar sesión.");

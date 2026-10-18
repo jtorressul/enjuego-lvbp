@@ -3737,6 +3737,18 @@ export function EnJuegoPortal({
         currentUser={currentUser}
         onUserUpdate={handleUserUpdate}
         initialTab={authModalTab}
+        onLoginSuccess={() => {
+          if (typeof window !== "undefined") {
+            const isStandalone =
+              (window.navigator as any).standalone === true ||
+              window.matchMedia("(display-mode: standalone)").matches;
+            if (!isStandalone) {
+              setTimeout(() => {
+                setPwaModalOpen(true);
+              }, 400);
+            }
+          }
+        }}
       />
 
       {/* PWA Floating Install Modal */}

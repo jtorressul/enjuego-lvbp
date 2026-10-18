@@ -6,9 +6,16 @@ import { X, Smartphone, Zap, Bell, Check, Share, ArrowRight } from "lucide-react
 interface PwaInstallModalProps {
   isOpen: boolean;
   onClose: () => void;
+  title?: string;
+  subtitle?: string;
 }
 
-export function PwaInstallModal({ isOpen, onClose }: PwaInstallModalProps) {
+export function PwaInstallModal({
+  isOpen,
+  onClose,
+  title = "¿Quieres instalar nuestra app?",
+  subtitle = "Béisbol venezolano en vivo en tu pantalla de inicio",
+}: PwaInstallModalProps) {
   const [isIos, setIsIos] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [installing, setInstalling] = useState(false);
@@ -68,10 +75,10 @@ export function PwaInstallModal({ isOpen, onClose }: PwaInstallModalProps) {
           </div>
           <div>
             <h3 className="text-lg font-black tracking-tight text-white">
-              Instalar App EnJuego
+              {title}
             </h3>
             <p className="text-xs text-slate-300 mt-0.5">
-              Béisbol venezolano en vivo en tu pantalla de inicio
+              {subtitle}
             </p>
           </div>
         </div>
@@ -160,7 +167,7 @@ export function PwaInstallModal({ isOpen, onClose }: PwaInstallModalProps) {
               onClick={onClose}
               className="w-full py-2 text-center text-xs font-semibold text-slate-400 hover:text-white transition cursor-pointer"
             >
-              Seguir en el navegador
+              Ahora no, seguir en la web
             </button>
           </div>
         )}

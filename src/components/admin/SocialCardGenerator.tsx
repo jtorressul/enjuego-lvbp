@@ -3,13 +3,24 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Calendar,
+  Check,
+  CheckCircle2,
+  Copy,
   Download,
+  ExternalLink,
   Image as ImageIcon,
+  Layers,
+  MapPin,
+  Minus,
   Palette,
+  Plus,
   RefreshCw,
   Share2,
+  Sliders,
   Sparkles,
   Trophy,
+  Tv,
+  Type,
   Upload,
 } from "lucide-react";
 import { LVBP_TEAMS } from "@/lib/lvbp-teams";
@@ -95,6 +106,8 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
   const [rendering, setRendering] = useState<boolean>(false);
   const [previewDataUrl, setPreviewDataUrl] = useState<string>("");
   const [downloadingMobile, setDownloadingMobile] = useState<boolean>(false);
+  const [studioTab, setStudioTab] = useState<"matchup" | "style" | "sponsor">("matchup");
+  const [copiedFeedback, setCopiedFeedback] = useState<boolean>(false);
 
   const VENEZUELA_TV_CHANNELS = [
     "IVC",
@@ -514,765 +527,965 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
     }
   };
 
+  const handleCopyImageToClipboard = async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    try {
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+        await navigator.clipboard.write([
+          new ClipboardItem({ "image/png": blob }),
+        ]);
+        setCopiedFeedback(true);
+        setTimeout(() => setCopiedFeedback(false), 2500);
+      }, "image/png");
+    } catch (err) {
+      console.warn("Clipboard copy failed", err);
+    }
+  };
+
   const optionBtn = (active: boolean) =>
-    `p-2 rounded-xl border text-center transition cursor-pointer ${
+    `p-2.5 rounded-xl border text-center transition cursor-pointer ${
       active
-        ? "bg-slate-900 text-white border-slate-900"
+        ? "bg-slate-900 text-white border-slate-900 shadow-2xs"
         : "bg-white hover:bg-slate-50 text-slate-700 border-slate-200"
     }`;
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* LEFT CONTROLS */}
-        <div className="lg:col-span-7 space-y-5">
-          {/* 1. TEMPLATE, SIZE & DESIGN */}
-          <section className="rounded-2xl bg-white border border-slate-200 p-5 shadow-2xs space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-black text-slate-950 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-rose-600" />
-                  <span>Generador de Artes Deportivos (PNG HD)</span>
+    <div className="space-y-5">
+      {/* ── TOP HERO HEADER & LEAGUE / MODE CONTROL ── */}
+      <div className="rounded-xl bg-white border border-slate-200/80 p-4 sm:p-5 shadow-xs space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 shrink-0">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm sm:text-base font-semibold tracking-tight text-slate-900">
+                  Estudio de Artes para Redes
                 </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Crea y descarga artes de <strong>LVBP</strong> o <strong>MLB</strong> con escudos oficiales, estadio y canales de TV.
-                </p>
+                <span className="text-[10px] font-semibold tracking-wide uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200/70">
+                  PNG HD
+                </span>
               </div>
-
-              {/* Liga LVBP / MLB selector */}
-              <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCardLeague("lvbp");
-                    setAwayCode("LAR");
-                    setHomeCode("ZUL");
-                  }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer ${
-                    cardLeague === "lvbp"
-                      ? "bg-slate-900 text-white shadow-2xs"
-                      : "text-slate-600 hover:text-slate-950"
-                  }`}
-                >
-                  🇻🇪 LVBP
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCardLeague("mlb");
-                    setAwayCode("LAD");
-                    setHomeCode("NYY");
-                  }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer ${
-                    cardLeague === "mlb"
-                      ? "bg-slate-900 text-white shadow-2xs"
-                      : "text-slate-600 hover:text-slate-950"
-                  }`}
-                >
-                  ⚾ MLB
-                </button>
-              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Genera publicaciones oficiales para Instagram, WhatsApp y Twitter con escudos, marcadores y canales en alta definición.
+              </p>
             </div>
+          </div>
 
-            <div>
-              <label className="block text-xs font-extrabold uppercase text-slate-600 mb-2">
-                1. Tipo de Arte
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {[
-                  { id: "final_single", label: "Resultado Final", sub: "1 Juego (Ej. 8 - 5)" },
-                  { id: "preview_single", label: "Juego de Hoy", sub: "Previa, Estadio y TV" },
-                  { id: "live_single", label: "En Vivo", sub: "Pizarra Parcial" },
-                  { id: "slate_all", label: "Jornada Completa", sub: "Todos los Juegos" },
-                ].map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => handleModeChange(item.id as CardTemplateMode)}
-                    className={`p-3 rounded-xl border text-left transition cursor-pointer ${
-                      templateMode === item.id
-                        ? "bg-rose-600 text-white border-rose-600 shadow-xs"
-                        : "bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200"
-                    }`}
-                  >
-                    <div className="text-xs font-black">{item.label}</div>
-                    <div
-                      className={`text-[10px] mt-0.5 ${
-                        templateMode === item.id ? "text-rose-100" : "text-slate-500"
-                      }`}
+          {/* League Segmented Switcher */}
+          <div className="bg-slate-100 p-1 rounded-xl border border-slate-200/80 inline-flex shadow-2xs">
+            <button
+              type="button"
+              onClick={() => {
+                setCardLeague("lvbp");
+                setAwayCode("LAR");
+                setHomeCode("ZUL");
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                cardLeague === "lvbp"
+                  ? "bg-white text-slate-900 shadow-2xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              🇻🇪 LVBP
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setCardLeague("mlb");
+                setAwayCode("LAD");
+                setHomeCode("NYY");
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                cardLeague === "mlb"
+                  ? "bg-white text-slate-900 shadow-2xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              ⚾ MLB
+            </button>
+          </div>
+        </div>
+
+        {/* Template Mode Pills */}
+        <div className="border-t border-slate-100 pt-3">
+          <span className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2">
+            Tipo de Publicación
+          </span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {[
+              { id: "final_single", label: "Resultado Final", desc: "Pizarra de 1 juego" },
+              { id: "preview_single", label: "Juego de Hoy", desc: "Previa, estadio y TV" },
+              { id: "live_single", label: "En Vivo", desc: "Marcador en curso" },
+              { id: "slate_all", label: "Jornada Completa", desc: "Todos los juegos del día" },
+            ].map((item) => {
+              const active = templateMode === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleModeChange(item.id as CardTemplateMode)}
+                  className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                    active
+                      ? "bg-slate-900 text-white border-slate-900 shadow-xs"
+                      : "bg-slate-50/70 hover:bg-slate-100 text-slate-700 border-slate-200/80"
+                  }`}
+                >
+                  <div className="text-xs font-semibold flex items-center justify-between">
+                    <span>{item.label}</span>
+                    {active && <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />}
+                  </div>
+                  <div className={`text-[10px] mt-0.5 ${active ? "text-slate-300" : "text-slate-500"}`}>
+                    {item.desc}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* ── 2-COLUMN STUDIO WORKBENCH ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* LEFT COLUMN: STUDIO TOOLS (7 cols) */}
+        <div className="lg:col-span-7 space-y-4">
+          {/* Studio Tab Bar */}
+          <div className="bg-slate-200/70 p-1 rounded-xl border border-slate-200/80 grid grid-cols-3 gap-1 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setStudioTab("matchup")}
+              className={`inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                studioTab === "matchup"
+                  ? "bg-white text-slate-900 shadow-2xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-white/40"
+              }`}
+            >
+              <Trophy className="w-3.5 h-3.5" />
+              <span>1. Partido</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStudioTab("style")}
+              className={`inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                studioTab === "style"
+                  ? "bg-white text-slate-900 shadow-2xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-white/40"
+              }`}
+            >
+              <Palette className="w-3.5 h-3.5" />
+              <span>2. Diseño</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStudioTab("sponsor")}
+              className={`inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                studioTab === "sponsor"
+                  ? "bg-white text-slate-900 shadow-2xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-white/40"
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>3. Patrocinador</span>
+            </button>
+          </div>
+
+          {/* ─────────────────────────────────────────────────────────────
+              TAB 1: MATCHUP & SCORES (PARTIDO, MARCADOR, SEDE, TV)
+             ───────────────────────────────────────────────────────────── */}
+          {studioTab === "matchup" && (
+            <div className="space-y-4">
+              {/* Calendario & Selector de Partido */}
+              <div className="rounded-xl bg-white border border-slate-200/80 p-4 shadow-xs space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-slate-500" />
+                    <span className="text-xs font-semibold text-slate-900">
+                      Jornada en Calendario ({cardLeague.toUpperCase()})
+                    </span>
+                    {loadingGames && (
+                      <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                        <RefreshCw className="w-3 h-3 animate-spin" /> Cargando…
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={selectedDate}
+                      onChange={(e) => {
+                        const nextDate = e.target.value;
+                        setSelectedDate(nextDate);
+                        const firstInDate = allGames.find((g) => g.date === nextDate);
+                        if (firstInDate) selectGame(firstInDate);
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 shadow-2xs focus:outline-none focus:border-slate-900"
                     >
-                      {item.sub}
+                      {availableDates.length === 0 && (
+                        <option value={selectedDate}>{selectedDate}</option>
+                      )}
+                      {availableDates.map((d) => (
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      type="button"
+                      onClick={() => fetchSchedule(cardLeague)}
+                      className="p-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 transition shadow-2xs cursor-pointer"
+                      title="Refrescar partidos desde MLB StatsAPI"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${loadingGames ? "animate-spin" : ""}`} />
+                    </button>
+                  </div>
+                </div>
+
+                {gamesForDate.length > 0 ? (
+                  <div className="pt-1 border-t border-slate-100">
+                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                      Cargar datos con 1 clic:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {gamesForDate.map((g) => {
+                        const isSelected = selectedGameId === g.id;
+                        return (
+                          <button
+                            key={g.id}
+                            type="button"
+                            onClick={() => selectGame(g)}
+                            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer shadow-2xs ${
+                              isSelected
+                                ? "bg-slate-900 text-white border-slate-900"
+                                : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200/80"
+                            }`}
+                          >
+                            <span>{g.awayTeam.code}</span>
+                            <span className="mx-1 text-slate-400">vs</span>
+                            <span>{g.homeTeam.code}</span>
+                            {(g.awayScore !== undefined || g.homeScore !== undefined) && (
+                              <span className={`ml-1.5 font-bold tabular-nums ${isSelected ? "text-rose-300" : "text-rose-600"}`}>
+                                {g.awayScore ?? 0}-{g.homeScore ?? 0}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
-                  </button>
-                ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic pt-1 border-t border-slate-100">
+                    No hay juegos en la fecha seleccionada. Puedes editar los equipos manualmente abajo.
+                  </p>
+                )}
               </div>
-            </div>
 
-            <div>
-              <label className="block text-xs font-extrabold uppercase text-slate-600 mb-2">
-                2. Tamaño de Descarga
-              </label>
-              <div className="grid grid-cols-3 gap-1.5">
-                {[
-                  { id: "post_4_5", label: "Post (4:5)", dim: "1080×1350" },
-                  { id: "story_9_16", label: "Historia (9:16)", dim: "1080×1920" },
-                  { id: "square_1_1", label: "Cuadrado (1:1)", dim: "1080×1080" },
-                ].map((fmt) => (
-                  <button
-                    key={fmt.id}
-                    type="button"
-                    onClick={() => setSizeFormat(fmt.id as CardSizeFormat)}
-                    className={optionBtn(sizeFormat === fmt.id)}
-                  >
-                    <div className="text-[11px] font-black">{fmt.label}</div>
-                    <div className="text-[10px] opacity-75 font-mono">{fmt.dim}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
+              {/* Matchup Scoreboard Box (Single Game) */}
+              {templateMode !== "slate_all" ? (
+                <div className="rounded-xl bg-white border border-slate-200/80 p-4 sm:p-5 shadow-xs space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-11 gap-3 items-center">
+                    {/* Left: Away Team */}
+                    <div className="md:col-span-5 p-3.5 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                          Visitante (Izquierda)
+                        </span>
+                        <span className="text-[11px] font-mono font-bold text-slate-700">
+                          {awayCode}
+                        </span>
+                      </div>
+                      <select
+                        value={awayCode}
+                        onChange={(e) => setAwayCode(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-900 shadow-2xs focus:outline-none focus:border-slate-900"
+                      >
+                        {activeTeamList.map((t) => (
+                          <option key={t.code} value={t.code}>
+                            {t.name} ({t.code})
+                          </option>
+                        ))}
+                      </select>
 
-            <div>
-              <label className="block text-xs font-extrabold uppercase text-slate-600 mb-2 flex items-center gap-1.5">
-                <Palette className="w-3.5 h-3.5 text-rose-600" />
-                Fondo del Arte
-              </label>
-              <div className="grid grid-cols-3 gap-1.5">
-                {[
-                  {
-                    id: "editorial_light",
-                    label: "Editorial Claro",
-                    sub: "Estilo prensa limpia",
-                    swatch: "linear-gradient(135deg,#ffffff,#e9e6e1)",
-                  },
-                  {
-                    id: "stadium_night",
-                    label: "Estadio Nocturno",
-                    sub: "Estilo ESPN / MLB",
-                    swatch: "linear-gradient(135deg,#0a0f1e,#1e2b55)",
-                  },
-                  {
-                    id: "club_duel",
-                    label: "Duelo de Clubes",
-                    sub: "Colores de ambos equipos",
-                    swatch: `linear-gradient(120deg,${
-                      ALL_TEAMS[awayCode]?.color || "#b3161a"
-                    } 50%,${ALL_TEAMS[homeCode]?.color || "#121734"} 50%)`,
-                  },
-                ].map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setBackgroundTheme(t.id as BackgroundTheme)}
-                    className={optionBtn(backgroundTheme === t.id)}
-                  >
-                    <div
-                      className="h-6 w-full rounded-md mb-1.5 border border-black/10"
-                      style={{ background: t.swatch }}
-                    />
-                    <div className="text-[11px] font-black">{t.label}</div>
-                    <div className="text-[9px] opacity-75">{t.sub}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
+                      {/* Away Score Stepper */}
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-xs font-medium text-slate-600">Carreras:</span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setAwayScore((s) => Math.max(0, s - 1))}
+                            className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 flex items-center justify-center font-bold text-xs cursor-pointer shadow-2xs"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <input
+                            type="number"
+                            min={0}
+                            max={99}
+                            value={awayScore}
+                            onChange={(e) => setAwayScore(Math.max(0, Number(e.target.value) || 0))}
+                            className="w-12 h-7 rounded-lg border border-slate-200 bg-white text-center font-bold text-sm text-slate-900 tabular-nums focus:outline-none focus:border-slate-900"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setAwayScore((s) => s + 1)}
+                            className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 flex items-center justify-center font-bold text-xs cursor-pointer shadow-2xs"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
 
-            <div>
-              <label className="block text-xs font-extrabold uppercase text-slate-600 mb-2">
-                Estilo de los Escudos
-              </label>
-              <div className="grid grid-cols-3 gap-1.5">
-                {[
-                  { id: "floating_shield", label: "Escudo Flotante", sub: "Oficial, sin fondo" },
-                  { id: "pearl_medallion", label: "Medallón Perla", sub: "Blanco con bisel" },
-                  { id: "mascot_color", label: "Mascota HD", sub: "Sobre color del club" },
-                ].map((st) => (
-                  <button
-                    key={st.id}
-                    type="button"
-                    onClick={() => setMedallionStyle(st.id as MedallionStyleMode)}
-                    className={optionBtn(medallionStyle === st.id)}
-                  >
-                    <div className="text-[11px] font-black">{st.label}</div>
-                    <div className="text-[9px] opacity-75">{st.sub}</div>
-                  </button>
-                ))}
+                    {/* Center: Status Pill */}
+                    <div className="md:col-span-1 flex flex-col items-center justify-center py-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        VS
+                      </span>
+                      <input
+                        type="text"
+                        value={statusPillText}
+                        onChange={(e) => setStatusPillText(e.target.value)}
+                        placeholder="FINAL"
+                        className="w-20 mt-1 px-1.5 py-1 rounded-md border border-slate-200 bg-slate-50 text-[11px] font-bold text-center text-slate-800 uppercase focus:outline-none focus:border-slate-900"
+                      />
+                    </div>
+
+                    {/* Right: Home Team */}
+                    <div className="md:col-span-5 p-3.5 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                          Home Club (Derecha)
+                        </span>
+                        <span className="text-[11px] font-mono font-bold text-slate-700">
+                          {homeCode}
+                        </span>
+                      </div>
+                      <select
+                        value={homeCode}
+                        onChange={(e) => {
+                          const code = e.target.value;
+                          setHomeCode(code);
+                          const meta = ALL_TEAMS[code];
+                          if (meta) {
+                            setVenueText(`${meta.venue} · ${meta.venueCity}`);
+                          }
+                        }}
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-900 shadow-2xs focus:outline-none focus:border-slate-900"
+                      >
+                        {activeTeamList.map((t) => (
+                          <option key={t.code} value={t.code}>
+                            {t.name} ({t.code})
+                          </option>
+                        ))}
+                      </select>
+
+                      {/* Home Score Stepper */}
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-xs font-medium text-slate-600">Carreras:</span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setHomeScore((s) => Math.max(0, s - 1))}
+                            className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 flex items-center justify-center font-bold text-xs cursor-pointer shadow-2xs"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <input
+                            type="number"
+                            min={0}
+                            max={99}
+                            value={homeScore}
+                            onChange={(e) => setHomeScore(Math.max(0, Number(e.target.value) || 0))}
+                            className="w-12 h-7 rounded-lg border border-slate-200 bg-white text-center font-bold text-sm text-slate-900 tabular-nums focus:outline-none focus:border-slate-900"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setHomeScore((s) => s + 1)}
+                            className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 flex items-center justify-center font-bold text-xs cursor-pointer shadow-2xs"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Venue and Channels */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1 flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Estadio y Ciudad</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={venueText}
+                        onChange={(e) => setVenueText(e.target.value)}
+                        placeholder="Ej. Estadio Monumental Simón Bolívar · Caracas"
+                        className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-slate-900 shadow-2xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 mb-1 flex items-center gap-1.5">
+                        <Tv className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Canales de TV</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={tvChannelsText}
+                        onChange={(e) => setTvChannelsText(e.target.value)}
+                        placeholder="Ej. IVC · Televen · 1Baseball · BeisbolPlay"
+                        className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none focus:border-slate-900 shadow-2xs"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Quick TV Channel Chips */}
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                      Canales Rápidos (Haz clic para activar/quitar):
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {VENEZUELA_TV_CHANNELS.map((ch) => {
+                        const active = tvChannelsText
+                          .toLowerCase()
+                          .split(/[·,|/]/)
+                          .map((s) => s.trim())
+                          .includes(ch.toLowerCase());
+                        return (
+                          <button
+                            key={ch}
+                            type="button"
+                            onClick={() => toggleTvChannelChip(ch)}
+                            className={`px-2 py-0.5 rounded-md text-[11px] font-medium border transition cursor-pointer shadow-2xs ${
+                              active
+                                ? "bg-slate-900 text-white border-slate-900"
+                                : "bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200/80"
+                            }`}
+                          >
+                            {active ? `✓ ${ch}` : `+ ${ch}`}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Headline Words */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-slate-100">
+                    <div>
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
+                        Palabra 1
+                      </label>
+                      <input
+                        type="text"
+                        value={headlineWord1}
+                        onChange={(e) => setHeadlineWord1(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-rose-600 focus:outline-none focus:border-slate-900 shadow-2xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
+                        Palabra 2
+                      </label>
+                      <input
+                        type="text"
+                        value={headlineWord2}
+                        onChange={(e) => setHeadlineWord2(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-900 focus:outline-none focus:border-slate-900 shadow-2xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
+                        Sello Centro 1
+                      </label>
+                      <input
+                        type="text"
+                        value={centerBadgeLine1}
+                        onChange={(e) => setCenterBadgeLine1(e.target.value)}
+                        placeholder="Opcional"
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:border-slate-900 shadow-2xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
+                        Sello Centro 2
+                      </label>
+                      <input
+                        type="text"
+                        value={centerBadgeLine2}
+                        onChange={(e) => setCenterBadgeLine2(e.target.value)}
+                        placeholder="Opcional"
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:border-slate-900 shadow-2xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Slate Full-Day Editor */
+                <div className="rounded-xl bg-white border border-slate-200/80 p-4 sm:p-5 shadow-xs space-y-3">
+                  <div className="text-xs font-semibold text-slate-900">
+                    Editar Partidos de la Jornada ({gamesForDate.length} programados)
+                  </div>
+                  {gamesForDate.slice(0, 4).map((g) => {
+                    const ov = slateOverrides[g.id] || {};
+                    const homeMeta = ALL_TEAMS[g.homeTeam.code];
+                    const valVenue =
+                      ov.venue !== undefined
+                        ? ov.venue
+                        : g.venue || (homeMeta ? homeMeta.venue : "");
+                    const valTv =
+                      ov.tv !== undefined
+                        ? ov.tv
+                        : g.tvChannels && g.tvChannels.length > 0
+                          ? g.tvChannels.join(" · ")
+                          : g.tv || "BeisbolPlay";
+                    const valTime = ov.time !== undefined ? ov.time : g.time || "7:00 PM";
+
+                    return (
+                      <div
+                        key={g.id}
+                        className="p-3 rounded-lg bg-slate-50/70 border border-slate-200/80 space-y-2"
+                      >
+                        <div className="text-xs font-semibold text-slate-900">
+                          {g.awayTeam.name} ({g.awayTeam.code}) vs {g.homeTeam.name} ({g.homeTeam.code})
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <div>
+                            <label className="block text-[10px] font-medium text-slate-500">
+                              Estadio
+                            </label>
+                            <input
+                              type="text"
+                              value={valVenue}
+                              onChange={(e) =>
+                                setSlateOverrides((prev) => ({
+                                  ...prev,
+                                  [g.id]: { ...prev[g.id], venue: e.target.value },
+                                }))
+                              }
+                              className="w-full px-2.5 py-1 rounded-md border border-slate-200 text-xs bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-medium text-slate-500">
+                              Canales TV
+                            </label>
+                            <input
+                              type="text"
+                              value={valTv}
+                              onChange={(e) =>
+                                setSlateOverrides((prev) => ({
+                                  ...prev,
+                                  [g.id]: { ...prev[g.id], tv: e.target.value },
+                                }))
+                              }
+                              className="w-full px-2.5 py-1 rounded-md border border-slate-200 text-xs bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-medium text-slate-500">
+                              Hora
+                            </label>
+                            <input
+                              type="text"
+                              value={valTime}
+                              onChange={(e) =>
+                                setSlateOverrides((prev) => ({
+                                  ...prev,
+                                  [g.id]: { ...prev[g.id], time: e.target.value },
+                                }))
+                              }
+                              className="w-full px-2.5 py-1 rounded-md border border-slate-200 text-xs bg-white"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ─────────────────────────────────────────────────────────────
+              TAB 2: STYLE & DESIGN (TAMAÑO, FONDO, ESCUDOS, TOGGLES)
+             ───────────────────────────────────────────────────────────── */}
+          {studioTab === "style" && (
+            <div className="rounded-xl bg-white border border-slate-200/80 p-5 shadow-xs space-y-4">
+              {/* Formato y Tamaño */}
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">
+                  Tamaño de Descarga
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: "post_4_5", label: "Post (4:5)", dim: "1080×1350", desc: "Instagram & Móvil" },
+                    { id: "story_9_16", label: "Historia (9:16)", dim: "1080×1920", desc: "Stories / Estados" },
+                    { id: "square_1_1", label: "Cuadrado (1:1)", dim: "1080×1080", desc: "Twitter / Web" },
+                  ].map((fmt) => (
+                    <button
+                      key={fmt.id}
+                      type="button"
+                      onClick={() => setSizeFormat(fmt.id as CardSizeFormat)}
+                      className={optionBtn(sizeFormat === fmt.id)}
+                    >
+                      <div className="text-xs font-semibold">{fmt.label}</div>
+                      <div className="text-[10px] font-mono text-slate-500 mt-0.5">{fmt.dim}</div>
+                      <div className="text-[9px] text-slate-400 mt-0.5">{fmt.desc}</div>
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="pt-2.5 flex flex-wrap items-center gap-4">
-                <label className="inline-flex items-center gap-2 text-xs font-extrabold text-slate-700 cursor-pointer">
+
+              {/* Tema de Fondo */}
+              <div className="border-t border-slate-100 pt-3">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2 flex items-center gap-1.5">
+                  <Palette className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Tema de Fondo</span>
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    {
+                      id: "editorial_light",
+                      label: "Editorial Claro",
+                      sub: "Prensa limpia y nítida",
+                      swatch: "linear-gradient(135deg,#ffffff,#e9e6e1)",
+                    },
+                    {
+                      id: "stadium_night",
+                      label: "Estadio Nocturno",
+                      sub: "Azul medianoche profundo",
+                      swatch: "linear-gradient(135deg,#0a0f1e,#1e2b55)",
+                    },
+                    {
+                      id: "club_duel",
+                      label: "Duelo de Clubes",
+                      sub: "Colores de los equipos",
+                      swatch: `linear-gradient(120deg,${
+                        ALL_TEAMS[awayCode]?.color || "#b3161a"
+                      } 50%,${ALL_TEAMS[homeCode]?.color || "#121734"} 50%)`,
+                    },
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setBackgroundTheme(t.id as BackgroundTheme)}
+                      className={optionBtn(backgroundTheme === t.id)}
+                    >
+                      <div
+                        className="h-6 w-full rounded-md mb-1.5 border border-black/10 shadow-2xs"
+                        style={{ background: t.swatch }}
+                      />
+                      <div className="text-xs font-semibold">{t.label}</div>
+                      <div className="text-[9px] text-slate-500 mt-0.5">{t.sub}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Estilo de los Escudos */}
+              <div className="border-t border-slate-100 pt-3">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">
+                  Tratamiento de los Escudos
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: "floating_shield", label: "Escudo Flotante", sub: "Oficial con sombra 3D" },
+                    { id: "pearl_medallion", label: "Medallón Perla", sub: "Base blanca perlada" },
+                    { id: "mascot_color", label: "Mascota HD", sub: "Sobre color del club" },
+                  ].map((st) => (
+                    <button
+                      key={st.id}
+                      type="button"
+                      onClick={() => setMedallionStyle(st.id as MedallionStyleMode)}
+                      className={optionBtn(medallionStyle === st.id)}
+                    >
+                      <div className="text-xs font-semibold">{st.label}</div>
+                      <div className="text-[9px] text-slate-500 mt-0.5">{st.sub}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Toggles Visuales */}
+              <div className="border-t border-slate-100 pt-3 space-y-2.5">
+                <label className="flex items-center gap-2.5 text-xs font-medium text-slate-700 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={showLeagueLogo}
                     onChange={(e) => setShowLeagueLogo(e.target.checked)}
-                    className="w-4 h-4 rounded accent-rose-600"
+                    className="w-4 h-4 rounded border-slate-300 accent-rose-600 cursor-pointer"
                   />
-                  <img
-                    src={cardLeague === "mlb" ? "/logos/mlb.svg" : "/logos/lvbp-official.png"}
-                    alt={cardLeague.toUpperCase()}
-                    className="w-5 h-5 object-contain"
-                  />
-                  <span>Incluir logo oficial {cardLeague === "mlb" ? "MLB" : "LVBP"} en el banner</span>
+                  <span>Incluir logo oficial {cardLeague === "mlb" ? "MLB" : "LVBP"} en la cabecera del arte</span>
                 </label>
-              </div>
-            </div>
-          </section>
 
-          {/* 2. GAME, STADIUM & TV CHANNELS */}
-          <section className="rounded-2xl bg-white border border-slate-200 p-5 shadow-2xs space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-sm font-black text-slate-950 flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-rose-600" />
-                <span>3. Partido, Estadio y Canales de TV ({cardLeague.toUpperCase()})</span>
-              </h3>
-              <button
-                type="button"
-                onClick={() => fetchSchedule(cardLeague)}
-                className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${loadingGames ? "animate-spin" : ""}`} />
-                <span>Cargar calendario {cardLeague.toUpperCase()}</span>
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                  Fecha de la Jornada
-                </label>
-                <select
-                  value={selectedDate}
-                  onChange={(e) => {
-                    const nextDate = e.target.value;
-                    setSelectedDate(nextDate);
-                    const firstInDate = allGames.find((g) => g.date === nextDate);
-                    if (firstInDate) selectGame(firstInDate);
-                  }}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900"
-                >
-                  {availableDates.length === 0 && (
-                    <option value={selectedDate}>{selectedDate}</option>
-                  )}
-                  {availableDates.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                  Juegos del Día ({gamesForDate.length})
-                </label>
-                <div className="flex flex-wrap gap-1.5">
-                  {gamesForDate.map((g) => (
-                    <button
-                      key={g.id}
-                      type="button"
-                      onClick={() => selectGame(g)}
-                      className={`px-2.5 py-1.5 rounded-lg text-xs font-black border transition cursor-pointer ${
-                        selectedGameId === g.id
-                          ? "bg-rose-600 text-white border-rose-600"
-                          : "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300"
-                      }`}
-                    >
-                      {g.awayTeam.code} {g.awayScore}-{g.homeScore} {g.homeTeam.code}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-4 pt-1">
-              <label className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showVenueAndTv}
-                  onChange={(e) => setShowVenueAndTv(e.target.checked)}
-                  className="rounded border-slate-300"
-                />
-                <span>Mostrar Estadio y Canales de TV en el arte</span>
-              </label>
-
-              {templateMode !== "slate_all" && (
-                <label className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 cursor-pointer">
+                <label className="flex items-center gap-2.5 text-xs font-medium text-slate-700 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={showTeamNames}
-                    onChange={(e) => setShowTeamNames(e.target.checked)}
-                    className="rounded border-slate-300"
+                    checked={showVenueAndTv}
+                    onChange={(e) => setShowVenueAndTv(e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-300 accent-rose-600 cursor-pointer"
                   />
-                  <span>Mostrar nombres de equipos</span>
+                  <span>Mostrar cintillo de Estadio y Canales de TV</span>
                 </label>
-              )}
-            </div>
 
-            {templateMode !== "slate_all" ? (
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 items-end">
-                  <div className="sm:col-span-2">
-                    <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                      Equipo Visitante (Izquierda)
-                    </label>
-                    <select
-                      value={awayCode}
-                      onChange={(e) => setAwayCode(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900"
-                    >
-                      {activeTeamList.map((t) => (
-                        <option key={t.code} value={t.code}>
-                          {t.name} ({t.code})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                      Carreras Izq.
-                    </label>
+                {templateMode !== "slate_all" && (
+                  <label className="flex items-center gap-2.5 text-xs font-medium text-slate-700 cursor-pointer">
                     <input
-                      type="number"
-                      min={0}
-                      max={99}
-                      value={awayScore}
-                      onChange={(e) => setAwayScore(Math.max(0, Number(e.target.value) || 0))}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm font-black text-center text-slate-950"
+                      type="checkbox"
+                      checked={showTeamNames}
+                      onChange={(e) => setShowTeamNames(e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-300 accent-rose-600 cursor-pointer"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                      Carreras Der.
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={99}
-                      value={homeScore}
-                      onChange={(e) => setHomeScore(Math.max(0, Number(e.target.value) || 0))}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm font-black text-center text-slate-950"
-                    />
-                  </div>
-                  <div className="col-span-2 sm:col-span-1">
-                    <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                      Centro / Hora
-                    </label>
-                    <input
-                      type="text"
-                      value={statusPillText}
-                      onChange={(e) => setStatusPillText(e.target.value)}
-                      placeholder="FINAL / 7:00 PM"
-                      className="w-full px-2.5 py-2 rounded-xl border border-slate-300 bg-white text-xs font-black text-center text-slate-900"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                      Equipo Home Club (Derecha)
-                    </label>
-                    <select
-                      value={homeCode}
-                      onChange={(e) => {
-                        const code = e.target.value;
-                        setHomeCode(code);
-                        const meta = ALL_TEAMS[code];
-                        if (meta) {
-                          setVenueText(`${meta.venue} · ${meta.venueCity}`);
-                        }
-                      }}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900"
-                    >
-                      {activeTeamList.map((t) => (
-                        <option key={t.code} value={t.code}>
-                          {t.name} ({t.code})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                      📍 Estadio (Sede del Juego)
-                    </label>
-                    <input
-                      type="text"
-                      value={venueText}
-                      onChange={(e) => setVenueText(e.target.value)}
-                      placeholder="Ej. Estadio Monumental Simón Bolívar · Caracas"
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900"
-                    />
-                  </div>
-                </div>
-
-                {/* TV CHANNELS INPUT + QUICK PICK CHIPS */}
-                <div className="space-y-2 pt-1">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <label className="block text-[11px] font-bold text-slate-600">
-                      📺 Canales que transmiten el juego (haz clic para activar/quitar)
-                    </label>
-                  </div>
-
-                  <div className="flex flex-wrap gap-1.5">
-                    {VENEZUELA_TV_CHANNELS.map((ch) => {
-                      const active = tvChannelsText
-                        .toLowerCase()
-                        .split(/[·,|/]/)
-                        .map((s) => s.trim())
-                        .includes(ch.toLowerCase());
-                      return (
-                        <button
-                          key={ch}
-                          type="button"
-                          onClick={() => toggleTvChannelChip(ch)}
-                          className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold border transition cursor-pointer ${
-                            active
-                              ? "bg-slate-900 text-white border-slate-900"
-                              : "bg-white hover:bg-slate-100 text-slate-700 border-slate-300"
-                          }`}
-                        >
-                          {active ? `✓ ${ch}` : `+ ${ch}`}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <input
-                    type="text"
-                    value={tvChannelsText}
-                    onChange={(e) => setTvChannelsText(e.target.value)}
-                    placeholder="Ej. IVC · Televen · 1Baseball · BeisbolPlay"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900"
-                  />
-                </div>
-              </div>
-            ) : (
-              /* SLATE PER-GAME VENUE & TV EDITOR */
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                <div className="text-xs font-extrabold uppercase text-slate-600">
-                  Editar Estadio, Hora y TV de cada partido de la jornada
-                </div>
-                {gamesForDate.slice(0, 4).map((g) => {
-                  const ov = slateOverrides[g.id] || {};
-                  const homeMeta = ALL_TEAMS[g.homeTeam.code];
-                  const valVenue =
-                    ov.venue !== undefined
-                      ? ov.venue
-                      : g.venue || (homeMeta ? homeMeta.venue : "");
-                  const valTv =
-                    ov.tv !== undefined
-                      ? ov.tv
-                      : g.tvChannels && g.tvChannels.length > 0
-                        ? g.tvChannels.join(" · ")
-                        : g.tv || "BeisbolPlay";
-                  const valTime = ov.time !== undefined ? ov.time : g.time || "7:00 PM";
-
-                  return (
-                    <div
-                      key={g.id}
-                      className="p-3 rounded-xl bg-white border border-slate-200 space-y-2"
-                    >
-                      <div className="text-xs font-black text-slate-900">
-                        {g.awayTeam.name} ({g.awayTeam.code}) vs {g.homeTeam.name} (
-                        {g.homeTeam.code})
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-500">
-                            📍 Estadio
-                          </label>
-                          <input
-                            type="text"
-                            value={valVenue}
-                            onChange={(e) =>
-                              setSlateOverrides((prev) => ({
-                                ...prev,
-                                [g.id]: { ...prev[g.id], venue: e.target.value },
-                              }))
-                            }
-                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-bold"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-500">
-                            📺 Canales de TV
-                          </label>
-                          <input
-                            type="text"
-                            value={valTv}
-                            onChange={(e) =>
-                              setSlateOverrides((prev) => ({
-                                ...prev,
-                                [g.id]: { ...prev[g.id], tv: e.target.value },
-                              }))
-                            }
-                            placeholder="Ej. IVC · Televen"
-                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-bold"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-500">
-                            🕒 Hora
-                          </label>
-                          <input
-                            type="text"
-                            value={valTime}
-                            onChange={(e) =>
-                              setSlateOverrides((prev) => ({
-                                ...prev,
-                                [g.id]: { ...prev[g.id], time: e.target.value },
-                              }))
-                            }
-                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-bold"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                  Título Palabra 1
-                </label>
-                <input
-                  type="text"
-                  value={headlineWord1}
-                  onChange={(e) => setHeadlineWord1(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-black text-rose-700"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                  Título Palabra 2
-                </label>
-                <input
-                  type="text"
-                  value={headlineWord2}
-                  onChange={(e) => setHeadlineWord2(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-black text-slate-900"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                  Sello Centro L1 (Opcional)
-                </label>
-                <input
-                  type="text"
-                  value={centerBadgeLine1}
-                  onChange={(e) => setCenterBadgeLine1(e.target.value)}
-                  placeholder="Ej. SOY"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                  Sello Centro L2 (Opcional)
-                </label>
-                <input
-                  type="text"
-                  value={centerBadgeLine2}
-                  onChange={(e) => setCenterBadgeLine2(e.target.value)}
-                  placeholder="Ej. LARENSE"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold"
-                />
+                    <span>Mostrar nombres de los equipos debajo del escudo</span>
+                  </label>
+                )}
               </div>
             </div>
-          </section>
+          )}
 
-          {/* 3. SPONSOR */}
-          <section className="rounded-2xl bg-white border border-slate-200 p-5 shadow-2xs space-y-3">
-            <h3 className="text-sm font-black text-slate-950 flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-amber-500" />
-              <span>4. Patrocinador (&ldquo;Presentado por&rdquo;)</span>
-            </h3>
-
-            <div className="flex flex-wrap gap-2">
-              {[
-                { id: "campaign", label: `Usar anunciante del panel (${campaigns.length})` },
-                { id: "custom", label: "Subir logo de patrocinador" },
-                { id: "none", label: "Sin patrocinador" },
-              ].map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => setSponsorMode(opt.id as "campaign" | "custom" | "none")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border cursor-pointer ${
-                    sponsorMode === opt.id
-                      ? "bg-slate-900 text-white border-slate-900"
-                      : "bg-slate-50 text-slate-700 border-slate-200"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-
-            {sponsorMode !== "none" && (
-              <>
-                <div className="grid grid-cols-3 gap-2 pt-1">
+          {/* ─────────────────────────────────────────────────────────────
+              TAB 3: SPONSOR / "PRESENTADO POR"
+             ───────────────────────────────────────────────────────────── */}
+          {studioTab === "sponsor" && (
+            <div className="rounded-xl bg-white border border-slate-200/80 p-5 shadow-xs space-y-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">
+                  Origen del Patrocinador
+                </label>
+                <div className="grid grid-cols-3 gap-2">
                   {[
-                    { id: "floating", label: "Logo Limpio", sub: "Directo sobre el arte, sin caja" },
-                    { id: "adaptive_card", label: "Tarjeta Ajustada", sub: "Se adapta al tamaño del logo" },
-                    { id: "full_banner", label: "Banner Completo", sub: "Cintillo 970×90 inferior" },
+                    { id: "campaign", label: `Anunciante (${campaigns.length})`, desc: "Del panel admin" },
+                    { id: "custom", label: "Logo Personalizado", desc: "Subir imagen PNG/JPG" },
+                    { id: "none", label: "Sin Patrocinador", desc: "Arte limpio EnJuego" },
                   ].map((opt) => (
                     <button
                       key={opt.id}
                       type="button"
-                      onClick={() => setSponsorLayout(opt.id as SponsorDisplayLayout)}
-                      className={`p-2 rounded-xl border text-left transition cursor-pointer ${
-                        sponsorLayout === opt.id
-                          ? "bg-rose-50 border-rose-600 text-rose-950"
-                          : "bg-slate-50 border-slate-200 text-slate-700"
-                      }`}
+                      onClick={() => setSponsorMode(opt.id as "campaign" | "custom" | "none")}
+                      className={optionBtn(sponsorMode === opt.id)}
                     >
-                      <div className="text-[11px] font-black">{opt.label}</div>
-                      <div className="text-[9px] text-slate-500">{opt.sub}</div>
+                      <div className="text-xs font-semibold">{opt.label}</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">{opt.desc}</div>
                     </button>
                   ))}
                 </div>
-
-                {sponsorLayout !== "full_banner" && (
-                  <label className="inline-flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={removeSponsorWhite}
-                      onChange={(e) => setRemoveSponsorWhite(e.target.checked)}
-                      className="rounded border-slate-300"
-                    />
-                    <span>Quitar fondo blanco del logo automáticamente</span>
-                  </label>
-                )}
-              </>
-            )}
-
-            {sponsorMode === "campaign" && campaigns.length > 0 && (
-              <select
-                value={selectedCampaignId}
-                onChange={(e) => setSelectedCampaignId(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900"
-              >
-                {campaigns.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.companyName || c.name}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {sponsorMode === "custom" && (
-              <div className="flex flex-wrap items-center gap-3">
-                <label className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black cursor-pointer">
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>Subir logo PNG/JPG</span>
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    className="hidden"
-                    onChange={(e) => handleUploadSponsorLogo(e.target.files?.[0])}
-                  />
-                </label>
-                {customSponsorLogo && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCustomSponsorLogo("");
-                      try {
-                        window.localStorage.removeItem("enjuego_social_sponsor_logo");
-                      } catch {
-                        // ignore
-                      }
-                    }}
-                    className="text-xs font-bold text-slate-500 hover:text-rose-600 cursor-pointer"
-                  >
-                    Quitar logo
-                  </button>
-                )}
-                <input
-                  type="text"
-                  value={customSponsorName}
-                  onChange={(e) => {
-                    setCustomSponsorName(e.target.value);
-                    try {
-                      window.localStorage.setItem("enjuego_social_sponsor_name", e.target.value);
-                    } catch {
-                      // ignore
-                    }
-                  }}
-                  placeholder="Nombre (se usa si no hay logo)"
-                  className="px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold"
-                />
               </div>
-            )}
-          </section>
+
+              {sponsorMode !== "none" && (
+                <>
+                  <div className="border-t border-slate-100 pt-3">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">
+                      Estilo de Presentación
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { id: "floating", label: "Logo Limpio", sub: "Flotante sin caja" },
+                        { id: "adaptive_card", label: "Tarjeta Ajustada", sub: "Tarjeta con fondo sutil" },
+                        { id: "full_banner", label: "Banner Completo", sub: "Cintillo 970×90 en base" },
+                      ].map((opt) => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setSponsorLayout(opt.id as SponsorDisplayLayout)}
+                          className={optionBtn(sponsorLayout === opt.id)}
+                        >
+                          <div className="text-xs font-semibold">{opt.label}</div>
+                          <div className="text-[9px] text-slate-500 mt-0.5">{opt.sub}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {sponsorLayout !== "full_banner" && (
+                    <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer pt-1">
+                      <input
+                        type="checkbox"
+                        checked={removeSponsorWhite}
+                        onChange={(e) => setRemoveSponsorWhite(e.target.checked)}
+                        className="w-4 h-4 rounded border-slate-300 accent-rose-600 cursor-pointer"
+                      />
+                      <span>Remover fondo blanco del logo automáticamente</span>
+                    </label>
+                  )}
+                </>
+              )}
+
+              {sponsorMode === "campaign" && campaigns.length > 0 && (
+                <div className="border-t border-slate-100 pt-3">
+                  <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                    Seleccionar Anuncio del Panel
+                  </label>
+                  <select
+                    value={selectedCampaignId}
+                    onChange={(e) => setSelectedCampaignId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-900 shadow-2xs focus:outline-none focus:border-slate-900"
+                  >
+                    {campaigns.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.companyName || c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {sponsorMode === "custom" && (
+                <div className="border-t border-slate-100 pt-3 space-y-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium cursor-pointer transition shadow-2xs">
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Subir logo PNG/JPG</span>
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        className="hidden"
+                        onChange={(e) => handleUploadSponsorLogo(e.target.files?.[0])}
+                      />
+                    </label>
+                    {customSponsorLogo && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCustomSponsorLogo("");
+                          try {
+                            window.localStorage.removeItem("enjuego_social_sponsor_logo");
+                          } catch {
+                            // ignore
+                          }
+                        }}
+                        className="text-xs font-medium text-rose-600 hover:text-rose-700 cursor-pointer"
+                      >
+                        Quitar logo
+                      </button>
+                    )}
+                    <input
+                      type="text"
+                      value={customSponsorName}
+                      onChange={(e) => {
+                        setCustomSponsorName(e.target.value);
+                        try {
+                          window.localStorage.setItem("enjuego_social_sponsor_name", e.target.value);
+                        } catch {
+                          // ignore
+                        }
+                      }}
+                      placeholder="Nombre alternativo"
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-800 shadow-2xs"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* RIGHT PREVIEW */}
+        {/* RIGHT COLUMN: WORKBENCH CANVAS & ACTIONS (5 cols) */}
         <div className="lg:col-span-5 sticky top-20 space-y-4">
-          <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                <ImageIcon className="w-4 h-4 text-rose-600" />
-                Vista Previa en Tiempo Real
-              </span>
-              <span className="text-[11px] font-mono font-bold text-slate-400">
-                {sizeFormat === "story_9_16"
-                  ? "1080×1920"
-                  : sizeFormat === "square_1_1"
-                    ? "1080×1080"
-                    : "1080×1350"}{" "}
-                PNG
-              </span>
+          <div className="rounded-xl bg-slate-950 border border-slate-800 p-4 sm:p-5 shadow-xl text-white space-y-4">
+            {/* Top Toolbar */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="w-4 h-4 text-rose-500" />
+                <span className="text-xs font-semibold text-slate-200">
+                  Previsualización en Vivo
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700 tabular-nums">
+                  {sizeFormat === "story_9_16"
+                    ? "1080×1920 (9:16)"
+                    : sizeFormat === "square_1_1"
+                      ? "1080×1080 (1:1)"
+                      : "1080×1350 (4:5)"}
+                </span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" title="Sincronizado" />
+              </div>
             </div>
 
-            <div className="w-full rounded-xl overflow-hidden border border-slate-200 bg-slate-100 flex flex-col justify-center items-center p-2">
+            {/* Workbench Viewport */}
+            <div className="w-full rounded-lg overflow-hidden bg-slate-900/90 border border-slate-800/80 flex flex-col justify-center items-center p-3 relative min-h-[360px]">
+              {rendering && (
+                <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center z-10">
+                  <RefreshCw className="w-6 h-6 text-rose-500 animate-spin" />
+                </div>
+              )}
               <canvas
                 ref={canvasRef}
                 className={
                   previewDataUrl
                     ? "hidden"
-                    : "w-full max-w-[380px] h-auto rounded-lg shadow-md"
+                    : "w-full max-w-[340px] h-auto rounded-lg shadow-2xl ring-1 ring-white/10"
                 }
               />
               {previewDataUrl && (
                 <img
                   src={previewDataUrl}
                   alt="Arte Deportivo EnJuego"
-                  className="w-full max-w-[380px] h-auto rounded-lg shadow-md select-auto"
+                  className="w-full max-w-[340px] h-auto rounded-lg shadow-2xl ring-1 ring-white/10 select-auto transition-transform hover:scale-[1.01]"
                 />
               )}
-              <p className="text-[11px] text-slate-500 font-semibold mt-2 text-center sm:hidden">
-                💡 También puedes mantener presionada la imagen para guardarla en Fotos
-              </p>
             </div>
 
-            <div className="space-y-2.5">
+            {/* Actions Bar */}
+            <div className="space-y-2 pt-1">
               <button
                 type="button"
                 onClick={handleDownloadPng}
                 disabled={rendering || downloadingMobile}
-                className="w-full py-3.5 px-5 rounded-xl text-white font-black text-sm shadow-lg flex items-center justify-center gap-2 transition cursor-pointer active:scale-98 disabled:opacity-60"
+                className="w-full py-3 px-4 rounded-xl text-white font-semibold text-xs sm:text-sm shadow-md flex items-center justify-center gap-2 transition cursor-pointer active:scale-98 disabled:opacity-60"
                 style={{ background: "linear-gradient(135deg, #e11d48 0%, #be123c 100%)" }}
               >
                 <Download className="w-4 h-4" />
                 <span>
                   {downloadingMobile
-                    ? "Preparando PNG..."
-                    : "Descargar Arte en PNG (Alta Calidad)"}
+                    ? "Generando archivo..."
+                    : `Descargar PNG HD (${
+                        sizeFormat === "story_9_16"
+                          ? "1080×1920"
+                          : sizeFormat === "square_1_1"
+                            ? "1080×1080"
+                            : "1080×1350"
+                      })`}
                 </span>
               </button>
 
-              <button
-                type="button"
-                onClick={handleShareOrSaveMobile}
-                disabled={rendering || downloadingMobile}
-                className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs shadow-sm flex items-center justify-center gap-2 transition cursor-pointer active:scale-98 disabled:opacity-60 sm:hidden"
-              >
-                <Share2 className="w-4 h-4 text-amber-400" />
-                <span>Guardar en Fotos / Compartir (WhatsApp · IG)</span>
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopyImageToClipboard}
+                  className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-2xs"
+                  title="Copiar imagen al portapapeles para pegar directo en WhatsApp Web o Twitter"
+                >
+                  {copiedFeedback ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-emerald-300 font-bold">¡Copiado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Copiar Imagen</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleShareOrSaveMobile}
+                  disabled={rendering || downloadingMobile}
+                  className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-2xs"
+                >
+                  <Share2 className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Compartir</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

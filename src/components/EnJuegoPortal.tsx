@@ -12,6 +12,7 @@ import { TeamRosterView } from "@/components/TeamRosterView";
 import { BroadcastChannelsRow } from "@/components/BroadcastChannelsRow";
 import { AuthModal } from "@/components/AuthModal";
 import { AdBanner } from "@/components/AdBanner";
+import MlbPlayoffBracket from "@/components/MlbPlayoffBracket";
 import { UserProfile } from "@/lib/user-auth";
 import { getFallbackSchedule } from "@/lib/lvbp-fallback-data";
 import {
@@ -196,7 +197,8 @@ export function EnJuegoPortal({
     if (resolvedUrlTeam && MLB_TEAMS[resolvedUrlTeam.code]) return "mlb";
     return "lvbp";
   });
-  const [mlbStandingsFilter, setMlbStandingsFilter] = useState<"ALL" | "AL" | "NL">("ALL");
+  const [mlbStandingsFilter, setMlbStandingsFilter] = useState<"PLAYOFFS" | "ALL" | "AL" | "NL">("ALL");
+  const [showHomeMlbBracket, setShowHomeMlbBracket] = useState(false);
   const [openNavDropdown, setOpenNavDropdown] = useState<string | null>(null);
   const [mobileExpandedSection, setMobileExpandedSection] = useState<string | null>(null);
   const navMenuRef = useRef<HTMLElement>(null);
@@ -2316,48 +2318,32 @@ export function EnJuegoPortal({
             {/* 1. Pizarra de Juegos de la Jornada con Selector Limpio Arriba de la Jornada (Solo cambia la Jornada) */}
             <section className="space-y-4">
               <div className="flex flex-wrap items-end justify-between gap-3">
-                <div className="space-y-2">
-                  {/* Clean League Selector right above the Jornada title — ONLY changes Jornada games */}
-                  <div className="inline-flex items-center rounded-xl bg-white p-1 border border-slate-200 shadow-2xs">
-                    <button
-                      type="button"
-                      onClick={() => setJornadaLeague("lvbp")}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer flex items-center gap-1.5 ${
-                        jornadaLeague === "lvbp"
-                          ? "bg-amber-400 text-slate-950 shadow-2xs"
-                          : "text-slate-600 hover:text-slate-950"
-                      }`}
-                    >
-                      <span>🇻🇪</span>
-                      <span>Jornada LVBP</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setJornadaLeague("mlb")}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer flex items-center gap-1.5 ${
-                        jornadaLeague === "mlb"
-                          ? "bg-amber-400 text-slate-950 shadow-2xs"
-                          : "text-slate-600 hover:text-slate-950"
-                      }`}
-                    >
-                      <span>⚾</span>
-                      <span>Jornada MLB</span>
-                    </button>
-                  </div>
-
-                  <div>
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600 block">
-                      {jornadaLeague === "mlb"
-                        ? "⚾ Pizarra de Juegos · Grandes Ligas (MLB) 2026"
-                        : "🇻🇪 Pizarra de Juegos · Temporada LVBP 2026-2027"}
-                    </span>
-                    <h1 className="text-xl sm:text-2xl font-black text-slate-950 capitalize">
-                      {jornadaDayFormatted.fullLabel}
-                    </h1>
-                  </div>
+                <div>
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600 block">
+                    {jornadaLeague === "mlb"
+                      ? "⚾ Pizarra de Juegos · Grandes Ligas (MLB) 2026"
+                      : "🇻🇪 Pizarra de Juegos · Temporada LVBP 2026-2027"}
+                  </span>
+                  <h1 className="text-xl sm:text-2xl font-black text-slate-950 capitalize">
+                    {jornadaDayFormatted.fullLabel}
+                  </h1>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
+                  {jornadaLeague === "mlb" && (
+                    <button
+                      type="button"
+                      onClick={() => setShowHomeMlbBracket((v) => !v)}
+                      className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-extrabold transition cursor-pointer shadow-2xs ${
+                        showHomeMlbBracket
+                          ? "bg-amber-400 text-slate-950 border-amber-400"
+                          : "bg-white hover:bg-slate-50 border-slate-200 text-slate-800"
+                      }`}
+                    >
+                      <Trophy className="w-3.5 h-3.5 text-amber-600" />
+                      <span>{showHomeMlbBracket ? "Ocultar Postemporada" : "Cuadro Postemporada ›"}</span>
+                    </button>
+                  )}
                   <Link
                     href={`/calendario?liga=${jornadaLeague}`}
                     className="inline-flex items-center gap-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 px-3.5 py-2 text-xs font-extrabold transition cursor-pointer shadow-2xs"
@@ -2380,6 +2366,18 @@ export function EnJuegoPortal({
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {jornadaGamesOfDay.map((game) => renderScoreboardCard(game))}
+                </div>
+              )}
+
+              {jornadaLeague === "mlb" && showHomeMlbBracket && (
+                <div className="pt-2 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-base sm:text-lg font-black text-slate-950 flex items-center gap-2">
+                      <Trophy className="w-4 h-4 text-amber-600" />
+                      <span>Cuadro de Postemporada MLB 2026</span>
+                    </h2>
+                  </div>
+                  <MlbPlayoffBracket season={2026} />
                 </div>
               )}
             </section>
@@ -2828,6 +2826,22 @@ export function EnJuegoPortal({
                 {gamesOfDay.map((game) => renderScoreboardCard(game))}
               </div>
             )}
+
+            {activeLeague === "mlb" && (
+              <div className="pt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600 block">
+                      ⚾ Postemporada MLB 2026 · Rumbo a la Serie Mundial
+                    </span>
+                    <h2 className="text-lg sm:text-xl font-black text-slate-950">
+                      Cuadro de Postemporada (MLB)
+                    </h2>
+                  </div>
+                </div>
+                <MlbPlayoffBracket season={2026} />
+              </div>
+            )}
           </div>
         )}
 
@@ -3201,9 +3215,10 @@ export function EnJuegoPortal({
               </div>
 
               {activeLeague === "mlb" ? (
-                <div className="inline-flex rounded-xl bg-white p-1 border border-slate-200 shadow-2xs">
+                <div className="inline-flex flex-wrap rounded-xl bg-white p-1 border border-slate-200 shadow-2xs gap-0.5">
                   {(
                     [
+                      ["PLAYOFFS", "🏆 Postemporada"],
                       ["ALL", "6 Divisiones (30)"],
                       ["AL", "Liga Americana (AL)"],
                       ["NL", "Liga Nacional (NL)"],
@@ -3259,62 +3274,79 @@ export function EnJuegoPortal({
                 ))}
               </div>
             ) : activeLeague === "mlb" ? (
-              /* MLB: 6 SEPARATED DIVISIONAL TABLES (AL EAST, AL CENTRAL, AL WEST, NL EAST, NL CENTRAL, NL WEST) */
+              /* MLB: POSTSEASON BRACKET + 6 SEPARATED DIVISIONAL TABLES */
               <div className="space-y-6">
-                <div className="grid grid-cols-1 gap-6">
-                  {(
-                    [
-                      {
-                        divCode: "AL East",
-                        league: "AL",
-                        title: "Liga Americana · División Este",
-                        badge: "AL ESTE",
-                        accent: "bg-sky-50 border-sky-200 text-sky-800",
-                      },
-                      {
-                        divCode: "AL Central",
-                        league: "AL",
-                        title: "Liga Americana · División Central",
-                        badge: "AL CENTRAL",
-                        accent: "bg-sky-50 border-sky-200 text-sky-800",
-                      },
-                      {
-                        divCode: "AL West",
-                        league: "AL",
-                        title: "Liga Americana · División Oeste",
-                        badge: "AL OESTE",
-                        accent: "bg-sky-50 border-sky-200 text-sky-800",
-                      },
-                      {
-                        divCode: "NL East",
-                        league: "NL",
-                        title: "Liga Nacional · División Este",
-                        badge: "NL ESTE",
-                        accent: "bg-indigo-50 border-indigo-200 text-indigo-800",
-                      },
-                      {
-                        divCode: "NL Central",
-                        league: "NL",
-                        title: "Liga Nacional · División Central",
-                        badge: "NL CENTRAL",
-                        accent: "bg-indigo-50 border-indigo-200 text-indigo-800",
-                      },
-                      {
-                        divCode: "NL West",
-                        league: "NL",
-                        title: "Liga Nacional · División Oeste",
-                        badge: "NL OESTE",
-                        accent: "bg-indigo-50 border-indigo-200 text-indigo-800",
-                      },
-                    ] as const
-                  )
-                    .filter((div) =>
-                      mlbStandingsFilter === "ALL" ? true : div.league === mlbStandingsFilter
+                {(mlbStandingsFilter === "PLAYOFFS" || mlbStandingsFilter === "ALL") && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600 block">
+                          ⚾ Postemporada MLB 2026 · Comodines, Serie Divisional, Campeonato y Serie Mundial
+                        </span>
+                        <h2 className="text-lg sm:text-xl font-black text-slate-950">
+                          Cuadro de Postemporada (MLB 2026)
+                        </h2>
+                      </div>
+                    </div>
+                    <MlbPlayoffBracket season={2026} />
+                  </div>
+                )}
+
+                {mlbStandingsFilter !== "PLAYOFFS" && (
+                  <div className="grid grid-cols-1 gap-6">
+                    {(
+                      [
+                        {
+                          divCode: "AL East",
+                          league: "AL",
+                          title: "Liga Americana · División Este",
+                          badge: "AL ESTE",
+                          accent: "bg-sky-50 border-sky-200 text-sky-800",
+                        },
+                        {
+                          divCode: "AL Central",
+                          league: "AL",
+                          title: "Liga Americana · División Central",
+                          badge: "AL CENTRAL",
+                          accent: "bg-sky-50 border-sky-200 text-sky-800",
+                        },
+                        {
+                          divCode: "AL West",
+                          league: "AL",
+                          title: "Liga Americana · División Oeste",
+                          badge: "AL OESTE",
+                          accent: "bg-sky-50 border-sky-200 text-sky-800",
+                        },
+                        {
+                          divCode: "NL East",
+                          league: "NL",
+                          title: "Liga Nacional · División Este",
+                          badge: "NL ESTE",
+                          accent: "bg-indigo-50 border-indigo-200 text-indigo-800",
+                        },
+                        {
+                          divCode: "NL Central",
+                          league: "NL",
+                          title: "Liga Nacional · División Central",
+                          badge: "NL CENTRAL",
+                          accent: "bg-indigo-50 border-indigo-200 text-indigo-800",
+                        },
+                        {
+                          divCode: "NL West",
+                          league: "NL",
+                          title: "Liga Nacional · División Oeste",
+                          badge: "NL OESTE",
+                          accent: "bg-indigo-50 border-indigo-200 text-indigo-800",
+                        },
+                      ] as const
                     )
-                    .map((div) => {
-                      const divRows = standings
-                        .filter((r) => (r.division || MLB_TEAMS[r.team.code]?.division) === div.divCode)
-                        .sort((a, b) => Number(b.pct) - Number(a.pct) || b.wins - a.wins);
+                      .filter((div) =>
+                        mlbStandingsFilter === "ALL" ? true : div.league === mlbStandingsFilter
+                      )
+                      .map((div) => {
+                        const divRows = standings
+                          .filter((r) => (r.division || MLB_TEAMS[r.team.code]?.division) === div.divCode)
+                          .sort((a, b) => Number(b.pct) - Number(a.pct) || b.wins - a.wins);
 
                       return (
                         <div
@@ -3421,7 +3453,8 @@ export function EnJuegoPortal({
                         </div>
                       );
                     })}
-                </div>
+                  </div>
+                )}
               </div>
             ) : standingsPhase !== "REGULAR" ? (
               <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center space-y-2 shadow-xs">

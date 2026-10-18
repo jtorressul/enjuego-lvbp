@@ -3,7 +3,7 @@
   "name": "En Juego · Béisbol en Vivo",
   "short_name": "EnJuego",
   "description": "Marcadores en vivo, jugada a jugada, posiciones y transmisiones de la LVBP y MLB",
-  "start_url": "/",
+  "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",

@@ -12,6 +12,7 @@ import { TeamRosterView } from "@/components/TeamRosterView";
 import { BroadcastChannelsRow } from "@/components/BroadcastChannelsRow";
 import { AuthModal } from "@/components/AuthModal";
 import { PwaInstallModal } from "@/components/pwa/PwaInstallModal";
+import { PwaOnboardingModal } from "@/components/pwa/PwaOnboardingModal";
 import { AdBanner } from "@/components/AdBanner";
 import MlbPlayoffBracket from "@/components/MlbPlayoffBracket";
 import { ShareGameBannerModal } from "@/components/ShareGameBannerModal";
@@ -247,6 +248,7 @@ export function EnJuegoPortal({
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState<"quick" | "login" | "register" | "profile">("quick");
   const [pwaModalOpen, setPwaModalOpen] = useState(false);
+  const [pwaOnboardingOpen, setPwaOnboardingOpen] = useState(false);
 
   const switchLeague = (nextLeague: "lvbp" | "mlb") => {
     setActiveLeague((prev) => {
@@ -338,6 +340,18 @@ export function EnJuegoPortal({
           }
         }
       }
+
+      // Check PWA launch mode (?source=pwa or standalone display mode)
+      const urlParams = new URLSearchParams(window.location.search);
+      const isPwa =
+        urlParams.get("source") === "pwa" ||
+        (window.navigator as any).standalone === true ||
+        window.matchMedia("(display-mode: standalone)").matches;
+
+      const hasOnboarded = localStorage.getItem("enjuego_pwa_onboarded");
+      if (isPwa && !hasOnboarded && !storedUser) {
+        setPwaOnboardingOpen(true);
+      }
     } catch {
       // ignore
     }
@@ -406,6 +420,17 @@ export function EnJuegoPortal({
         setPostAuthor(updated.name);
       }
     }
+  };
+
+  const handlePwaOnboardingComplete = (user: UserProfile, chosenLeague: "lvbp" | "mlb") => {
+    handleUserUpdate(user);
+    if (chosenLeague !== activeLeague) {
+      switchLeague(chosenLeague);
+    }
+    if (user.favoriteTeam) {
+      setSelectedTeamCode(user.favoriteTeam);
+    }
+    setPwaOnboardingOpen(false);
   };
 
   const mapServerPosts = (posts: any[]) =>
@@ -1521,18 +1546,6 @@ export function EnJuegoPortal({
                 </span>
               </button>
             )}
-
-            {/* PWA Install Button (Desktop) */}
-            <button
-              type="button"
-              onClick={() => setPwaModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-200 hover:text-white border text-xs font-bold transition cursor-pointer shadow-2xs hover:border-amber-400"
-              style={{ backgroundColor: "#0f172a", borderColor: "#1e293b" }}
-              title="Instalar App EnJuego en tu teléfono o PC"
-            >
-              <Smartphone className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden xl:inline">Instalar App</span>
-            </button>
           </div>
 
           {/* Mobile & Tablet Right Controls (<1024px): Perfectly Fitted Touch Buttons */}
@@ -3755,6 +3768,13 @@ export function EnJuegoPortal({
       <PwaInstallModal
         isOpen={pwaModalOpen}
         onClose={() => setPwaModalOpen(false)}
+      />
+
+      {/* PWA Onboarding Modal (Automatic on App Launch) */}
+      <PwaOnboardingModal
+        isOpen={pwaOnboardingOpen}
+        onClose={() => setPwaOnboardingOpen(false)}
+        onComplete={handlePwaOnboardingComplete}
       />
 
       {/* Share Game Official Banner Modal (Previa, En Vivo, Resultado Final) */}

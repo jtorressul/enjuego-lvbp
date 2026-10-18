@@ -2118,8 +2118,9 @@ export function EnJuegoPortal({
         </div>
       )}
 
-      {/* SCORE STRIP / TICKER BAR (SINGLE COMPACT HORIZONTAL ROW ON MOBILE & DESKTOP) */}
-      <section className="border-b border-slate-200 bg-slate-50/90">
+      {/* SCORE STRIP / TICKER BAR (SINGLE COMPACT HORIZONTAL ROW ON MOBILE & DESKTOP - HIDDEN IN GAMEDAY) */}
+      {section !== "juego" && (
+        <section className="border-b border-slate-200 bg-slate-50/90">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 flex items-center gap-2">
           {/* Date Selector Box with League Selector right above the Jornada */}
           <div className="flex flex-col items-center justify-center bg-white border border-slate-200 rounded-xl px-1.5 sm:px-2.5 py-1 shrink-0 shadow-2xs">
@@ -2132,13 +2133,11 @@ export function EnJuegoPortal({
                     setJornadaLeague("lvbp");
                   } else {
                     switchLeague("lvbp");
-                    if (section !== "juego") {
-                      router.push(
-                        section === "equipos"
-                          ? "/teams?team=leones&liga=lvbp"
-                          : `/${section}?liga=lvbp`
-                      );
-                    }
+                    router.push(
+                      section === "equipos"
+                        ? "/teams?team=leones&liga=lvbp"
+                        : `/${section}?liga=lvbp`
+                    );
                   }
                 }}
                 className={`flex-1 px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-black uppercase transition cursor-pointer flex items-center justify-center gap-1 ${
@@ -2158,13 +2157,11 @@ export function EnJuegoPortal({
                     setJornadaLeague("mlb");
                   } else {
                     switchLeague("mlb");
-                    if (section !== "juego") {
-                      router.push(
-                        section === "equipos"
-                          ? "/teams?team=yankees&liga=mlb"
-                          : `/${section}?liga=mlb`
-                      );
-                    }
+                    router.push(
+                      section === "equipos"
+                        ? "/teams?team=yankees&liga=mlb"
+                        : `/${section}?liga=mlb`
+                    );
                   }
                 }}
                 className={`flex-1 px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-black uppercase transition cursor-pointer flex items-center justify-center gap-1 ${
@@ -2234,7 +2231,7 @@ export function EnJuegoPortal({
                     key={game.id}
                     href={`/juego/${game.id}`}
                     className={`flex items-center gap-3 rounded-xl px-3 py-1.5 border text-left shrink-0 transition cursor-pointer shadow-2xs ${
-                      selectedGameId === game.id && section === "juego"
+                      selectedGameId === game.id && (section as string) === "juego"
                         ? "bg-amber-50 border-amber-400"
                         : isLive
                           ? "bg-white border-red-300 hover:border-red-400"
@@ -2297,6 +2294,7 @@ export function EnJuegoPortal({
           </div>
         </div>
       </section>
+      )}
 
       {/* MAIN CONTENT CONTAINER */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 pt-3 sm:pt-4 pb-28 md:pb-10">

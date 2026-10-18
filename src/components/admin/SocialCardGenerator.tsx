@@ -84,16 +84,14 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
   >({});
 
   // Sponsor ("Presentado por:")
-  const [sponsorMode, setSponsorMode] = useState<"campaign" | "custom" | "none">(
-    campaigns.length > 0 ? "campaign" : "custom"
-  );
+  const [sponsorMode, setSponsorMode] = useState<"campaign" | "custom" | "none">("none");
   const [sponsorLayout, setSponsorLayout] = useState<SponsorDisplayLayout>("floating");
   const [removeSponsorWhite, setRemoveSponsorWhite] = useState<boolean>(true);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>(
     campaigns[0]?.id || ""
   );
   const [customSponsorLogo, setCustomSponsorLogo] = useState<string>("");
-  const [customSponsorName, setCustomSponsorName] = useState<string>("TuZapp");
+  const [customSponsorName, setCustomSponsorName] = useState<string>("");
   const [rendering, setRendering] = useState<boolean>(false);
   const [previewDataUrl, setPreviewDataUrl] = useState<string>("");
   const [downloadingMobile, setDownloadingMobile] = useState<boolean>(false);
@@ -139,7 +137,6 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
   useEffect(() => {
     if (campaigns.length > 0 && !selectedCampaignId) {
       setSelectedCampaignId(campaigns[0].id);
-      setSponsorMode("campaign");
     }
   }, [campaigns, selectedCampaignId]);
 

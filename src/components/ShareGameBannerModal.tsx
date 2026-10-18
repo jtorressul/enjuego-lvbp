@@ -37,30 +37,6 @@ export function ShareGameBannerModal({ game, onClose }: ShareGameBannerModalProp
   const [downloading, setDownloading] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  // Active sponsor from /api/banners so shared banners include the portal sponsor
-  const [sponsorImageUrl, setSponsorImageUrl] = useState("");
-  const [sponsorLabel, setSponsorLabel] = useState("");
-
-  useEffect(() => {
-    if (!game) return;
-    let active = true;
-    fetch("/api/banners", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((data) => {
-        if (!active) return;
-        const campaigns = Array.isArray(data?.campaigns) ? data.campaigns : [];
-        const activeCamp = campaigns.find((c: any) => c.active && c.imageUrl) || campaigns[0];
-        if (activeCamp?.imageUrl) {
-          setSponsorImageUrl(activeCamp.imageUrl);
-          setSponsorLabel(activeCamp.companyName || activeCamp.name || "");
-        }
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, [game]);
-
   const detectedLeague: "lvbp" | "mlb" =
     game && (MLB_TEAMS[game.awayTeam.code] || MLB_TEAMS[game.homeTeam.code]) ? "mlb" : "lvbp";
 
@@ -134,11 +110,11 @@ export function ShareGameBannerModal({ game, onClose }: ShareGameBannerModalProp
           slateOverrides: {},
           centerBadgeLine1: "",
           centerBadgeLine2: "",
-          sponsorMode: sponsorImageUrl ? "campaign" : "none",
+          sponsorMode: "none",
           sponsorLayout: "floating",
           removeSponsorWhite: true,
-          activeSponsorImageUrl: sponsorImageUrl,
-          activeSponsorLabel: sponsorLabel,
+          activeSponsorImageUrl: "",
+          activeSponsorLabel: "",
           league: detectedLeague,
           showLeagueLogo: true,
         },
@@ -177,8 +153,6 @@ export function ShareGameBannerModal({ game, onClose }: ShareGameBannerModalProp
     headlineWord2,
     statusPillText,
     detectedLeague,
-    sponsorImageUrl,
-    sponsorLabel,
   ]);
 
   useEffect(() => {

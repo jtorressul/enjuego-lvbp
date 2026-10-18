@@ -2233,10 +2233,7 @@ export function EnJuegoPortal({
       </section>
 
       {/* MAIN CONTENT CONTAINER */}
-      <main
-        key={`${section}-${activeDate}-${selectedGameId}-${selectedTeamCode}`}
-        className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 pt-3 sm:pt-4 pb-28 md:pb-10 animate-view-enter"
-      >
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 pt-3 sm:pt-4 pb-28 md:pb-10">
         {/* TOP LEADERBOARD SPONSOR BANNER (PRO STYLE) */}
         <div className="mb-4 sm:mb-5">
           <AdBanner slot="top-leaderboard" />

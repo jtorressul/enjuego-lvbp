@@ -192,6 +192,7 @@ export function GamedayView({
 
   // Radio state
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  const currentPlayingUrlRef = React.useRef<string>("");
   const [radioPlaying, setRadioPlaying] = useState(false);
   const [radioTeam, setRadioTeam] = useState<"away" | "home">("home");
   const [selectedStationId, setSelectedStationId] = useState<string>("");
@@ -350,12 +351,28 @@ export function GamedayView({
     if (!audio) return;
 
     if (!radioPlaying) {
-      audio.pause();
+      if (!audio.paused) {
+        audio.pause();
+      }
+      currentPlayingUrlRef.current = "";
       setAudioBuffering(false);
       return;
     }
 
-    if (effectiveStreamUrl) {
+    if (!effectiveStreamUrl) {
+      if (!audio.paused) {
+        audio.pause();
+      }
+      currentPlayingUrlRef.current = "";
+      setAudioBuffering(false);
+      setAudioError(false);
+      return;
+    }
+
+    // Only assign audio.src and invoke audio.load() when the stream URL actually changes!
+    // Never restart or reload an ongoing stream on background score/status polling re-renders.
+    if (currentPlayingUrlRef.current !== effectiveStreamUrl) {
+      currentPlayingUrlRef.current = effectiveStreamUrl;
       setAudioBuffering(true);
       setAudioError(false);
       audio.src = effectiveStreamUrl;
@@ -371,11 +388,19 @@ export function GamedayView({
           setAudioBuffering(false);
           setAudioError(true);
         });
-    } else {
-      setAudioBuffering(false);
-      setAudioError(false);
+    } else if (audio.paused) {
+      audio
+        .play()
+        .then(() => {
+          setAudioBuffering(false);
+        })
+        .catch((err) => {
+          console.warn("Direct stream playback resume failed:", err);
+          setAudioBuffering(false);
+          setAudioError(true);
+        });
     }
-  }, [radioPlaying, effectiveStreamUrl, isMuted, radioVolume]);
+  }, [radioPlaying, effectiveStreamUrl]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -387,7 +412,9 @@ export function GamedayView({
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
+        audioRef.current.src = "";
       }
+      currentPlayingUrlRef.current = "";
     };
   }, [gameId]);
 
@@ -1798,6 +1825,7 @@ export function GamedayView({
                 setAudioError(false);
               }}
               onError={() => {
+                if (!radioPlaying) return;
                 setAudioBuffering(false);
                 setAudioError(true);
               }}

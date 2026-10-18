@@ -190,6 +190,8 @@ export function EnJuegoPortal({
     return "lvbp";
   });
   const [mlbStandingsFilter, setMlbStandingsFilter] = useState<"ALL" | "AL" | "NL">("ALL");
+  const [openNavDropdown, setOpenNavDropdown] = useState<string | null>(null);
+  const navMenuRef = useRef<HTMLElement>(null);
 
   const activeTeamsCatalog = useMemo(
     () => (activeLeague === "mlb" ? MLB_TEAMS : LVBP_TEAMS),
@@ -229,11 +231,13 @@ export function EnJuegoPortal({
   const [authModalTab, setAuthModalTab] = useState<"quick" | "login" | "register" | "profile">("quick");
 
   const switchLeague = (nextLeague: "lvbp" | "mlb") => {
-    if (nextLeague === activeLeague) return;
     setActiveLeague(nextLeague);
     setTeamFilter("");
     setUserSelectedDateManually(false);
-    setSelectedTeamCode(nextLeague === "mlb" ? "NYY" : "CAR");
+    setSelectedTeamCode((prev) => {
+      if (nextLeague === "mlb") return MLB_TEAMS[prev] ? prev : "NYY";
+      return LVBP_TEAMS[prev] ? prev : "CAR";
+    });
     try {
       localStorage.setItem("enjuego_active_league", nextLeague);
     } catch {
@@ -241,9 +245,15 @@ export function EnJuegoPortal({
     }
   };
 
+  // Sync activeLeague immediately whenever URL ?liga=lvbp|mlb changes
   useEffect(() => {
+    const qLeague = (searchParams?.get("liga") || searchParams?.get("league") || "").toLowerCase();
+    if (qLeague === "mlb" || qLeague === "lvbp") {
+      switchLeague(qLeague);
+    }
     setMobileDrawerOpen(false);
     setTeamsDropdownOpen(false);
+    setOpenNavDropdown(null);
   }, [pathname, searchParams]);
 
   useEffect(() => {
@@ -252,25 +262,28 @@ export function EnJuegoPortal({
       const inDesktop = teamsDropdownRef.current?.contains(target);
       const inMobileBtn = mobileTeamsButtonRef.current?.contains(target);
       const inMobileModal = mobileTeamsModalRef.current?.contains(target);
+      const inNavMenu = navMenuRef.current?.contains(target);
       if (!inDesktop && !inMobileBtn && !inMobileModal) {
         setTeamsDropdownOpen(false);
+      }
+      if (!inNavMenu) {
+        setOpenNavDropdown(null);
       }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setTeamsDropdownOpen(false);
         setMobileDrawerOpen(false);
+        setOpenNavDropdown(null);
       }
     };
-    if (teamsDropdownOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      document.addEventListener("keydown", handleKeyDown);
-    }
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [teamsDropdownOpen]);
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", "light");
@@ -388,54 +401,85 @@ export function EnJuegoPortal({
       myReaction: "",
     }));
 
-  const loadAllData = async () => {
-    try {
-      const [schRes, stdRes, commRes] = await Promise.all([
-        fetch(`/api/lvbp/schedule?season=2026&league=${activeLeague}`),
-        fetch(`/api/lvbp/standings?season=2026&league=${activeLeague}`),
-        fetch("/api/lvbp/interactive?mode=community", { cache: "no-store" }),
-      ]);
-      const schData = await schRes.json();
-      const stdData = await stdRes.json();
-      const commData = await commRes.json().catch(() => ({}));
-
-      const loadedGames: ScheduleGame[] = schData.games || [];
-      setSchedule(loadedGames);
-      setStandings(stdData.standings || []);
-      setLeaders(stdData.leaders || { hitting: [], pitching: [] });
-      if (Array.isArray(commData?.posts)) {
-        setCommunityPosts(mapServerPosts(commData.posts));
-      }
-
-      const uniqueDates = [...new Set(loadedGames.map((g) => g.date))].sort();
-      if (uniqueDates.length > 0) {
-        const paramDate = searchParams?.get("fecha") || searchParams?.get("date");
-        const todayIso = getTodayCaracasIso();
-        const liveGame = loadedGames.find((g) => g.status === "IN_PROGRESS");
-        // Prioritize: 1. URL parameter, 2. Live game date, 3. Today in Venezuela, 4. Nearest upcoming date
-        const targetIso = paramDate || (liveGame ? liveGame.date : todayIso);
-
-        let idx = uniqueDates.indexOf(targetIso);
-        if (idx === -1) {
-          idx = uniqueDates.findIndex((d) => d >= targetIso);
-        }
-        if (idx === -1) {
-          idx = Math.max(0, uniqueDates.length - 1);
-        }
-        setSelectedDateIndex((prev) => (userSelectedDateManually ? prev : idx));
-      }
-    } catch {
-      // ignore error
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    setLoading(true);
-    loadAllData();
-    const interval = setInterval(loadAllData, 20000);
-    return () => clearInterval(interval);
+    const controller = new AbortController();
+    const targetLeague = activeLeague;
+    const seasonParam = targetLeague === "mlb" ? "2025" : "2026";
+
+    const loadAllData = async (isInitial: boolean) => {
+      if (isInitial) setLoading(true);
+      try {
+        const [schRes, stdRes, commRes] = await Promise.all([
+          fetch(`/api/lvbp/schedule?season=${seasonParam}&league=${targetLeague}`, {
+            signal: controller.signal,
+          }),
+          fetch(`/api/lvbp/standings?season=${seasonParam}&league=${targetLeague}`, {
+            signal: controller.signal,
+          }),
+          fetch("/api/lvbp/interactive?mode=community", {
+            cache: "no-store",
+            signal: controller.signal,
+          }),
+        ]);
+        const schData = await schRes.json();
+        const stdData = await stdRes.json();
+        const commData = await commRes.json().catch(() => ({}));
+
+        if (controller.signal.aborted) return;
+
+        // Strictly filter games and standings by targetLeague so LVBP and MLB never mix
+        const rawGames: ScheduleGame[] = schData.games || [];
+        const loadedGames = rawGames.filter((g) =>
+          targetLeague === "mlb"
+            ? Boolean(MLB_TEAMS[g.homeTeam.code] || MLB_TEAMS[g.awayTeam.code])
+            : Boolean(LVBP_TEAMS[g.homeTeam.code] || LVBP_TEAMS[g.awayTeam.code])
+        );
+
+        const rawStandings: StandingRow[] = stdData.standings || [];
+        const cleanStandings = rawStandings.filter((r) =>
+          targetLeague === "mlb"
+            ? Boolean(MLB_TEAMS[r.team.code])
+            : Boolean(LVBP_TEAMS[r.team.code])
+        );
+
+        setSchedule(loadedGames);
+        setStandings(cleanStandings);
+        setLeaders(stdData.leaders || { hitting: [], pitching: [] });
+        if (Array.isArray(commData?.posts)) {
+          setCommunityPosts(mapServerPosts(commData.posts));
+        }
+
+        const uniqueDates = [...new Set(loadedGames.map((g) => g.date))].sort();
+        if (uniqueDates.length > 0) {
+          const paramDate = searchParams?.get("fecha") || searchParams?.get("date");
+          const todayIso = getTodayCaracasIso();
+          const liveGame = loadedGames.find((g) => g.status === "IN_PROGRESS");
+          const targetIso = paramDate || (liveGame ? liveGame.date : todayIso);
+
+          let idx = uniqueDates.indexOf(targetIso);
+          if (idx === -1) {
+            idx = uniqueDates.findIndex((d) => d >= targetIso);
+          }
+          if (idx === -1) {
+            idx = Math.max(0, uniqueDates.length - 1);
+          }
+          setSelectedDateIndex((prev) => (userSelectedDateManually ? prev : idx));
+        }
+      } catch {
+        // ignore abort or network error
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadAllData(true);
+    const interval = setInterval(() => loadAllData(false), 20000);
+    return () => {
+      controller.abort();
+      clearInterval(interval);
+    };
   }, [userSelectedDateManually, activeLeague]);
 
   const dates = useMemo(
@@ -988,73 +1032,189 @@ export function EnJuegoPortal({
                 <span style={{ color: "#ffffff" }}>.online</span>
               </span>
             </Link>
-
-            {/* LEAGUE SWITCHER PILL: LVBP 🇻🇪 | MLB ⚾ */}
-            <div
-              className="inline-flex items-center p-1 rounded-xl border shrink-0"
-              style={{ backgroundColor: "#0f172a", borderColor: "#1e293b" }}
-              role="group"
-              aria-label="Selector de Liga"
-            >
-              <button
-                type="button"
-                onClick={() => switchLeague("lvbp")}
-                className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-black transition cursor-pointer ${
-                  activeLeague === "lvbp"
-                    ? "bg-amber-400 text-slate-950 shadow-2xs"
-                    : "text-slate-300 hover:text-white"
-                }`}
-              >
-                <span>🇻🇪</span>
-                <span>LVBP</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => switchLeague("mlb")}
-                className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-black transition cursor-pointer ${
-                  activeLeague === "mlb"
-                    ? "bg-sky-400 text-slate-950 shadow-2xs"
-                    : "text-slate-300 hover:text-white"
-                }`}
-              >
-                <span>⚾</span>
-                <span>MLB</span>
-              </button>
-            </div>
           </div>
 
-          {/* Desktop Main Navigation with Real URLs (lg+ to match right controls) */}
+          {/* Desktop Main Navigation with Dropdowns per Section (LVBP / MLB) */}
           <nav
+            ref={navMenuRef}
             className="hidden lg:flex items-center gap-1 p-1.5 rounded-xl border border-slate-800"
             style={{ backgroundColor: "#0f172a", borderColor: "#1e293b" }}
             aria-label="Navegación Principal"
           >
+            {/* Inicio */}
+            <Link
+              href="/inicio"
+              onClick={() => setOpenNavDropdown(null)}
+              className={`px-3.5 py-2 rounded-lg text-xs font-black transition cursor-pointer ${
+                section === "home"
+                  ? "bg-amber-400 text-slate-950 shadow-2xs"
+                  : "text-slate-300 hover:text-white hover:bg-slate-800"
+              }`}
+            >
+              Inicio
+            </Link>
+
+            {/* Dropdown Menu Items: Resultados, Calendario, Posiciones, Líderes, Equipos */}
             {(
               [
-                ["home", "/inicio", "Inicio"],
-                ["resultados", "/resultados", "Resultados"],
-                ["calendario", "/calendario", "Calendario"],
-                ["posiciones", "/posiciones", "Posiciones"],
-                ["lideres", "/lideres", "Líderes"],
-                [
-                  "equipos",
-                  `/teams?team=${anyTeamsCatalog[selectedTeamCode]?.slug || (activeLeague === "mlb" ? "yankees" : "leones")}`,
-                  "Equipos",
-                ],
+                {
+                  key: "resultados",
+                  label: "Resultados",
+                  lvbpHref: "/resultados?liga=lvbp",
+                  mlbHref: "/resultados?liga=mlb",
+                  lvbpDesc: "Pizarra en vivo de Venezuela",
+                  mlbDesc: "Pizarra de Grandes Ligas",
+                },
+                {
+                  key: "calendario",
+                  label: "Calendario",
+                  lvbpHref: "/calendario?liga=lvbp",
+                  mlbHref: "/calendario?liga=mlb",
+                  lvbpDesc: "Juegos y canales TV LVBP",
+                  mlbDesc: "Juegos y canales TV MLB",
+                },
+                {
+                  key: "posiciones",
+                  label: "Posiciones",
+                  lvbpHref: "/posiciones?liga=lvbp",
+                  mlbHref: "/posiciones?liga=mlb",
+                  lvbpDesc: "Tabla Round Robin (8 clubes)",
+                  mlbDesc: "6 Divisiones Liga Americana y Nacional",
+                },
+                {
+                  key: "lideres",
+                  label: "Líderes",
+                  lvbpHref: "/lideres?liga=lvbp",
+                  mlbHref: "/lideres?liga=mlb",
+                  lvbpDesc: "Bateo y pitcheo LVBP",
+                  mlbDesc: "Bateo y pitcheo MLB",
+                },
+                {
+                  key: "equipos",
+                  label: "Equipos",
+                  lvbpHref: "/teams?team=leones&liga=lvbp",
+                  mlbHref: "/teams?team=yankees&liga=mlb",
+                  lvbpDesc: "8 franquicias y rosters LVBP",
+                  mlbDesc: "30 franquicias y rosters MLB",
+                },
               ] as const
-            ).map(([key, href, label]) => (
-              <Link
-                key={key}
-                href={href}
-                className={`px-3.5 py-2 rounded-lg text-xs font-black transition cursor-pointer ${
-                  section === key
-                    ? "bg-amber-400 text-slate-950 shadow-2xs"
-                    : "text-slate-300 hover:text-white hover:bg-slate-800"
-                }`}
-              >
-                {label}
-              </Link>
-            ))}
+            ).map((item) => {
+              const isCurrentSection = section === item.key;
+              const isOpen = openNavDropdown === item.key;
+
+              return (
+                <div
+                  key={item.key}
+                  className="relative"
+                  onMouseEnter={() => setOpenNavDropdown(item.key)}
+                  onMouseLeave={() =>
+                    setOpenNavDropdown((prev) => (prev === item.key ? null : prev))
+                  }
+                >
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOpenNavDropdown((prev) => (prev === item.key ? null : item.key))
+                    }
+                    className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-black transition cursor-pointer ${
+                      isCurrentSection
+                        ? "bg-amber-400 text-slate-950 shadow-2xs"
+                        : isOpen
+                          ? "bg-slate-800 text-white"
+                          : "text-slate-300 hover:text-white hover:bg-slate-800"
+                    }`}
+                    aria-expanded={isOpen}
+                  >
+                    <span>{item.label}</span>
+                    {isCurrentSection && (
+                      <span
+                        className={`px-1.5 py-0.2 rounded text-[9px] font-black uppercase ${
+                          isCurrentSection
+                            ? "bg-slate-950/15 text-slate-950"
+                            : "bg-slate-700 text-slate-200"
+                        }`}
+                      >
+                        {activeLeague.toUpperCase()}
+                      </span>
+                    )}
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 transition-transform duration-150 ${
+                        isOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {isOpen && (
+                    <div className="absolute left-0 top-full pt-2 w-64 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                      <div
+                        className="rounded-2xl bg-white border border-slate-200 shadow-2xl p-2 space-y-1 text-slate-900"
+                        style={{ backgroundColor: "#ffffff", color: "#0f172a" }}
+                      >
+                        <div className="px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                          {item.label} · Selecciona Liga
+                        </div>
+
+                        <Link
+                          href={item.lvbpHref}
+                          onClick={() => {
+                            switchLeague("lvbp");
+                            setOpenNavDropdown(null);
+                          }}
+                          className={`flex items-center justify-between gap-2.5 p-2.5 rounded-xl border transition cursor-pointer ${
+                            isCurrentSection && activeLeague === "lvbp"
+                              ? "bg-amber-50 border-amber-400 text-slate-950"
+                              : "bg-white hover:bg-slate-50 border-transparent hover:border-slate-200 text-slate-900"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="w-8 h-8 rounded-lg bg-amber-100 border border-amber-200 flex items-center justify-center text-base shrink-0">
+                              🇻🇪
+                            </span>
+                            <div className="min-w-0">
+                              <div className="text-xs font-black text-slate-950 leading-tight">
+                                {item.label} LVBP
+                              </div>
+                              <div className="text-[10px] font-semibold text-slate-500 truncate">
+                                {item.lvbpDesc}
+                              </div>
+                            </div>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-amber-600 shrink-0" />
+                        </Link>
+
+                        <Link
+                          href={item.mlbHref}
+                          onClick={() => {
+                            switchLeague("mlb");
+                            setOpenNavDropdown(null);
+                          }}
+                          className={`flex items-center justify-between gap-2.5 p-2.5 rounded-xl border transition cursor-pointer ${
+                            isCurrentSection && activeLeague === "mlb"
+                              ? "bg-sky-50 border-sky-400 text-slate-950"
+                              : "bg-white hover:bg-slate-50 border-transparent hover:border-slate-200 text-slate-900"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="w-8 h-8 rounded-lg bg-sky-100 border border-sky-200 flex items-center justify-center text-base shrink-0">
+                              ⚾
+                            </span>
+                            <div className="min-w-0">
+                              <div className="text-xs font-black text-slate-950 leading-tight">
+                                {item.label} MLB
+                              </div>
+                              <div className="text-[10px] font-semibold text-slate-500 truncate">
+                                {item.mlbDesc}
+                              </div>
+                            </div>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-sky-600 shrink-0" />
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </nav>
 
           {/* Desktop Right Quick Bar: Equipos Dropdown + Quick Icon Strip */}
@@ -1109,7 +1269,7 @@ export function EnJuegoPortal({
                       </p>
                     </div>
                     <Link
-                      href="/teams"
+                      href={`/teams?liga=${activeLeague}`}
                       onClick={() => setTeamsDropdownOpen(false)}
                       className="text-[11px] font-extrabold hover:underline"
                       style={{ color: "#d97706" }}
@@ -1125,7 +1285,7 @@ export function EnJuegoPortal({
                       return (
                         <Link
                           key={team.code}
-                          href={`/teams?team=${team.slug}`}
+                          href={`/teams?team=${team.slug}&liga=${activeLeague}`}
                           onClick={() => {
                             setSelectedTeamCode(team.code);
                             setTeamsDropdownOpen(false);
@@ -1320,7 +1480,7 @@ export function EnJuegoPortal({
               </div>
               <div className="flex items-center gap-2">
                 <Link
-                  href="/teams"
+                  href={`/teams?liga=${activeLeague}`}
                   onClick={() => setTeamsDropdownOpen(false)}
                   className="text-xs font-black text-amber-600 hover:text-amber-700 hover:underline px-1.5 py-0.5"
                 >
@@ -1344,7 +1504,7 @@ export function EnJuegoPortal({
                 return (
                   <Link
                     key={team.code}
-                    href={`/teams?team=${team.slug}`}
+                    href={`/teams?team=${team.slug}&liga=${activeLeague}`}
                     onClick={() => {
                       setSelectedTeamCode(team.code);
                       setTeamsDropdownOpen(false);
@@ -1431,36 +1591,6 @@ export function EnJuegoPortal({
 
             {/* Scrollable Drawer Body */}
             <div className="flex-1 overflow-y-auto overscroll-contain pb-10">
-            {/* League Switcher inside Mobile Drawer */}
-            <div className="px-4 pt-3.5 pb-1 bg-slate-50">
-              <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-900 border border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => switchLeague("lvbp")}
-                  className={`py-2 px-3 rounded-lg text-xs font-black flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                    activeLeague === "lvbp"
-                      ? "bg-amber-400 text-slate-950 shadow-2xs"
-                      : "text-slate-300 hover:text-white"
-                  }`}
-                >
-                  <span>🇻🇪</span>
-                  <span>LVBP Venezuela</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => switchLeague("mlb")}
-                  className={`py-2 px-3 rounded-lg text-xs font-black flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                    activeLeague === "mlb"
-                      ? "bg-sky-400 text-slate-950 shadow-2xs"
-                      : "text-slate-300 hover:text-white"
-                  }`}
-                >
-                  <span>⚾</span>
-                  <span>MLB Grandes Ligas</span>
-                </button>
-              </div>
-            </div>
-
             {/* Fan Profile / Login Card in Drawer */}
             <div className="p-4 bg-slate-50 border-b border-slate-200">
               {currentUser ? (
@@ -1569,44 +1699,114 @@ export function EnJuegoPortal({
               )}
             </div>
 
-            {/* Navigation Links */}
-            <div className="p-4 space-y-1.5 border-b border-slate-100">
-              <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 px-3 block mb-2">
-                Navegación Principal
+            {/* Navigation Links with LVBP / MLB Sub-options */}
+            <div className="p-4 space-y-2 border-b border-slate-100">
+              <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 px-2 block mb-2">
+                Navegación por Liga (LVBP · MLB)
               </span>
+
+              <Link
+                href="/inicio"
+                onClick={() => setMobileDrawerOpen(false)}
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-black transition ${
+                  section === "home"
+                    ? "bg-amber-400 text-slate-950 shadow-2xs"
+                    : "text-slate-800 hover:bg-slate-100"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Home className="w-4.5 h-4.5 text-amber-600" />
+                  <span>Inicio</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+              </Link>
+
               {(
                 [
-                  ["home", "/inicio", "Inicio", Home],
-                  ["resultados", "/resultados", "Resultados en Vivo", Activity],
-                  ["calendario", "/calendario", "Calendario y Canales TV", Calendar],
-                  ["posiciones", "/posiciones", "Tabla de Posiciones", Trophy],
-                  ["lideres", "/lideres", "Líderes y Estadísticas", BarChart3],
-                  [
-                    "equipos",
-                    `/teams?team=${anyTeamsCatalog[selectedTeamCode]?.slug || (activeLeague === "mlb" ? "yankees" : "leones")}`,
-                    "Equipos y Rosters",
-                    Users,
-                  ],
+                  {
+                    key: "resultados",
+                    label: "Resultados en Vivo",
+                    Icon: Activity,
+                    lvbpHref: "/resultados?liga=lvbp",
+                    mlbHref: "/resultados?liga=mlb",
+                  },
+                  {
+                    key: "calendario",
+                    label: "Calendario y Canales TV",
+                    Icon: Calendar,
+                    lvbpHref: "/calendario?liga=lvbp",
+                    mlbHref: "/calendario?liga=mlb",
+                  },
+                  {
+                    key: "posiciones",
+                    label: "Tabla de Posiciones",
+                    Icon: Trophy,
+                    lvbpHref: "/posiciones?liga=lvbp",
+                    mlbHref: "/posiciones?liga=mlb",
+                  },
+                  {
+                    key: "lideres",
+                    label: "Líderes y Estadísticas",
+                    Icon: BarChart3,
+                    lvbpHref: "/lideres?liga=lvbp",
+                    mlbHref: "/lideres?liga=mlb",
+                  },
+                  {
+                    key: "equipos",
+                    label: "Equipos y Rosters",
+                    Icon: Users,
+                    lvbpHref: "/teams?team=leones&liga=lvbp",
+                    mlbHref: "/teams?team=yankees&liga=mlb",
+                  },
                 ] as const
-              ).map(([key, href, label, Icon]) => {
+              ).map(({ key, label, Icon, lvbpHref, mlbHref }) => {
                 const active = section === key || (section === "juego" && key === "resultados");
                 return (
-                  <Link
+                  <div
                     key={key}
-                    href={href}
-                    onClick={() => setMobileDrawerOpen(false)}
-                    className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-black transition ${
+                    className={`rounded-2xl border p-2.5 space-y-2 transition ${
                       active
-                        ? "bg-amber-400 text-slate-950 shadow-2xs"
-                        : "text-slate-800 hover:bg-slate-100 hover:text-slate-950"
+                        ? "bg-amber-50/60 border-amber-300"
+                        : "bg-slate-50/70 border-slate-200/80"
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <Icon className="w-5 h-5 text-amber-600" />
+                    <div className="flex items-center gap-2.5 px-1 text-xs font-black text-slate-900">
+                      <Icon className="w-4 h-4 text-amber-600 shrink-0" />
                       <span>{label}</span>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-400" />
-                  </Link>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Link
+                        href={lvbpHref}
+                        onClick={() => {
+                          switchLeague("lvbp");
+                          setMobileDrawerOpen(false);
+                        }}
+                        className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-black border transition ${
+                          active && activeLeague === "lvbp"
+                            ? "bg-amber-400 text-slate-950 border-amber-400 shadow-2xs"
+                            : "bg-white text-slate-800 border-slate-200 hover:border-amber-400"
+                        }`}
+                      >
+                        <span>🇻🇪</span>
+                        <span>LVBP</span>
+                      </Link>
+                      <Link
+                        href={mlbHref}
+                        onClick={() => {
+                          switchLeague("mlb");
+                          setMobileDrawerOpen(false);
+                        }}
+                        className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-black border transition ${
+                          active && activeLeague === "mlb"
+                            ? "bg-sky-400 text-slate-950 border-sky-400 shadow-2xs"
+                            : "bg-white text-slate-800 border-slate-200 hover:border-sky-400"
+                        }`}
+                      >
+                        <span>⚾</span>
+                        <span>MLB</span>
+                      </Link>
+                    </div>
+                  </div>
                 );
               })}
             </div>
@@ -1911,13 +2111,13 @@ export function EnJuegoPortal({
                 </h2>
                 <div className="flex items-center gap-4">
                   <Link
-                    href="/lideres"
+                    href={`/lideres?liga=${activeLeague}`}
                     className="text-xs font-extrabold text-slate-600 hover:text-amber-600 cursor-pointer"
                   >
                     Ver todos los líderes ›
                   </Link>
                   <Link
-                    href="/posiciones"
+                    href={`/posiciones?liga=${activeLeague}`}
                     className="text-xs font-extrabold text-amber-600 hover:underline cursor-pointer"
                   >
                     Tabla completa ›
@@ -1954,14 +2154,16 @@ export function EnJuegoPortal({
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {standings.slice(0, 10).map((row, idx) => {
+                        {standings.slice(0, 8).map((row, idx) => {
                           const isFav = favoriteTeamCode === row.team.code;
                           const zoneDot =
-                            idx < 4
-                              ? "bg-emerald-500"
-                              : idx < 6
-                                ? "bg-amber-400"
-                                : "bg-slate-300";
+                            activeLeague === "mlb"
+                              ? "bg-sky-500"
+                              : idx < 4
+                                ? "bg-emerald-500"
+                                : idx < 6
+                                  ? "bg-amber-400"
+                                  : "bg-slate-300";
                           return (
                             <tr
                               key={row.team.code}
@@ -1998,8 +2200,11 @@ export function EnJuegoPortal({
 
                   <div className="pt-3 mt-2 border-t border-slate-100 flex flex-wrap items-center gap-3 text-[10px] font-bold text-slate-500">
                     {activeLeague === "mlb" ? (
-                      <Link href="/posiciones" className="text-amber-600 hover:underline font-extrabold">
-                        Ver las 30 franquicias y divisiones AL / NL ›
+                      <Link
+                        href="/posiciones?liga=mlb"
+                        className="text-amber-600 hover:underline font-extrabold"
+                      >
+                        Ver las 6 divisiones oficiales AL / NL ›
                       </Link>
                     ) : (
                       <>
@@ -2285,7 +2490,9 @@ export function EnJuegoPortal({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
-                  Pizarras C · H · E y Transmisiones TV
+                  {activeLeague === "mlb"
+                    ? "⚾ Grandes Ligas (MLB) · Pizarras C · H · E"
+                    : "🇻🇪 Béisbol Venezolano (LVBP) · Pizarras C · H · E"}
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-950">
                   Resultados de la {activeLeague === "mlb" ? "MLB" : "LVBP"}
@@ -2302,7 +2509,7 @@ export function EnJuegoPortal({
                       type="button"
                       onClick={() => {
                         setSelectedDateIndex(idx);
-                        router.replace(`/resultados?fecha=${d}`, { scroll: false });
+                        router.replace(`/resultados?liga=${activeLeague}&fecha=${d}`, { scroll: false });
                       }}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition cursor-pointer shrink-0 ${
                         idx === selectedDateIndex
@@ -2330,8 +2537,8 @@ export function EnJuegoPortal({
               <div>
                 <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
                   {activeLeague === "mlb"
-                    ? "Grandes Ligas · Señales de TV y Estadios"
-                    : "Temporada 2026-2027 · Señales de TV y Estadios"}
+                    ? "⚾ Grandes Ligas (MLB) · Señales de TV y Estadios"
+                    : "🇻🇪 Temporada 2026-2027 (LVBP) · Señales de TV y Estadios"}
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-950">
                   Calendario de Juegos ({activeLeague.toUpperCase()})
@@ -2373,7 +2580,7 @@ export function EnJuegoPortal({
                   type="button"
                   onClick={() => {
                     setTeamFilter("");
-                    router.replace("/calendario", { scroll: false });
+                    router.replace(`/calendario?liga=${activeLeague}`, { scroll: false });
                   }}
                   className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-extrabold border transition shrink-0 cursor-pointer ${
                     teamFilter === ""
@@ -2395,7 +2602,9 @@ export function EnJuegoPortal({
                         const next = active ? "" : t.code;
                         setTeamFilter(next);
                         router.replace(
-                          next ? `/calendario?equipo=${t.slug}` : "/calendario",
+                          next
+                            ? `/calendario?liga=${activeLeague}&equipo=${t.slug}`
+                            : `/calendario?liga=${activeLeague}`,
                           { scroll: false }
                         );
                       }}
@@ -2435,7 +2644,7 @@ export function EnJuegoPortal({
                         />
                         <div>
                           <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-600">
-                            Calendario Individual · /calendario?equipo={club.slug}
+                            Calendario Individual · /calendario?liga={activeLeague}&equipo={club.slug}
                           </span>
                           <h2 className="text-lg sm:text-xl font-black text-slate-950">
                             {club.name}
@@ -2455,7 +2664,7 @@ export function EnJuegoPortal({
                           Visitante: {awayCount} juegos
                         </span>
                         <Link
-                          href={`/equipos/${club.slug}`}
+                          href={`/teams?liga=${activeLeague}&team=${club.slug}`}
                           className="rounded-xl bg-amber-400 text-slate-950 px-3 py-1.5 font-extrabold hover:bg-amber-300 transition"
                         >
                           Ver Roster de {club.nick} ›
@@ -2675,18 +2884,18 @@ export function EnJuegoPortal({
           </div>
         )}
 
-        {/* SECTION: POSICIONES (/posiciones) WITH ROUND ROBIN OR MLB DIVISIONAL ZONES */}
+        {/* SECTION: POSICIONES (/posiciones) — COMPLETELY SEPARATED LVBP (8 TEAMS) vs MLB (6 OFFICIAL DIVISIONS) */}
         {section === "posiciones" && (
           <div className="space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
                   {activeLeague === "mlb"
-                    ? "Clasificación Grandes Ligas · Liga Americana y Nacional"
-                    : "Tabla de Clasificación · Rumbo al Round Robin"}
+                    ? "⚾ Grandes Ligas (MLB) · 6 Divisiones Oficiales (AL y NL)"
+                    : "🇻🇪 Tabla de Clasificación LVBP · Rumbo al Round Robin"}
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-950">
-                  Tabla de Posiciones ({activeLeague.toUpperCase()})
+                  Tabla de Posiciones ({activeLeague === "mlb" ? "MLB" : "LVBP"})
                 </h1>
               </div>
 
@@ -2694,7 +2903,7 @@ export function EnJuegoPortal({
                 <div className="inline-flex rounded-xl bg-white p-1 border border-slate-200 shadow-2xs">
                   {(
                     [
-                      ["ALL", "Todas (30)"],
+                      ["ALL", "6 Divisiones (30)"],
                       ["AL", "Liga Americana (AL)"],
                       ["NL", "Liga Nacional (NL)"],
                     ] as const
@@ -2739,7 +2948,172 @@ export function EnJuegoPortal({
               )}
             </div>
 
-            {activeLeague === "lvbp" && standingsPhase !== "REGULAR" ? (
+            {activeLeague === "mlb" ? (
+              /* MLB: 6 SEPARATED DIVISIONAL TABLES (AL EAST, AL CENTRAL, AL WEST, NL EAST, NL CENTRAL, NL WEST) */
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 gap-6">
+                  {(
+                    [
+                      {
+                        divCode: "AL East",
+                        league: "AL",
+                        title: "Liga Americana · División Este",
+                        badge: "AL ESTE",
+                        accent: "bg-sky-50 border-sky-200 text-sky-800",
+                      },
+                      {
+                        divCode: "AL Central",
+                        league: "AL",
+                        title: "Liga Americana · División Central",
+                        badge: "AL CENTRAL",
+                        accent: "bg-sky-50 border-sky-200 text-sky-800",
+                      },
+                      {
+                        divCode: "AL West",
+                        league: "AL",
+                        title: "Liga Americana · División Oeste",
+                        badge: "AL OESTE",
+                        accent: "bg-sky-50 border-sky-200 text-sky-800",
+                      },
+                      {
+                        divCode: "NL East",
+                        league: "NL",
+                        title: "Liga Nacional · División Este",
+                        badge: "NL ESTE",
+                        accent: "bg-indigo-50 border-indigo-200 text-indigo-800",
+                      },
+                      {
+                        divCode: "NL Central",
+                        league: "NL",
+                        title: "Liga Nacional · División Central",
+                        badge: "NL CENTRAL",
+                        accent: "bg-indigo-50 border-indigo-200 text-indigo-800",
+                      },
+                      {
+                        divCode: "NL West",
+                        league: "NL",
+                        title: "Liga Nacional · División Oeste",
+                        badge: "NL OESTE",
+                        accent: "bg-indigo-50 border-indigo-200 text-indigo-800",
+                      },
+                    ] as const
+                  )
+                    .filter((div) =>
+                      mlbStandingsFilter === "ALL" ? true : div.league === mlbStandingsFilter
+                    )
+                    .map((div) => {
+                      const divRows = standings
+                        .filter((r) => (r.division || MLB_TEAMS[r.team.code]?.division) === div.divCode)
+                        .sort((a, b) => Number(b.pct) - Number(a.pct) || b.wins - a.wins);
+
+                      return (
+                        <div
+                          key={div.divCode}
+                          className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-xs no-scrollbar"
+                        >
+                          <div className="px-4 py-3 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800">
+                            <div className="flex items-center gap-2.5">
+                              <span className="text-sm font-black text-amber-400">⚾</span>
+                              <h2 className="text-sm sm:text-base font-black tracking-tight">
+                                {div.title}
+                              </h2>
+                            </div>
+                            <span
+                              className={`rounded-lg border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${div.accent}`}
+                            >
+                              {div.badge}
+                            </span>
+                          </div>
+
+                          <table className="w-full min-w-[700px] text-xs text-right border-collapse">
+                            <thead>
+                              <tr className="bg-slate-50 text-slate-500 border-b border-slate-200 font-extrabold">
+                                <th className="py-2.5 px-4 text-left w-24">POS</th>
+                                <th className="py-2.5 px-4 text-left">Equipo</th>
+                                <th className="py-2.5 px-3">JJ</th>
+                                <th className="py-2.5 px-3">JG</th>
+                                <th className="py-2.5 px-3">JP</th>
+                                <th className="py-2.5 px-3 text-amber-600">PCT</th>
+                                <th className="py-2.5 px-3">DIF</th>
+                                <th className="py-2.5 px-3">CASA</th>
+                                <th className="py-2.5 px-3">VIS</th>
+                                <th className="py-2.5 px-3">CA</th>
+                                <th className="py-2.5 px-3">CP</th>
+                                <th className="py-2.5 px-3">DIF.C</th>
+                                <th className="py-2.5 px-4">RACHA</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 tabular-nums">
+                              {divRows.map((row, idx) => {
+                                const isFav = favoriteTeamCode === row.team.code;
+                                const isDivLeader = idx === 0;
+                                return (
+                                  <tr
+                                    key={row.team.code}
+                                    onClick={() => openTeamPage(row.team.code)}
+                                    className={`hover:bg-slate-50 transition cursor-pointer ${
+                                      isFav ? "bg-amber-50/60" : ""
+                                    }`}
+                                  >
+                                    <td className="py-3 px-4 text-left font-bold text-slate-600 whitespace-nowrap">
+                                      <span className="inline-flex items-center gap-2">
+                                        <b className="w-4 text-slate-900">{idx + 1}°</b>
+                                        {isDivLeader && (
+                                          <span className="inline-flex items-center rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 px-1.5 py-0.5 text-[9px] font-extrabold">
+                                            Líder
+                                          </span>
+                                        )}
+                                      </span>
+                                    </td>
+                                    <td className="py-3 px-4 text-left font-black text-slate-950 flex items-center gap-3">
+                                      <img
+                                        src={row.team.logoUrl}
+                                        alt=""
+                                        className="w-7 h-7 object-contain"
+                                      />
+                                      <span>{row.team.name}</span>
+                                      {isFav && (
+                                        <span title="Tu Equipo Favorito">
+                                          <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="py-3 px-3 text-slate-600">{row.gamesPlayed}</td>
+                                    <td className="py-3 px-3 font-extrabold text-slate-950">
+                                      {row.wins}
+                                    </td>
+                                    <td className="py-3 px-3 text-slate-600">{row.losses}</td>
+                                    <td className="py-3 px-3 font-black text-amber-600">
+                                      {row.pct}
+                                    </td>
+                                    <td className="py-3 px-3 font-bold text-slate-700">
+                                      {row.gamesBehind}
+                                    </td>
+                                    <td className="py-3 px-3 text-slate-500">{row.homeRecord}</td>
+                                    <td className="py-3 px-3 text-slate-500">{row.awayRecord}</td>
+                                    <td className="py-3 px-3 text-slate-600">{row.runsScored}</td>
+                                    <td className="py-3 px-3 text-slate-600">{row.runsAllowed}</td>
+                                    <td
+                                      className={`py-3 px-3 font-bold ${
+                                        row.runDiff >= 0 ? "text-emerald-600" : "text-rose-600"
+                                      }`}
+                                    >
+                                      {row.runDiff > 0 ? `+${row.runDiff}` : row.runDiff}
+                                    </td>
+                                    <td className="py-3 px-4 font-bold text-slate-900">
+                                      {row.streak}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            ) : standingsPhase !== "REGULAR" ? (
               <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center space-y-2 shadow-xs">
                 <Trophy className="w-8 h-8 text-amber-500 mx-auto" />
                 <h3 className="text-base font-black text-slate-950">
@@ -2750,14 +3124,13 @@ export function EnJuegoPortal({
                 </p>
               </div>
             ) : (
+              /* LVBP: CLASSIC 8-TEAM TABLE WITH ROUND ROBIN & COMODÍN ZONES */
               <>
                 <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-xs no-scrollbar">
                   <table className="w-full min-w-[720px] text-xs text-right border-collapse">
                     <thead>
                       <tr className="bg-slate-50 text-slate-500 border-b border-slate-200 font-extrabold">
-                        <th className="py-3 px-4 text-left">
-                          {activeLeague === "mlb" ? "POS / DIVISIÓN" : "POS / ZONA"}
-                        </th>
+                        <th className="py-3 px-4 text-left">POS / ZONA</th>
                         <th className="py-3 px-4 text-left">Equipo</th>
                         <th className="py-3 px-3">JJ</th>
                         <th className="py-3 px-3">JG</th>
@@ -2774,19 +3147,11 @@ export function EnJuegoPortal({
                     </thead>
                     <tbody className="divide-y divide-slate-100 tabular-nums">
                       {standings
-                        .filter((r) =>
-                          activeLeague === "mlb" && mlbStandingsFilter !== "ALL"
-                            ? r.league === mlbStandingsFilter
-                            : true
-                        )
+                        .filter((r) => Boolean(LVBP_TEAMS[r.team.code]))
                         .map((row, idx) => {
                           const isFav = favoriteTeamCode === row.team.code;
                           const zoneBadge =
-                            activeLeague === "mlb" ? (
-                              <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 border border-sky-200 text-sky-800 px-2 py-0.5 text-[10px] font-extrabold">
-                                {row.divisionEs || "MLB"}
-                              </span>
-                            ) : idx < 4 ? (
+                            idx < 4 ? (
                               <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 px-2 py-0.5 text-[10px] font-extrabold">
                                 Round Robin
                               </span>
@@ -2852,24 +3217,22 @@ export function EnJuegoPortal({
                 </div>
 
                 {/* Qualification Legend */}
-                {activeLeague === "lvbp" && (
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600 shadow-2xs">
-                    <div className="flex flex-wrap items-center gap-4">
-                      <span className="inline-flex items-center gap-2 font-bold text-emerald-800">
-                        <span className="w-3 h-3 rounded bg-emerald-500" />
-                        1° al 4° lugar: Clasificación directa al Round Robin (Enero)
-                      </span>
-                      <span className="inline-flex items-center gap-2 font-bold text-amber-800">
-                        <span className="w-3 h-3 rounded bg-amber-400" />
-                        5° y 6° lugar: Serie del Comodín (Play-In por el 5° cupo)
-                      </span>
-                      <span className="inline-flex items-center gap-2 font-semibold text-slate-500">
-                        <span className="w-3 h-3 rounded bg-slate-300" />
-                        7° y 8° lugar: Eliminados
-                      </span>
-                    </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600 shadow-2xs">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <span className="inline-flex items-center gap-2 font-bold text-emerald-800">
+                      <span className="w-3 h-3 rounded bg-emerald-500" />
+                      1° al 4° lugar: Clasificación directa al Round Robin (Enero)
+                    </span>
+                    <span className="inline-flex items-center gap-2 font-bold text-amber-800">
+                      <span className="w-3 h-3 rounded bg-amber-400" />
+                      5° y 6° lugar: Serie del Comodín (Play-In por el 5° cupo)
+                    </span>
+                    <span className="inline-flex items-center gap-2 font-semibold text-slate-500">
+                      <span className="w-3 h-3 rounded bg-slate-300" />
+                      7° y 8° lugar: Eliminados
+                    </span>
                   </div>
-                )}
+                </div>
               </>
             )}
           </div>
@@ -2888,7 +3251,7 @@ export function EnJuegoPortal({
                 </h1>
               </div>
               <Link
-                href="/posiciones"
+                href={`/posiciones?liga=${activeLeague}`}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-white border border-slate-200 px-3.5 py-2 text-xs font-extrabold text-slate-800 hover:border-amber-400 transition shadow-2xs"
               >
                 <Trophy className="w-3.5 h-3.5 text-amber-600" /> Ver Tabla de Posiciones ›
@@ -2926,13 +3289,13 @@ export function EnJuegoPortal({
       >
         {(
           [
-            ["home", "/inicio", "Inicio", Home],
-            ["resultados", "/resultados", "Pizarra", Activity],
-            ["calendario", "/calendario", "Calendario", Calendar],
-            ["posiciones", "/posiciones", "Posiciones", Trophy],
+            ["home", `/inicio?liga=${activeLeague}`, "Inicio", Home],
+            ["resultados", `/resultados?liga=${activeLeague}`, "Pizarra", Activity],
+            ["calendario", `/calendario?liga=${activeLeague}`, "Calendario", Calendar],
+            ["posiciones", `/posiciones?liga=${activeLeague}`, "Posiciones", Trophy],
             [
               "equipos",
-              `/teams?team=${anyTeamsCatalog[selectedTeamCode]?.slug || (activeLeague === "mlb" ? "yankees" : "leones")}`,
+              `/teams?liga=${activeLeague}&team=${anyTeamsCatalog[selectedTeamCode]?.slug || (activeLeague === "mlb" ? "yankees" : "leones")}`,
               "Equipos",
               Users,
             ],

@@ -982,8 +982,9 @@ export async function fetchLvbpRoster(teamIdOrCode: string, league: "lvbp" | "ml
 
 export async function fetchMlbSchedule(season = "2025"): Promise<ScheduleGame[]> {
   try {
+    const mlbSeason = season === "2026" ? "2025" : season;
     // Query Postseason + Final Regular Season window from MLB StatsAPI (sportId=1)
-    const url = `${MLB_BASE}/v1/schedule?sportId=${MLB_SPORT_ID}&season=${season}&startDate=${season}-09-25&endDate=${season}-11-05&gameType=R,F,D,L,W&hydrate=linescore(runners),team,decisions,probablePitcher,broadcasts`;
+    const url = `${MLB_BASE}/v1/schedule?sportId=${MLB_SPORT_ID}&season=${mlbSeason}&startDate=${mlbSeason}-09-25&endDate=${mlbSeason}-11-05&gameType=R,F,D,L,W&hydrate=linescore(runners),team,decisions,probablePitcher,broadcasts`;
     const res = await fetch(url, { next: { revalidate: 30 } });
     if (!res.ok) {
       return getMlbFallbackSchedule();
@@ -1079,7 +1080,8 @@ export async function fetchMlbStandingsAndLeaders(season = "2025"): Promise<{
   leaders: { hitting: LeaderCategory[]; pitching: LeaderCategory[] };
 }> {
   try {
-    const url = `${MLB_BASE}/v1/standings?leagueId=103,104&season=${season}&standingsTypes=regularSeason&hydrate=team,streak`;
+    const mlbSeason = season === "2026" ? "2025" : season;
+    const url = `${MLB_BASE}/v1/standings?leagueId=103,104&season=${mlbSeason}&standingsTypes=regularSeason&hydrate=team,streak`;
     const res = await fetch(url, { next: { revalidate: 120 } });
     if (!res.ok) {
       return {
@@ -1179,7 +1181,7 @@ function getMlbFallbackStandings(): StandingRow[] {
     COL: [61, 101, 682, 929, "P3"],
   };
 
-  return Object.values(MLB_TEAMS).map((meta) => {
+  const rawRows: StandingRow[] = Object.values(MLB_TEAMS).map((meta) => {
     const [w, l, rs, ra, streak] = sampleRecords[meta.code] || [81, 81, 700, 700, "G1"];
     const gp = w + l;
     const pct = (w / gp).toFixed(3).replace(/^0/, "");
@@ -1212,6 +1214,30 @@ function getMlbFallbackStandings(): StandingRow[] {
       divisionEs: meta.divisionEs,
     };
   });
+
+  // Compute divisional gamesBehind for each of the 6 MLB divisions
+  const byDiv = new Map<string, StandingRow[]>();
+  for (const r of rawRows) {
+    const divKey = r.division || "AL East";
+    const list = byDiv.get(divKey) || [];
+    list.push(r);
+    byDiv.set(divKey, list);
+  }
+
+  const finalRows: StandingRow[] = [];
+  for (const [, list] of byDiv.entries()) {
+    list.sort((a, b) => b.wins - a.wins || a.losses - b.losses);
+    const leader = list[0];
+    for (const item of list) {
+      const diff = leader
+        ? (leader.wins - item.wins + (item.losses - leader.losses)) / 2
+        : 0;
+      item.gamesBehind = diff <= 0 ? "—" : diff.toFixed(1);
+      finalRows.push(item);
+    }
+  }
+
+  return finalRows;
 }
 
 function getMlbFallbackSchedule(): ScheduleGame[] {

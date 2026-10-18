@@ -373,6 +373,16 @@ export const THEME_PALETTES: Record<BackgroundTheme, ThemePalette> = {
 };
 
 
+export interface SlateOverride {
+  venue?: string;
+  tv?: string;
+  time?: string;
+  awayScore?: number;
+  homeScore?: number;
+  status?: "SCHEDULED" | "IN_PROGRESS" | "FINISHED";
+  inning?: string;
+}
+
 export interface SocialCardOptions {
   sizeFormat: CardSizeFormat;
   backgroundTheme: BackgroundTheme;
@@ -391,7 +401,7 @@ export interface SocialCardOptions {
   tvChannelsText: string;
   subInfoText: string;
   gamesForDate: ScheduleGame[];
-  slateOverrides: Record<string, { venue?: string; tv?: string; time?: string }>;
+  slateOverrides: Record<string, SlateOverride>;
   centerBadgeLine1: string;
   centerBadgeLine2: string;
   sponsorMode: "campaign" | "custom" | "none";
@@ -699,7 +709,7 @@ export async function renderSocialCard(
           total = w1W + spacePx + w2W;
         }
         ctx.translate(W / 2, headlineCenterY);
-        ctx.transform(1, 0, -0.14, isSquare ? 1.2 : 1.34, 0, 0);
+        ctx.transform(1, 0, -0.07, isSquare ? 1.05 : 1.08, 0, 0);
         ctx.textBaseline = "middle";
         ctx.textAlign = "left";
         if (theme.isDark) {
@@ -1012,21 +1022,29 @@ export async function renderSocialCard(
           const mainH = showVenueAndTv ? rowH - 36 : rowH;
           const cy = ry + mainH / 2;
 
+          // 1. Card Container with crisp modern border & subtle shadow
           ctx.save();
-          ctx.shadowColor = theme.isDark ? "rgba(0,0,0,0.35)" : "rgba(18,23,52,0.08)";
-          ctx.shadowBlur = 18;
-          ctx.shadowOffsetY = 5;
-          ctx.fillStyle = theme.isDark ? "rgba(255,255,255,0.09)" : "#ffffff";
-          drawRoundedRect(ctx, rx, ry, rw, rowH, 22);
+          ctx.shadowColor = theme.isDark ? "rgba(0,0,0,0.35)" : "rgba(18,23,52,0.06)";
+          ctx.shadowBlur = 14;
+          ctx.shadowOffsetY = 4;
+          ctx.fillStyle = theme.isDark ? "rgba(255,255,255,0.08)" : "#ffffff";
+          drawRoundedRect(ctx, rx, ry, rw, rowH, 20);
           ctx.fill();
+
+          ctx.shadowColor = "transparent";
+          ctx.strokeStyle = theme.isDark ? "rgba(255,255,255,0.12)" : "rgba(18,23,52,0.08)";
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
           ctx.restore();
 
+          // 2. Team Logos
           const aColor = ALL_TEAMS[g.awayTeam.code]?.color || "#121734";
           const hColor = ALL_TEAMS[g.homeTeam.code]?.color || "#121734";
-          const logoR = isSquare ? 36 : 40;
-          drawTeamLogo(rx + 66, cy, logoR, aColor, logos[0]);
-          drawTeamLogo(rx + rw - 66, cy, logoR, hColor, logos[1]);
+          const logoR = isSquare ? 34 : 38;
+          drawTeamLogo(rx + 58, cy, logoR, aColor, logos[0]);
+          drawTeamLogo(rx + rw - 58, cy, logoR, hColor, logos[1]);
 
+          // 3. Game Data & Overrides
           const ov = slateOverrides[g.id] || {};
           const homeMeta = ALL_TEAMS[g.homeTeam.code];
           const gVenue =
@@ -1040,22 +1058,57 @@ export async function renderSocialCard(
                 ? g.tvChannels.join(" · ")
                 : g.tv || "BeisbolPlay";
           const gTime = ov.time || g.time || "7:00 PM";
+          const gStatus = ov.status || g.status;
+          const gAwayScore = ov.awayScore !== undefined ? ov.awayScore : g.awayScore;
+          const gHomeScore = ov.homeScore !== undefined ? ov.homeScore : g.homeScore;
+
+          // 4. Team Names
+          const awayNick = g.awayTeam.nick.toUpperCase();
+          const homeNick = g.homeTeam.nick.toUpperCase();
 
           ctx.save();
-          ctx.font = '400 38px "Bebas Neue", sans-serif';
-          ctx.fillStyle = theme.footerText;
+          ctx.fillStyle = theme.isDark ? "#ffffff" : "#0f172a";
           ctx.textBaseline = "middle";
-          ctx.textAlign = "left";
-          ctx.fillText(g.awayTeam.nick.toUpperCase(), rx + 124, cy + 2);
-          ctx.textAlign = "right";
-          ctx.fillText(g.homeTeam.nick.toUpperCase(), rx + rw - 124, cy + 2);
-          ctx.textAlign = "center";
 
-          if (g.status === "FINISHED" || g.status === "IN_PROGRESS") {
-            ctx.font = '600 54px "Teko", "Bebas Neue", sans-serif';
-            ctx.fillStyle = theme.isDark ? "#ffffff" : "#b3161a";
-            ctx.fillText(`${g.awayScore}  -  ${g.homeScore}`, W / 2, cy - 4);
-            let slateInning = (g.inning || (g.status === "IN_PROGRESS" ? "EN VIVO" : "FINAL")).trim().toUpperCase();
+          // Away Nickname
+          let awayFontPx = 36;
+          ctx.font = `400 ${awayFontPx}px "Bebas Neue", sans-serif`;
+          const aW = ctx.measureText(awayNick).width;
+          if (aW > 185) {
+            awayFontPx = Math.floor((awayFontPx * 185) / aW);
+            ctx.font = `400 ${awayFontPx}px "Bebas Neue", sans-serif`;
+          }
+          ctx.textAlign = "left";
+          ctx.fillText(awayNick, rx + 112, cy + 1);
+
+          // Home Nickname
+          let homeFontPx = 36;
+          ctx.font = `400 ${homeFontPx}px "Bebas Neue", sans-serif`;
+          const hW = ctx.measureText(homeNick).width;
+          if (hW > 185) {
+            homeFontPx = Math.floor((homeFontPx * 185) / hW);
+            ctx.font = `400 ${homeFontPx}px "Bebas Neue", sans-serif`;
+          }
+          ctx.textAlign = "right";
+          ctx.fillText(homeNick, rx + rw - 112, cy + 1);
+          ctx.restore();
+
+          // 5. Center Section: Scores & Status (Never overlap!)
+          if (gStatus === "IN_PROGRESS") {
+            // Live Score: crisp, dark tabular numerals
+            ctx.save();
+            ctx.font = isSquare
+              ? '700 32px "Barlow Condensed", sans-serif'
+              : '700 42px "Barlow Condensed", sans-serif';
+            ctx.fillStyle = theme.isDark ? "#ffffff" : "#0f172a";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            const scoreY = isSquare ? cy - 11 : cy - 13;
+            ctx.fillText(`${gAwayScore}  —  ${gHomeScore}`, W / 2, scoreY);
+            ctx.restore();
+
+            // Live Inning Pill
+            let slateInning = (ov.inning || g.inning || "EN VIVO").trim().toUpperCase();
             if (
               slateInning === "IN PROGRESS" ||
               slateInning === "IN_PROGRESS" ||
@@ -1064,51 +1117,145 @@ export async function renderSocialCard(
             ) {
               slateInning = "EN VIVO";
             }
-            ctx.fillText(slateInning, W / 2, cy + 28);
-          } else {
-            ctx.fillStyle = "#b3161a";
-            drawRoundedRect(ctx, W / 2 - 78, cy - 22, 156, 44, 22);
-            ctx.fill();
-            ctx.font = '700 26px "Barlow Condensed", sans-serif';
-            ctx.fillStyle = "#ffffff";
-            ctx.fillText(gTime, W / 2, cy + 1);
-          }
 
-          // Bottom Stadium + TV strip inside each game row
-          if (showVenueAndTv && (gVenue || gTv)) {
-            const barY = ry + mainH;
-            ctx.strokeStyle = theme.isDark
-              ? "rgba(255,255,255,0.10)"
-              : "rgba(18,23,52,0.07)";
+            ctx.save();
+            ctx.font = isSquare
+              ? '700 13px "Barlow Condensed", sans-serif'
+              : '700 15px "Barlow Condensed", sans-serif';
+            const badgeLabel = `● ${slateInning}`;
+            const textW = ctx.measureText(badgeLabel).width;
+            const pillW = Math.max(isSquare ? 82 : 98, textW + (isSquare ? 16 : 22));
+            const pillH = isSquare ? 20 : 25;
+            const pillY = isSquare ? cy + 13 : cy + 17;
+
+            ctx.fillStyle = "#dc2626";
+            if (theme.isDark) {
+              ctx.shadowColor = "rgba(220, 38, 38, 0.4)";
+              ctx.shadowBlur = 8;
+            }
+            drawRoundedRect(ctx, W / 2 - pillW / 2, pillY - pillH / 2, pillW, pillH, pillH / 2);
+            ctx.fill();
+
+            ctx.shadowColor = "transparent";
+            ctx.fillStyle = "#ffffff";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(badgeLabel, W / 2, pillY + 1);
+            ctx.restore();
+          } else if (gStatus === "FINISHED") {
+            // Final Score
+            ctx.save();
+            ctx.font = isSquare
+              ? '700 32px "Barlow Condensed", sans-serif'
+              : '700 42px "Barlow Condensed", sans-serif';
+            ctx.fillStyle = theme.isDark ? "#ffffff" : "#0f172a";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            const scoreY = isSquare ? cy - 11 : cy - 13;
+            ctx.fillText(`${gAwayScore}  —  ${gHomeScore}`, W / 2, scoreY);
+            ctx.restore();
+
+            // Final Badge: subtle neutral pill
+            let finalLabel = (ov.inning || g.inning || "FINAL").trim().toUpperCase();
+            if (finalLabel === "FINISHED" || finalLabel === "FINALIZADO") finalLabel = "FINAL";
+
+            ctx.save();
+            ctx.font = isSquare
+              ? '700 13px "Barlow Condensed", sans-serif'
+              : '700 15px "Barlow Condensed", sans-serif';
+            const textW = ctx.measureText(finalLabel).width;
+            const pillW = Math.max(isSquare ? 68 : 82, textW + (isSquare ? 16 : 22));
+            const pillH = isSquare ? 20 : 24;
+            const pillY = isSquare ? cy + 13 : cy + 17;
+
+            ctx.fillStyle = theme.isDark ? "rgba(255, 255, 255, 0.14)" : "#f1f5f9";
+            drawRoundedRect(ctx, W / 2 - pillW / 2, pillY - pillH / 2, pillW, pillH, pillH / 2);
+            ctx.fill();
+
+            ctx.strokeStyle = theme.isDark ? "rgba(255, 255, 255, 0.22)" : "rgba(15, 23, 42, 0.12)";
             ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(rx + 24, barY);
-            ctx.lineTo(rx + rw - 24, barY);
             ctx.stroke();
 
-            const stripCy = barY + 18;
-            ctx.font = '700 19px "Barlow Condensed", sans-serif';
+            ctx.fillStyle = theme.isDark ? "#e2e8f0" : "#475569";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(finalLabel, W / 2, pillY + 1);
+            ctx.restore();
+          } else {
+            // Scheduled Game Time Badge
+            ctx.save();
+            const pillW = isSquare ? 116 : 136;
+            const pillH = isSquare ? 34 : 40;
+            ctx.fillStyle = theme.isDark ? "rgba(255, 255, 255, 0.12)" : "#0f172a";
+            drawRoundedRect(ctx, W / 2 - pillW / 2, cy - pillH / 2, pillW, pillH, pillH / 2);
+            ctx.fill();
+
+            if (theme.isDark) {
+              ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
+              ctx.lineWidth = 1;
+              ctx.stroke();
+            }
+
+            ctx.font = isSquare
+              ? '700 21px "Barlow Condensed", sans-serif'
+              : '700 25px "Barlow Condensed", sans-serif';
+            ctx.fillStyle = "#ffffff";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(gTime, W / 2, cy + 1);
+            ctx.restore();
+          }
+
+          // 6. Bottom Stadium + TV strip inside each game row
+          if (showVenueAndTv && (gVenue || gTv)) {
+            const barY = ry + mainH;
+            ctx.save();
+            ctx.strokeStyle = theme.isDark
+              ? "rgba(255, 255, 255, 0.10)"
+              : "rgba(18, 23, 52, 0.08)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(rx + 20, barY);
+            ctx.lineTo(rx + rw - 20, barY);
+            ctx.stroke();
+
+            const stripCy = barY + (rowH - mainH) / 2;
+            ctx.font = '700 18px "Barlow Condensed", sans-serif';
+
             if (gVenue) {
               drawPinIcon(
-                rx + 36,
+                rx + 34,
                 stripCy,
-                15,
-                theme.isDark ? "#f87171" : "#b3161a"
+                14,
+                theme.isDark ? "#f87171" : "#dc2626"
               );
               ctx.fillStyle = theme.footerMuted;
               ctx.textAlign = "left";
               ctx.textBaseline = "middle";
-              ctx.fillText(gVenue.toUpperCase(), rx + 50, stripCy + 1);
+
+              let venueStr = gVenue.toUpperCase();
+              const maxVenueW = (rw / 2) - 60;
+              while (ctx.measureText(venueStr).width > maxVenueW && venueStr.length > 5) {
+                venueStr = venueStr.slice(0, -4) + "...";
+              }
+              ctx.fillText(venueStr, rx + 48, stripCy + 1);
             }
+
             if (gTv) {
               const tvStr = `TV: ${gTv.toUpperCase()}`;
-              ctx.fillStyle = theme.isDark ? "#fbbf24" : "#b3161a";
+              ctx.fillStyle = theme.isDark ? "#38bdf8" : "#0f172a";
               ctx.textAlign = "right";
               ctx.textBaseline = "middle";
-              ctx.fillText(tvStr, rx + rw - 28, stripCy + 1);
+
+              let cleanTvStr = tvStr;
+              const maxTvW = (rw / 2) - 50;
+              while (ctx.measureText(cleanTvStr).width > maxTvW && cleanTvStr.length > 5) {
+                cleanTvStr = cleanTvStr.slice(0, -4) + "...";
+              }
+              ctx.fillText(cleanTvStr, rx + rw - 24, stripCy + 1);
             }
+            ctx.restore();
           }
-          ctx.restore();
         });
       }
 
@@ -1276,6 +1423,18 @@ export async function renderSocialCard(
           }
           ctx.restore();
         }
+      } else {
+        ctx.save();
+        ctx.textAlign = "right";
+        ctx.textBaseline = "alphabetic";
+        ctx.fillStyle = theme.footerText;
+        ctx.font = '400 38px "Bebas Neue", sans-serif';
+        ctx.fillText("BÉISBOL EN VIVO", W - 96, footerBaseY - 36);
+        ctx.fillText("MINUTO A MINUTO", W - 96, footerBaseY);
+        ctx.font = '600 24px "Barlow Condensed", sans-serif';
+        ctx.fillStyle = theme.footerMuted;
+        ctx.fillText("@enjuego.online", W - 96, footerBaseY + 32);
+        ctx.restore();
       }
 
 

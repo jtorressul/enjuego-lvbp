@@ -37,6 +37,7 @@ import {
   type BackgroundTheme,
   type MedallionStyleMode,
   type SponsorDisplayLayout,
+  type SlateOverride,
 } from "@/lib/social-card-renderer";
 
 interface SocialCardGeneratorProps {
@@ -90,9 +91,7 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
   const [centerBadgeLine2, setCenterBadgeLine2] = useState<string>("");
 
   // Optional per-game overrides for Full-Day Slate ("Jornada Completa")
-  const [slateOverrides, setSlateOverrides] = useState<
-    Record<string, { venue?: string; tv?: string; time?: string }>
-  >({});
+  const [slateOverrides, setSlateOverrides] = useState<Record<string, SlateOverride>>({});
 
   // Sponsor ("Presentado por:")
   const [sponsorMode, setSponsorMode] = useState<"campaign" | "custom" | "none">("none");
@@ -1029,8 +1028,13 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
               ) : (
                 /* Slate Full-Day Editor */
                 <div className="rounded-xl bg-white border border-slate-200/80 p-4 sm:p-5 shadow-xs space-y-3">
-                  <div className="text-xs font-semibold text-slate-900">
-                    Editar Partidos de la Jornada ({gamesForDate.length} programados)
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-900">
+                      Juegos de la Jornada ({gamesForDate.length} en fecha)
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      Personaliza marcadores, estado y transmisión
+                    </span>
                   </div>
                   {gamesForDate.slice(0, 4).map((g) => {
                     const ov = slateOverrides[g.id] || {};
@@ -1046,15 +1050,191 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
                           ? g.tvChannels.join(" · ")
                           : g.tv || "BeisbolPlay";
                     const valTime = ov.time !== undefined ? ov.time : g.time || "7:00 PM";
+                    const valStatus = (ov.status || g.status || "SCHEDULED") as "SCHEDULED" | "IN_PROGRESS" | "FINISHED";
+                    const valAwayScore = ov.awayScore !== undefined ? ov.awayScore : g.awayScore;
+                    const valHomeScore = ov.homeScore !== undefined ? ov.homeScore : g.homeScore;
+                    const valInning = ov.inning !== undefined ? ov.inning : g.inning || (valStatus === "IN_PROGRESS" ? "EN VIVO" : "FINAL");
 
                     return (
                       <div
                         key={g.id}
-                        className="p-3 rounded-lg bg-slate-50/70 border border-slate-200/80 space-y-2"
+                        className="p-3.5 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-3"
                       >
-                        <div className="text-xs font-semibold text-slate-900">
-                          {g.awayTeam.name} ({g.awayTeam.code}) vs {g.homeTeam.name} ({g.homeTeam.code})
+                        {/* Header: Teams + Status Selector */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/60 pb-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-900">
+                              {g.awayTeam.name} <span className="font-mono text-slate-400 font-normal">vs</span> {g.homeTeam.name}
+                            </span>
+                          </div>
+
+                          {/* Quick Status Buttons */}
+                          <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-slate-200">
+                            {[
+                              { id: "SCHEDULED", label: "⏰ Programado" },
+                              { id: "IN_PROGRESS", label: "🔴 En Vivo" },
+                              { id: "FINISHED", label: "🏁 Final" },
+                            ].map((st) => (
+                              <button
+                                key={st.id}
+                                type="button"
+                                onClick={() =>
+                                  setSlateOverrides((prev) => ({
+                                    ...prev,
+                                    [g.id]: {
+                                      ...prev[g.id],
+                                      status: st.id as "SCHEDULED" | "IN_PROGRESS" | "FINISHED",
+                                      inning:
+                                        st.id === "IN_PROGRESS"
+                                          ? prev[g.id]?.inning || g.inning || "EN VIVO"
+                                          : st.id === "FINISHED"
+                                          ? "FINAL"
+                                          : prev[g.id]?.inning,
+                                    },
+                                  }))
+                                }
+                                className={`px-2 py-1 text-[10px] font-semibold rounded-md transition cursor-pointer ${
+                                  valStatus === st.id
+                                    ? "bg-slate-900 text-white shadow-xs"
+                                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                                }`}
+                              >
+                                {st.label}
+                              </button>
+                            ))}
+                          </div>
                         </div>
+
+                        {/* Scores & Inning (If In Progress or Finished) */}
+                        {valStatus !== "SCHEDULED" && (
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-white p-2.5 rounded-lg border border-slate-200/80">
+                            <div>
+                              <label className="block text-[10px] font-medium text-slate-500 mb-1">
+                                {g.awayTeam.code} (Visitante)
+                              </label>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setSlateOverrides((prev) => ({
+                                      ...prev,
+                                      [g.id]: {
+                                        ...prev[g.id],
+                                        awayScore: Math.max(0, valAwayScore - 1),
+                                      },
+                                    }))
+                                  }
+                                  className="w-6 h-6 flex items-center justify-center rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer"
+                                >
+                                  -
+                                </button>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={valAwayScore}
+                                  onChange={(e) =>
+                                    setSlateOverrides((prev) => ({
+                                      ...prev,
+                                      [g.id]: {
+                                        ...prev[g.id],
+                                        awayScore: parseInt(e.target.value) || 0,
+                                      },
+                                    }))
+                                  }
+                                  className="w-12 text-center py-0.5 rounded border border-slate-200 text-xs font-mono font-bold"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setSlateOverrides((prev) => ({
+                                      ...prev,
+                                      [g.id]: {
+                                        ...prev[g.id],
+                                        awayScore: valAwayScore + 1,
+                                      },
+                                    }))
+                                  }
+                                  className="w-6 h-6 flex items-center justify-center rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-medium text-slate-500 mb-1">
+                                {g.homeTeam.code} (Homeclub)
+                              </label>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setSlateOverrides((prev) => ({
+                                      ...prev,
+                                      [g.id]: {
+                                        ...prev[g.id],
+                                        homeScore: Math.max(0, valHomeScore - 1),
+                                      },
+                                    }))
+                                  }
+                                  className="w-6 h-6 flex items-center justify-center rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer"
+                                >
+                                  -
+                                </button>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={valHomeScore}
+                                  onChange={(e) =>
+                                    setSlateOverrides((prev) => ({
+                                      ...prev,
+                                      [g.id]: {
+                                        ...prev[g.id],
+                                        homeScore: parseInt(e.target.value) || 0,
+                                      },
+                                    }))
+                                  }
+                                  className="w-12 text-center py-0.5 rounded border border-slate-200 text-xs font-mono font-bold"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setSlateOverrides((prev) => ({
+                                      ...prev,
+                                      [g.id]: {
+                                        ...prev[g.id],
+                                        homeScore: valHomeScore + 1,
+                                      },
+                                    }))
+                                  }
+                                  className="w-6 h-6 flex items-center justify-center rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-medium text-slate-500 mb-1">
+                                Inning / Estado
+                              </label>
+                              <input
+                                type="text"
+                                value={valInning}
+                                placeholder="ej. ALTA 8°, FINAL"
+                                onChange={(e) =>
+                                  setSlateOverrides((prev) => ({
+                                    ...prev,
+                                    [g.id]: { ...prev[g.id], inning: e.target.value },
+                                  }))
+                                }
+                                className="w-full px-2 py-0.5 rounded border border-slate-200 text-xs font-medium"
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Stadium, TV, Time */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           <div>
                             <label className="block text-[10px] font-medium text-slate-500">
@@ -1090,7 +1270,7 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
                           </div>
                           <div>
                             <label className="block text-[10px] font-medium text-slate-500">
-                              Hora
+                              Hora (Programado)
                             </label>
                             <input
                               type="text"

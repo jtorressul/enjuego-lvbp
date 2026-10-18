@@ -30,6 +30,32 @@ const LVBP_LEAGUE_ID = 135;
 const WINTER_SPORT_ID = 17;
 const MLB_SPORT_ID = 1;
 
+// In-Memory Micro-Cache to keep CPU execution time well below Cloudflare Workers 10ms limit
+interface ServiceCacheEntry<T> {
+  data: T;
+  expiresAt: number;
+}
+
+const gScope = globalThis as unknown as {
+  __ENJUEGO_LVBP_SCH_CACHE__?: Map<string, ServiceCacheEntry<ScheduleGame[]>>;
+  __ENJUEGO_MLB_SCH_CACHE__?: Map<string, ServiceCacheEntry<ScheduleGame[]>>;
+  __ENJUEGO_GAMEDAY_CACHE__?: Map<string, ServiceCacheEntry<GamedayData>>;
+  __ENJUEGO_STANDINGS_CACHE__?: Map<string, ServiceCacheEntry<{ standings: StandingRow[]; leaders: any }>>;
+  __ENJUEGO_MLB_STANDINGS_CACHE__?: Map<string, ServiceCacheEntry<{ standings: StandingRow[]; leaders: any }>>;
+};
+
+if (!gScope.__ENJUEGO_LVBP_SCH_CACHE__) gScope.__ENJUEGO_LVBP_SCH_CACHE__ = new Map();
+if (!gScope.__ENJUEGO_MLB_SCH_CACHE__) gScope.__ENJUEGO_MLB_SCH_CACHE__ = new Map();
+if (!gScope.__ENJUEGO_GAMEDAY_CACHE__) gScope.__ENJUEGO_GAMEDAY_CACHE__ = new Map();
+if (!gScope.__ENJUEGO_STANDINGS_CACHE__) gScope.__ENJUEGO_STANDINGS_CACHE__ = new Map();
+if (!gScope.__ENJUEGO_MLB_STANDINGS_CACHE__) gScope.__ENJUEGO_MLB_STANDINGS_CACHE__ = new Map();
+
+const lvbpScheduleCache = gScope.__ENJUEGO_LVBP_SCH_CACHE__;
+const mlbScheduleCache = gScope.__ENJUEGO_MLB_SCH_CACHE__;
+const gamedayCache = gScope.__ENJUEGO_GAMEDAY_CACHE__;
+const standingsCache = gScope.__ENJUEGO_STANDINGS_CACHE__;
+const mlbStandingsCache = gScope.__ENJUEGO_MLB_STANDINGS_CACHE__;
+
 const EVENT_ES: Record<string, string> = {
   Single: "Sencillo",
   Double: "Doble",
@@ -240,6 +266,12 @@ export function resolveLvbpBroadcastChannels(
 }
 
 export async function fetchLvbpSchedule(season = "2026"): Promise<ScheduleGame[]> {
+  const now = Date.now();
+  const cached = lvbpScheduleCache?.get(season);
+  if (cached && now < cached.expiresAt) {
+    return cached.data;
+  }
+
   try {
     const broadcastMapPromise = getOfficialBroadcastsMap().catch(() => ({} as Record<string, OfficialBroadcastEntry>));
     const url = `${MLB_BASE}/v1/schedule?sportId=${WINTER_SPORT_ID}&leagueId=${LVBP_LEAGUE_ID}&season=${season}&gameType=R,F,D,L,W&hydrate=linescore(runners),team,decisions,probablePitcher,broadcasts`;
@@ -331,13 +363,21 @@ export async function fetchLvbpSchedule(season = "2026"): Promise<ScheduleGame[]
       }
     }
 
-    return games.length ? games : getFallbackSchedule();
+    const result = games.length ? games : getFallbackSchedule();
+    lvbpScheduleCache?.set(season, { data: result, expiresAt: now + 15_000 });
+    return result;
   } catch {
     return getFallbackSchedule();
   }
 }
 
 export async function fetchLvbpGameday(gamePk: string): Promise<GamedayData> {
+  const now = Date.now();
+  const cached = gamedayCache?.get(gamePk);
+  if (cached && now < cached.expiresAt) {
+    return cached.data;
+  }
+
   try {
     const url = `${MLB_BASE}/v1.1/game/${gamePk}/feed/live`;
     const res = await fetch(url, { cache: "no-store" });
@@ -345,7 +385,9 @@ export async function fetchLvbpGameday(gamePk: string): Promise<GamedayData> {
       return getFallbackGameday(gamePk);
     }
     const raw = await res.json();
-    return transformMlbLiveFeedToGameday(raw);
+    const result = transformMlbLiveFeedToGameday(raw);
+    gamedayCache?.set(gamePk, { data: result, expiresAt: now + 3_000 });
+    return result;
   } catch {
     return getFallbackGameday(gamePk);
   }
@@ -822,6 +864,12 @@ export async function fetchLvbpStandingsAndLeaders(season = "2026"): Promise<{
   standings: StandingRow[];
   leaders: { hitting: LeaderCategory[]; pitching: LeaderCategory[] };
 }> {
+  const now = Date.now();
+  const cached = standingsCache?.get(season);
+  if (cached && now < cached.expiresAt) {
+    return cached.data;
+  }
+
   const games = await fetchLvbpSchedule(season).catch(() => []);
   const finished = games.filter((g) => g.status === "FINISHED");
 
@@ -937,10 +985,12 @@ export async function fetchLvbpStandingsAndLeaders(season = "2026"): Promise<{
     };
   });
 
-  return {
+  const result = {
     standings,
     leaders: getLvbpLeadersSnapshot(),
   };
+  standingsCache?.set(season, { data: result, expiresAt: now + 25_000 });
+  return result;
 }
 
 export async function fetchLvbpRoster(teamIdOrCode: string, league: "lvbp" | "mlb" = "lvbp"): Promise<{
@@ -990,6 +1040,12 @@ export async function fetchLvbpRoster(teamIdOrCode: string, league: "lvbp" | "ml
 }
 
 export async function fetchMlbSchedule(season = "2026"): Promise<ScheduleGame[]> {
+  const now = Date.now();
+  const cached = mlbScheduleCache?.get(season);
+  if (cached && now < cached.expiresAt) {
+    return cached.data;
+  }
+
   try {
     const mlbSeason = season || "2026";
     // Query 2026 Postseason + Final Regular Season window from MLB StatsAPI (sportId=1)
@@ -1092,7 +1148,9 @@ export async function fetchMlbSchedule(season = "2026"): Promise<ScheduleGame[]>
     }
 
     const games = Array.from(gamesByPk.values());
-    return games.length ? games : getMlbFallbackSchedule();
+    const result = games.length ? games : getMlbFallbackSchedule();
+    mlbScheduleCache?.set(season, { data: result, expiresAt: now + 15_000 });
+    return result;
   } catch {
     return getMlbFallbackSchedule();
   }
@@ -1102,6 +1160,12 @@ export async function fetchMlbStandingsAndLeaders(season = "2026"): Promise<{
   standings: StandingRow[];
   leaders: { hitting: LeaderCategory[]; pitching: LeaderCategory[] };
 }> {
+  const now = Date.now();
+  const cached = mlbStandingsCache?.get(season);
+  if (cached && now < cached.expiresAt) {
+    return cached.data;
+  }
+
   try {
     const mlbSeason = season || "2026";
     const standingsUrl = `${MLB_BASE}/v1/standings?leagueId=103,104&season=${mlbSeason}&standingsTypes=regularSeason&hydrate=team,streak`;
@@ -1217,10 +1281,12 @@ export async function fetchMlbStandingsAndLeaders(season = "2026"): Promise<{
       }
     }
 
-    return {
+    const result = {
       standings: rows.length > 0 ? rows : getMlbFallbackStandings(),
       leaders: liveLeaders,
     };
+    mlbStandingsCache?.set(season, { data: result, expiresAt: now + 25_000 });
+    return result;
   } catch {
     return {
       standings: getMlbFallbackStandings(),

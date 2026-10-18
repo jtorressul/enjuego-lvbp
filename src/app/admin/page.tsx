@@ -145,6 +145,10 @@ export default function AdminDashboardPage() {
     todayPeakOnline: number;
     sectionHits?: Record<string, number>;
     osHits?: Record<string, number>;
+    todayCountryHits?: Record<string, number>;
+    todayRegionHits?: Record<string, number>;
+    liveCountryHits?: Record<string, number>;
+    liveRegionHits?: Record<string, number>;
     trafficHistory?: TrafficDaySummary[];
   }>({
     sessions: [],
@@ -159,8 +163,13 @@ export default function AdminDashboardPage() {
     todayPeakOnline: 0,
     sectionHits: {},
     osHits: {},
+    todayCountryHits: {},
+    todayRegionHits: {},
+    liveCountryHits: {},
+    liveRegionHits: {},
     trafficHistory: [],
   });
+  const [geoTab, setGeoTab] = useState<"live" | "today">("today");
   const [registeredUsers, setRegisteredUsers] = useState<UserProfile[]>([]);
   const [systemHealth, setSystemHealth] = useState<{
     kvConnected: boolean;
@@ -566,6 +575,42 @@ export default function AdminDashboardPage() {
       }))
       .sort((a, b) => b.count - a.count);
   }, [registeredUsers]);
+
+  const topCountriesList = useMemo(() => {
+    const hits =
+      geoTab === "live"
+        ? presence.liveCountryHits || {}
+        : presence.todayCountryHits || {};
+    const total = Math.max(
+      1,
+      Object.values(hits).reduce((acc, v) => acc + v, 0)
+    );
+    return Object.entries(hits)
+      .map(([country, count]) => ({
+        country,
+        count,
+        pct: Math.round((count / total) * 100),
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [presence, geoTab]);
+
+  const topRegionsList = useMemo(() => {
+    const hits =
+      geoTab === "live"
+        ? presence.liveRegionHits || {}
+        : presence.todayRegionHits || {};
+    const total = Math.max(
+      1,
+      Object.values(hits).reduce((acc, v) => acc + v, 0)
+    );
+    return Object.entries(hits)
+      .map(([region, count]) => ({
+        region,
+        count,
+        pct: Math.round((count / total) * 100),
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [presence, geoTab]);
 
   const filteredUsers = useMemo(() => {
     const q = userSearch.trim().toLowerCase();
@@ -1572,6 +1617,7 @@ export default function AdminDashboardPage() {
                     <thead>
                       <tr className="border-b border-slate-200 text-slate-500 uppercase text-[10px] font-extrabold">
                         <th className="py-2.5 px-3">Usuario / Visitante</th>
+                        <th className="py-2.5 px-3">Ubicación</th>
                         <th className="py-2.5 px-3">Equipo</th>
                         <th className="py-2.5 px-3">Viendo Ahora</th>
                         <th className="py-2.5 px-3">Dispositivo / SO</th>
@@ -1604,6 +1650,17 @@ export default function AdminDashboardPage() {
                               </div>
                             </td>
                             <td className="py-2.5 px-3">
+                              <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                                <span className="text-sm">{s.flag || "🌐"}</span>
+                                <span
+                                  className="truncate max-w-[170px] text-[11px]"
+                                  title={s.locationLabel || s.region || s.countryName || "Venezuela"}
+                                >
+                                  {s.locationLabel || s.region || s.countryName || "Venezuela"}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-3">
                               <span className="px-2 py-0.5 rounded bg-slate-100 font-black text-[10px] text-slate-700">
                                 {s.favoriteTeam || "LVBP"}
                               </span>
@@ -1628,6 +1685,125 @@ export default function AdminDashboardPage() {
                   </table>
                 </div>
               )}
+            </div>
+
+            {/* Desglose Geográfico: Países y Estados/Regiones */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Países de los Visitantes */}
+              <div className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5 shadow-2xs space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">🌍</span>
+                    <div>
+                      <h3 className="text-sm font-black text-slate-950">
+                        Países de los Visitantes
+                      </h3>
+                      <p className="text-[11px] text-slate-500">
+                        {geoTab === "live"
+                          ? "Conectados ahora mismo"
+                          : "Visitantes únicos acumulados hoy"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Selector En Vivo vs Hoy */}
+                  <div className="flex items-center bg-slate-100 p-0.5 rounded-lg text-[11px] font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setGeoTab("live")}
+                      className={`px-2.5 py-1 rounded-md transition-colors ${
+                        geoTab === "live"
+                          ? "bg-white text-slate-900 shadow-2xs"
+                          : "text-slate-500 hover:text-slate-900"
+                      }`}
+                    >
+                      En Vivo ({presence.onlineCount})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGeoTab("today")}
+                      className={`px-2.5 py-1 rounded-md transition-colors ${
+                        geoTab === "today"
+                          ? "bg-white text-slate-900 shadow-2xs"
+                          : "text-slate-500 hover:text-slate-900"
+                      }`}
+                    >
+                      Hoy ({presence.todayUniqueVisitors})
+                    </button>
+                  </div>
+                </div>
+
+                {topCountriesList.length === 0 ? (
+                  <p className="text-xs text-slate-400 font-bold py-2">
+                    Esperando visitas geolocalizadas...
+                  </p>
+                ) : (
+                  <div className="space-y-2.5">
+                    {topCountriesList.slice(0, 8).map((item) => (
+                      <div key={item.country} className="space-y-1 text-xs">
+                        <div className="flex justify-between font-bold text-slate-700">
+                          <span className="flex items-center gap-1.5">
+                            {item.country}
+                          </span>
+                          <span>
+                            {item.count} {item.count === 1 ? "visita" : "visitas"} ({item.pct}%)
+                          </span>
+                        </div>
+                        <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                          <div
+                            className="h-full bg-emerald-500 rounded-full transition-all"
+                            style={{ width: `${Math.max(4, item.pct)}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Estados y Regiones */}
+              <div className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5 shadow-2xs space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">📍</span>
+                    <div>
+                      <h3 className="text-sm font-black text-slate-950">
+                        Estados / Regiones Más Activas
+                      </h3>
+                      <p className="text-[11px] text-slate-500">
+                        Venezuela (por Estado) e Internacional
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {topRegionsList.length === 0 ? (
+                  <p className="text-xs text-slate-400 font-bold py-2">
+                    Esperando datos por estado / región...
+                  </p>
+                ) : (
+                  <div className="space-y-2.5">
+                    {topRegionsList.slice(0, 10).map((item) => (
+                      <div key={item.region} className="space-y-1 text-xs">
+                        <div className="flex justify-between font-bold text-slate-700">
+                          <span className="flex items-center gap-1.5">
+                            {item.region}
+                          </span>
+                          <span>
+                            {item.count} {item.count === 1 ? "visita" : "visitas"} ({item.pct}%)
+                          </span>
+                        </div>
+                        <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                          <div
+                            className="h-full bg-indigo-600 rounded-full transition-all"
+                            style={{ width: `${Math.max(4, item.pct)}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Desglose de Secciones Más Vistas, Sistemas Operativos y Ranking de Equipos Favoritos */}

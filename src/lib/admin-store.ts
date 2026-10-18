@@ -104,6 +104,12 @@ export interface LiveSession {
   sectionLabel: string;
   device: "mobile" | "desktop";
   os?: string;
+  countryCode?: string;
+  countryName?: string;
+  flag?: string;
+  region?: string;
+  city?: string;
+  locationLabel?: string;
   firstSeen: number;
   lastSeen: number;
   pageViews?: number;
@@ -119,6 +125,8 @@ export interface DailyTrafficStats {
   peakOnline: number;
   sectionHits?: Record<string, number>;
   osHits?: Record<string, number>;
+  countryHits?: Record<string, number>;
+  regionHits?: Record<string, number>;
 }
 
 export interface TrafficDaySummary {
@@ -128,6 +136,8 @@ export interface TrafficDaySummary {
   desktopVisitors: number;
   pageViews: number;
   peakOnline: number;
+  topCountries?: { country: string; count: number }[];
+  topRegions?: { region: string; count: number }[];
 }
 
 export interface HybridKVStore {
@@ -653,6 +663,12 @@ export async function recordPresenceHeartbeat(
     sessions[existingIdx] = {
       ...prev,
       ...input,
+      countryCode: input.countryCode || prev.countryCode,
+      countryName: input.countryName || prev.countryName,
+      flag: input.flag || prev.flag,
+      region: input.region || prev.region,
+      city: input.city || prev.city,
+      locationLabel: input.locationLabel || prev.locationLabel,
       os: resolvedOs,
       lastSeen: now,
       pageViews: (prev.pageViews || 1) + (isNewPageHit ? 1 : 0),
@@ -690,6 +706,8 @@ export async function recordPresenceHeartbeat(
     peakOnline: 0,
     sectionHits: {},
     osHits: {},
+    countryHits: {},
+    regionHits: {},
   };
   if (rawStats) {
     try {
@@ -711,10 +729,20 @@ export async function recordPresenceHeartbeat(
   if (!Array.isArray(stats.mobileSessions)) stats.mobileSessions = [];
   if (!Array.isArray(stats.desktopSessions)) stats.desktopSessions = [];
   if (!stats.osHits) stats.osHits = {};
+  if (!stats.countryHits) stats.countryHits = {};
+  if (!stats.regionHits) stats.regionHits = {};
 
   if (!stats.uniqueSessions.includes(input.sessionId) && stats.uniqueSessions.length < 5000) {
     stats.uniqueSessions.push(input.sessionId);
     stats.osHits[resolvedOs] = (stats.osHits[resolvedOs] || 0) + 1;
+    if (input.countryName) {
+      const cKey = `${input.flag || "🌐"} ${input.countryName}`;
+      stats.countryHits[cKey] = (stats.countryHits[cKey] || 0) + 1;
+    }
+    if (input.region) {
+      const rKey = input.countryCode === "VE" ? `🇻🇪 ${input.region}` : `${input.flag || "🌐"} ${input.region}`;
+      stats.regionHits[rKey] = (stats.regionHits[rKey] || 0) + 1;
+    }
   }
   if (input.device === "mobile") {
     if (!stats.mobileSessions.includes(input.sessionId) && stats.mobileSessions.length < 5000) {
@@ -742,6 +770,15 @@ export async function recordPresenceHeartbeat(
     if (rawHist) {
       histMap = JSON.parse(rawHist) || {};
     }
+    const topCountries = Object.entries(stats.countryHits || {})
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([country, count]) => ({ country, count }));
+    const topRegions = Object.entries(stats.regionHits || {})
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([region, count]) => ({ region, count }));
+
     histMap[dateKey] = {
       dateKey,
       uniqueVisitors: stats.uniqueSessions.length,
@@ -749,6 +786,8 @@ export async function recordPresenceHeartbeat(
       desktopVisitors: stats.desktopSessions.length,
       pageViews: Math.max(stats.pageViews || 0, stats.uniqueSessions.length),
       peakOnline: stats.peakOnline,
+      topCountries,
+      topRegions,
     };
     const keys = Object.keys(histMap).sort();
     if (keys.length > 21) {
@@ -780,6 +819,10 @@ export async function getLivePresenceSummary(): Promise<{
   todayPeakOnline: number;
   sectionHits: Record<string, number>;
   osHits: Record<string, number>;
+  todayCountryHits: Record<string, number>;
+  todayRegionHits: Record<string, number>;
+  liveCountryHits: Record<string, number>;
+  liveRegionHits: Record<string, number>;
   trafficHistory: TrafficDaySummary[];
 }> {
   const { kv } = await getAdminKv();
@@ -807,6 +850,20 @@ export async function getLivePresenceSummary(): Promise<{
   const desktopCount = activeSessions.filter((s) => s.device === "desktop").length;
   const registeredOnlineCount = activeSessions.filter((s) => s.isRegistered).length;
 
+  // Aggregate live country and region hits
+  const liveCountryHits: Record<string, number> = {};
+  const liveRegionHits: Record<string, number> = {};
+  for (const s of activeSessions) {
+    if (s.countryName) {
+      const cKey = `${s.flag || "🌐"} ${s.countryName}`;
+      liveCountryHits[cKey] = (liveCountryHits[cKey] || 0) + 1;
+    }
+    if (s.region) {
+      const rKey = s.countryCode === "VE" ? `🇻🇪 ${s.region}` : `${s.flag || "🌐"} ${s.region}`;
+      liveRegionHits[rKey] = (liveRegionHits[rKey] || 0) + 1;
+    }
+  }
+
   const dateKey = getTodayCaracasKey();
   const rawStats = await kv.get(`admin:traffic:${dateKey}`, { skipKv: true, ttlMs: 4000 });
   let todayUniqueVisitors = activeSessions.length;
@@ -816,6 +873,8 @@ export async function getLivePresenceSummary(): Promise<{
   let todayPeakOnline = activeSessions.length;
   let sectionHits: Record<string, number> = {};
   let osHits: Record<string, number> = {};
+  let todayCountryHits: Record<string, number> = { ...liveCountryHits };
+  let todayRegionHits: Record<string, number> = { ...liveRegionHits };
 
   if (rawStats) {
     try {
@@ -836,6 +895,12 @@ export async function getLivePresenceSummary(): Promise<{
       todayPeakOnline = Math.max(activeSessions.length, stats.peakOnline || 0);
       sectionHits = stats.sectionHits || {};
       osHits = stats.osHits || {};
+      if (stats.countryHits && Object.keys(stats.countryHits).length > 0) {
+        todayCountryHits = { ...stats.countryHits };
+      }
+      if (stats.regionHits && Object.keys(stats.regionHits).length > 0) {
+        todayRegionHits = { ...stats.regionHits };
+      }
     } catch {
       // ignore
     }
@@ -856,6 +921,14 @@ export async function getLivePresenceSummary(): Promise<{
     desktopVisitors: todayDesktopVisitors,
     pageViews: todayPageViews,
     peakOnline: todayPeakOnline,
+    topCountries: Object.entries(todayCountryHits)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([country, count]) => ({ country, count })),
+    topRegions: Object.entries(todayRegionHits)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([region, count]) => ({ region, count })),
   };
 
   const trafficHistory = Object.values(histMap)
@@ -875,6 +948,10 @@ export async function getLivePresenceSummary(): Promise<{
     todayPeakOnline,
     sectionHits,
     osHits,
+    todayCountryHits,
+    todayRegionHits,
+    liveCountryHits,
+    liveRegionHits,
     trafficHistory,
   };
 }

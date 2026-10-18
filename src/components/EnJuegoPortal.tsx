@@ -818,6 +818,7 @@ export function EnJuegoPortal({
           path: window.location.pathname + window.location.search,
           sectionLabel: getSectionLabel(),
           device: isMobile ? "mobile" : "desktop",
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         }),
       }).catch(() => {});
     };

@@ -43,18 +43,38 @@ export async function GET(request: Request) {
       getRecentAdClickLog(),
     ]);
 
+    const gScope = globalThis as unknown as {
+      __ENJUEGO_MLB_HEALTH_CACHE__?: {
+        status: "online" | "degraded";
+        latencyMs: number;
+        expiresAt: number;
+      };
+    };
+
     let mlbApiStatus: "online" | "degraded" = "online";
     let mlbLatencyMs = 0;
-    try {
-      const mlbStart = Date.now();
-      const res = await fetch(
-        "https://statsapi.mlb.com/api/v1/schedule?sportId=17&leagueId=135",
-        { signal: AbortSignal.timeout(3500) }
-      );
-      mlbLatencyMs = Date.now() - mlbStart;
-      if (!res.ok) mlbApiStatus = "degraded";
-    } catch {
-      mlbApiStatus = "degraded";
+
+    const cachedHealth = gScope.__ENJUEGO_MLB_HEALTH_CACHE__;
+    if (cachedHealth && Date.now() < cachedHealth.expiresAt) {
+      mlbApiStatus = cachedHealth.status;
+      mlbLatencyMs = cachedHealth.latencyMs;
+    } else {
+      try {
+        const mlbStart = Date.now();
+        const res = await fetch(
+          "https://statsapi.mlb.com/api/v1/schedule?sportId=17&leagueId=135",
+          { signal: AbortSignal.timeout(3500) }
+        );
+        mlbLatencyMs = Date.now() - mlbStart;
+        if (!res.ok) mlbApiStatus = "degraded";
+      } catch {
+        mlbApiStatus = "degraded";
+      }
+      gScope.__ENJUEGO_MLB_HEALTH_CACHE__ = {
+        status: mlbApiStatus,
+        latencyMs: mlbLatencyMs,
+        expiresAt: Date.now() + 60_000,
+      };
     }
 
     const enrichedCampaigns = campaigns.map((c) => ({

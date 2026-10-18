@@ -7,6 +7,7 @@ import {
   recordBannerMetric,
   recordPresenceHeartbeat,
 } from "@/lib/admin-store";
+import { resolveVisitorGeo } from "@/lib/geo-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -117,6 +118,8 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Missing sessionId" }, { status: 400 });
       }
 
+      const geo = resolveVisitorGeo(request, body);
+
       const res = await recordPresenceHeartbeat(
         {
           sessionId: String(sessionId).slice(0, 64),
@@ -129,6 +132,12 @@ export async function POST(request: Request) {
           sectionLabel: String(sectionLabel || "Inicio").slice(0, 48),
           device: device === "mobile" ? "mobile" : uaMeta.device,
           os: uaMeta.os,
+          countryCode: geo.countryCode,
+          countryName: geo.countryName,
+          flag: geo.flag,
+          region: geo.region,
+          city: geo.city,
+          locationLabel: geo.locationLabel,
         },
         ua
       );

@@ -1901,6 +1901,7 @@ export function GamedayView({
                         setRadioTeam(side);
                         setSelectedStationId("");
                         setAudioError(false);
+                        setShowInlineEmbed(false);
                       }
                     }}
                     className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-black border transition cursor-pointer ${
@@ -1966,8 +1967,8 @@ export function GamedayView({
                 </div>
               )}
 
-              {/* Reproductor embebido en la web (si es YouTube o Iframe y el usuario lo activa) */}
-              {showInlineEmbed && effectiveEmbedUrl && (
+              {/* Reproductor embebido en la web (solo si es YouTube y el usuario lo activa expresamente) */}
+              {showInlineEmbed && effectiveEmbedUrl && effectiveEmbedType === "youtube" && (
                 <div className="mt-2 rounded-xl overflow-hidden border border-slate-300 bg-black aspect-video relative shadow-inner">
                   <iframe
                     src={effectiveEmbedUrl}

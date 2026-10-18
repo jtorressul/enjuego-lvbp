@@ -71,17 +71,27 @@ export const LVBP_RADIO_CIRCUITS: Record<string, TeamRadioMeta> = {
     description: "Voz oficial de la Nave Turca a través de Hot 94.1 FM y la cadena Magallanes.",
   },
 
-  // Leones del Caracas: Unión Radio (unionradio.net/live-pt/)
+  // Leones del Caracas: Onda 107.9 FM (mundour.com/live-onda/)
   CAR: {
-    circuitName: "Circuito Unión Radio (Leones)",
-    stationName: "Unión Radio Live · La Mega 107.3 FM",
-    dial: "107.9 FM / 107.3 FM · unionradio.net/live-pt",
+    circuitName: "Circuito Onda La Superestación (Leones)",
+    stationName: "Onda 107.9 FM (MundoUR)",
+    dial: "107.9 FM Caracas · mundour.com/live-onda",
     city: "Caracas / Red Nacional",
-    webPlayerUrl: "https://unionradio.net/live-pt/",
-    embedUrl: "https://unionradio.net/live-pt/",
-    embedType: "iframe",
+    webPlayerUrl: "https://mundour.com/live-onda/",
+    streamUrl: "https://acp4.lorini.net:2060/stream",
+    embedType: "audio",
+    stations: [
+      {
+        id: "onda",
+        name: "Onda 107.9 FM",
+        dial: "107.9 FM Caracas",
+        streamUrl: "https://acp4.lorini.net:2060/stream",
+        webPlayerUrl: "https://mundour.com/live-onda/",
+        embedType: "audio",
+      },
+    ],
     narrators: "Fernando Arreaza, Efraín Zavarce, Pascual Artiles",
-    description: "Transmisión oficial de los Leones del Caracas a través de Unión Radio en vivo.",
+    description: "Transmisión oficial de los Leones del Caracas a través de Onda La Superestación en vivo.",
   },
 
   // Cardenales de Lara: Cardenales FM (cardenalesfm.net)
@@ -92,8 +102,6 @@ export const LVBP_RADIO_CIRCUITS: Record<string, TeamRadioMeta> = {
     city: "Barquisimeto / Centroccidente",
     webPlayerUrl: "https://www.cardenalesfm.net/",
     streamUrl: "https://server6.globalhostla.com:9308/stream",
-    embedUrl:
-      "https://player.globalstreaming.com.ve/?nr=CARDENALES%2092.1%20FM&s=6&p=08&dr=cardenalesfm.net&l=logo.png&bgI=background.png&c1=000000&c2=FFFFFF&c3=C91414&c4=FFFFFF&vt=6&i=cardenales921fm",
     embedType: "audio",
     narrators: "Alfonso Saer 'El Narrador', Alfonso Saer Gómez, Ignacio Serrano",
     description: "Transmisión oficial de los Cardenales de Lara en vivo desde Barquisimeto.",
@@ -128,13 +136,23 @@ export const LVBP_RADIO_CIRCUITS: Record<string, TeamRadioMeta> = {
 
   // Bravos de Margarita: Éxitos FM (mundour.com/live-exitos/)
   MAR: {
-    circuitName: "Circuito Bravos de Margarita",
-    stationName: "Éxitos FM (MundoUR)",
-    dial: "99.7 FM Margarita · mundour.com/live-exitos",
+    circuitName: "Circuito Éxitos FM (Bravos)",
+    stationName: "Éxitos 99.7 FM / 99.9 FM (MundoUR)",
+    dial: "99.7 FM Margarita · 99.9 FM · mundour.com/live-exitos",
     city: "Isla de Margarita / Caracas",
     webPlayerUrl: "https://mundour.com/live-exitos/",
-    embedUrl: "https://mundour.com/live-exitos/",
-    embedType: "iframe",
+    streamUrl: "https://acp4.lorini.net:2070/stream",
+    embedType: "audio",
+    stations: [
+      {
+        id: "exitos",
+        name: "Éxitos 99.7 FM / 99.9 FM",
+        dial: "99.7 FM Margarita · 99.9 FM",
+        streamUrl: "https://acp4.lorini.net:2070/stream",
+        webPlayerUrl: "https://mundour.com/live-exitos/",
+        embedType: "audio",
+      },
+    ],
     narrators: "Guillermo Rodríguez, David Naranjo, Trina Ballesteros",
     description: "La voz brava insular a través del circuito Éxitos FM en vivo.",
   },

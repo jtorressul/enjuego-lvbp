@@ -13,6 +13,7 @@ import { BroadcastChannelsRow } from "@/components/BroadcastChannelsRow";
 import { AuthModal } from "@/components/AuthModal";
 import { AdBanner } from "@/components/AdBanner";
 import MlbPlayoffBracket from "@/components/MlbPlayoffBracket";
+import { ShareGameBannerModal } from "@/components/ShareGameBannerModal";
 import { UserProfile } from "@/lib/user-auth";
 import { getFallbackSchedule } from "@/lib/lvbp-fallback-data";
 import {
@@ -231,6 +232,7 @@ export function EnJuegoPortal({
   // Favorite Team state ("Mi Equipo Favorito") stored in localStorage
   const [favoriteTeamCode, setFavoriteTeamCode] = useState<string>("");
   const [copiedGameId, setCopiedGameId] = useState<string>("");
+  const [shareModalGame, setShareModalGame] = useState<ScheduleGame | null>(null);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [teamsDropdownOpen, setTeamsDropdownOpen] = useState(false);
   const teamsDropdownRef = useRef<HTMLDivElement>(null);
@@ -641,25 +643,7 @@ export function EnJuegoPortal({
 
   const handleShareGame = (e: React.MouseEvent, game: ScheduleGame) => {
     e.stopPropagation();
-    const url =
-      typeof window !== "undefined"
-        ? `${window.location.origin}/juego/${game.id}`
-        : `https://enjuego.online/juego/${game.id}`;
-    const played = game.status === "IN_PROGRESS" || game.status === "FINISHED";
-    const scoreText = played
-      ? `${game.awayTeam.nick} ${game.awayScore} - ${game.homeScore} ${game.homeTeam.nick} (${game.inning})`
-      : `${game.awayTeam.nick} vs ${game.homeTeam.nick} (${game.time})`;
-    const text = `LVBP En Juego: ${scoreText} | Marcador y detalles en vivo: ${url}`;
-
-    if (typeof navigator !== "undefined" && navigator.share) {
-      navigator.share({ title: "En Juego LVBP", text, url }).catch(() => {});
-      return;
-    }
-    if (typeof window !== "undefined") {
-      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener");
-      setCopiedGameId(game.id);
-      setTimeout(() => setCopiedGameId(""), 2500);
-    }
+    setShareModalGame(game);
   };
 
   // Generate real game recaps / crónicas directly from LVBP games
@@ -1873,12 +1857,8 @@ export function EnJuegoPortal({
               )}
             </div>
 
-            {/* Navigation Links with Collapsible Arrow Dropdowns (like Inicio) */}
+            {/* Navigation Links with Collapsible Arrow Dropdowns */}
             <div className="p-4 space-y-1.5 border-b border-slate-100">
-              <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 px-2 block mb-2">
-                Navegación por Liga (LVBP · MLB)
-              </span>
-
               <Link
                 href="/inicio"
                 onClick={() => {
@@ -1957,11 +1937,6 @@ export function EnJuegoPortal({
                       <div className="flex items-center gap-3">
                         <Icon className="w-4.5 h-4.5 text-amber-600 shrink-0" />
                         <span>{label}</span>
-                        {active && (
-                          <span className="px-1.5 py-0.5 rounded bg-amber-400/30 text-amber-900 text-[10px] font-black uppercase">
-                            {activeLeague.toUpperCase()}
-                          </span>
-                        )}
                       </div>
                       <ChevronRight
                         className={`w-4 h-4 text-slate-400 transition-transform duration-150 ${
@@ -2277,6 +2252,7 @@ export function EnJuegoPortal({
               setAuthModalTab("quick");
               setAuthModalOpen(true);
             }}
+            onShareGame={(g) => setShareModalGame(g)}
           />
         )}
 
@@ -3630,56 +3606,6 @@ export function EnJuegoPortal({
         style={{ paddingBottom: "max(0.45rem, env(safe-area-inset-bottom, 0.45rem))" }}
         aria-label="Navegación Móvil"
       >
-        {/* Top Quick League Bar inside Mobile Bottom Dock — Only on inner sections */}
-        {section !== "home" && section !== "juego" && (
-          <div className="flex items-center justify-between px-3 py-1 bg-slate-950 text-white border-b border-slate-800">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Liga:
-            </span>
-            <div className="inline-flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => {
-                  switchLeague("lvbp");
-                  router.push(
-                    section === "equipos"
-                      ? "/teams?team=leones&liga=lvbp"
-                      : `/${section}?liga=lvbp`
-                  );
-                }}
-                className={`px-2.5 py-0.5 rounded-md text-[10px] font-black transition cursor-pointer flex items-center gap-1 ${
-                  activeLeague === "lvbp"
-                    ? "bg-amber-400 text-slate-950 shadow-2xs"
-                    : "text-slate-300 hover:text-white"
-                }`}
-              >
-                <span>🇻🇪</span>
-                <span>LVBP</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  switchLeague("mlb");
-                  router.push(
-                    section === "equipos"
-                      ? "/teams?team=yankees&liga=mlb"
-                      : `/${section}?liga=mlb`
-                  );
-                }}
-                className={`px-2.5 py-0.5 rounded-md text-[10px] font-black transition cursor-pointer flex items-center gap-1 ${
-                  activeLeague === "mlb"
-                    ? "bg-sky-400 text-slate-950 shadow-2xs"
-                    : "text-slate-300 hover:text-white"
-                }`}
-              >
-                <span>⚾</span>
-                <span>MLB</span>
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* 5 Main Mobile Navigation Tabs */}
         <div className="px-1.5 pt-1.5 flex items-center justify-around">
           {(
@@ -3769,6 +3695,12 @@ export function EnJuegoPortal({
         currentUser={currentUser}
         onUserUpdate={handleUserUpdate}
         initialTab={authModalTab}
+      />
+
+      {/* Share Game Official Banner Modal (Previa, En Vivo, Resultado Final) */}
+      <ShareGameBannerModal
+        game={shareModalGame}
+        onClose={() => setShareModalGame(null)}
       />
     </div>
   );

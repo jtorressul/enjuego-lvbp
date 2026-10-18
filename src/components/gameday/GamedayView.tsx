@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { GamedayData, PlayByPlayItem } from "@/lib/types";
+import { GamedayData, PlayByPlayItem, ScheduleGame } from "@/lib/types";
 import { playerHeadshot, LVBP_TEAMS } from "@/lib/lvbp-teams";
 import { BroadcastChannelsRow } from "@/components/BroadcastChannelsRow";
 import {
@@ -30,6 +30,7 @@ import {
   ExternalLink,
   Info,
   Sparkles,
+  Share2,
 } from "lucide-react";
 import { AdBanner } from "@/components/AdBanner";
 import type { UserProfile } from "@/lib/user-auth";
@@ -161,12 +162,14 @@ export function GamedayView({
   onSelectTeam,
   currentUser,
   onRequireAuth,
+  onShareGame,
 }: {
   gameId: string;
   onBack: () => void;
   onSelectTeam?: (teamCode: string) => void;
   currentUser?: UserProfile | null;
   onRequireAuth?: () => void;
+  onShareGame?: (game: ScheduleGame) => void;
 }) {
   const [game, setGame] = useState<GamedayData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -506,6 +509,28 @@ export function GamedayView({
         >
           <ArrowLeft className="w-4 h-4 text-amber-600" /> Volver a la pizarra
         </button>
+
+        {onShareGame && game && (
+          <button
+            type="button"
+            onClick={() =>
+              onShareGame({
+                ...game,
+                inning:
+                  game.statusLabel ||
+                  (game.inningState
+                    ? `${game.inningState.top ? "Alta" : "Baja"} ${game.inningState.inning}°`
+                    : game.status === "FINISHED"
+                      ? "Final"
+                      : game.time),
+              })
+            }
+            className="inline-flex items-center gap-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 px-3 py-1.5 text-xs font-black transition cursor-pointer shadow-2xs"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            <span>Compartir Banner</span>
+          </button>
+        )}
       </div>
 
       {/* HERO SCOREBOARD + LINESCORE */}

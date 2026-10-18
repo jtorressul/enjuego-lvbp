@@ -441,34 +441,32 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
     }, 3000);
   };
 
-  const handleDownloadPng = () => {
+  const handleDownloadPng = async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     setDownloadingMobile(true);
     try {
       const filename = getDownloadFilename();
       const dataUrl = canvas.toDataURL("image/png", 1.0);
-      const isMobile =
-        typeof navigator !== "undefined" &&
-        /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
-      if (isMobile) {
-        // On mobile browsers (iOS Safari, Android Chrome, in-app browsers),
-        // an HTTP response with Content-Disposition: attachment is 100% reliable
-        // and never fails due to data:/blob: URL size limits.
+      // Fast, zero-server-overhead direct blob download
+      try {
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.download = filename;
+        link.href = blobUrl;
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          if (document.body.contains(link)) document.body.removeChild(link);
+          URL.revokeObjectURL(blobUrl);
+        }, 3000);
+      } catch {
+        // Fallback to server attachment if client-side blob creation fails
         triggerServerAttachmentDownload(dataUrl, filename);
-        return;
       }
-
-      const blob = dataUrlToBlob(dataUrl);
-      const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.download = filename;
-      link.href = blobUrl;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
     } finally {
       setTimeout(() => setDownloadingMobile(false), 600);
     }

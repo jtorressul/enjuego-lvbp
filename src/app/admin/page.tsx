@@ -41,7 +41,23 @@ import {
   type TrafficDaySummary,
 } from "@/lib/admin-store";
 import type { UserProfile } from "@/lib/user-auth";
-import { SocialCardGenerator } from "@/components/admin/SocialCardGenerator";
+import dynamic from "next/dynamic";
+
+const SocialCardGenerator = dynamic(
+  () =>
+    import("@/components/admin/SocialCardGenerator").then(
+      (m) => m.SocialCardGenerator
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="py-16 text-center text-slate-400">
+        <div className="w-8 h-8 border-3 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+        <p className="text-xs font-bold">Cargando Generador de Artes…</p>
+      </div>
+    ),
+  }
+);
 
 type EnrichedCampaign = AdCampaign & {
   live?: boolean;

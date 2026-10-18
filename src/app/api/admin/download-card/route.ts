@@ -13,11 +13,7 @@ export async function POST(req: NextRequest) {
     }
 
     const base64Data = match[2];
-    const binaryStr = atob(base64Data);
-    const bytes = new Uint8Array(binaryStr.length);
-    for (let i = 0; i < binaryStr.length; i++) {
-      bytes[i] = binaryStr.charCodeAt(i);
-    }
+    const bytes = Buffer.from(base64Data, "base64");
 
     return new NextResponse(bytes, {
       status: 200,

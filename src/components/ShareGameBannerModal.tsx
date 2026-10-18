@@ -215,8 +215,21 @@ export function ShareGameBannerModal({ game, onClose }: ShareGameBannerModalProp
     if (!previewDataUrl) return;
     setDownloading(true);
     try {
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || "");
-      if (isMobile) {
+      try {
+        const res = await fetch(previewDataUrl);
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          if (document.body.contains(link)) document.body.removeChild(link);
+          URL.revokeObjectURL(blobUrl);
+        }, 3000);
+      } catch {
+        // Fallback to server attachment form
         const form = document.createElement("form");
         form.method = "POST";
         form.action = "/api/admin/download-card";
@@ -236,14 +249,9 @@ export function ShareGameBannerModal({ game, onClose }: ShareGameBannerModalProp
 
         document.body.appendChild(form);
         form.submit();
-        setTimeout(() => document.body.removeChild(form), 2000);
-      } else {
-        const link = document.createElement("a");
-        link.href = previewDataUrl;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        setTimeout(() => {
+          if (document.body.contains(form)) document.body.removeChild(form);
+        }, 3000);
       }
     } finally {
       setTimeout(() => setDownloading(false), 600);

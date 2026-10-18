@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { X, Smartphone, Zap, Bell, Check, Share, ArrowRight } from "lucide-react";
 
+import { urlBase64ToUint8Array } from "@/lib/push-config";
+
 interface PwaInstallModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -13,8 +15,8 @@ interface PwaInstallModalProps {
 export function PwaInstallModal({
   isOpen,
   onClose,
-  title = "¿Quieres instalar nuestra app?",
-  subtitle = "Béisbol venezolano en vivo en tu pantalla de inicio",
+  title = "¿Quieres descargar nuestra App y activar notificaciones?",
+  subtitle = "Recibe alertas de jonrones y resultados en vivo directamente en tu pantalla",
 }: PwaInstallModalProps) {
   const [isIos, setIsIos] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
@@ -36,6 +38,38 @@ export function PwaInstallModal({
   if (!isOpen) return null;
 
   const handleInstallClick = async () => {
+    // 1. Request notifications & subscribe device
+    if (typeof window !== "undefined" && "Notification" in window) {
+      try {
+        const perm = await Notification.requestPermission();
+        if (perm === "granted") {
+          const res = await fetch("/api/push/subscribe");
+          const { vapidPublicKey } = await res.json();
+          if (vapidPublicKey && "serviceWorker" in navigator) {
+            const reg = await navigator.serviceWorker.ready;
+            let sub = await reg.pushManager.getSubscription();
+            if (!sub) {
+              sub = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as unknown as BufferSource,
+              });
+            }
+            await fetch("/api/push/subscribe", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                subscription: sub.toJSON(),
+                teamPreference: "ALL",
+              }),
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("[Push] Error during install subscribe:", err);
+      }
+    }
+
+    // 2. Trigger PWA install prompt
     if (window.__ENJUEGO_TRIGGER_INSTALL__) {
       setInstalling(true);
       const success = await window.__ENJUEGO_TRIGGER_INSTALL__();
@@ -149,10 +183,10 @@ export function PwaInstallModal({
                 type="button"
                 onClick={handleInstallClick}
                 disabled={installing}
-                className="w-full py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs transition cursor-pointer shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs transition cursor-pointer shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 <Smartphone className="w-4 h-4" />
-                <span>{installing ? "Instalando..." : "Instalar App Ahora"}</span>
+                <span>{installing ? "Conectando..." : "Descargar App y Activar Alertas"}</span>
               </button>
             )}
 

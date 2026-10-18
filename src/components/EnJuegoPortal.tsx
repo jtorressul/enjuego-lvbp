@@ -351,6 +351,14 @@ export function EnJuegoPortal({
       const hasOnboarded = localStorage.getItem("enjuego_pwa_onboarded");
       if (isPwa && !hasOnboarded && !storedUser) {
         setPwaOnboardingOpen(true);
+      } else if (!isPwa) {
+        // When opening the web in browser: show the floating download & notifications modal
+        const dismissed = sessionStorage.getItem("enjuego_pwa_install_dismissed");
+        if (!dismissed) {
+          setTimeout(() => {
+            setPwaModalOpen(true);
+          }, 800);
+        }
       }
     } catch {
       // ignore
@@ -3767,7 +3775,12 @@ export function EnJuegoPortal({
       {/* PWA Floating Install Modal */}
       <PwaInstallModal
         isOpen={pwaModalOpen}
-        onClose={() => setPwaModalOpen(false)}
+        onClose={() => {
+          try {
+            sessionStorage.setItem("enjuego_pwa_install_dismissed", "true");
+          } catch {}
+          setPwaModalOpen(false);
+        }}
       />
 
       {/* PWA Onboarding Modal (Automatic on App Launch) */}

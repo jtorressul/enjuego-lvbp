@@ -48,6 +48,10 @@ export interface ScheduleGame {
   venueCity: string;
   tv?: string;
   tvChannels?: string[];
+  radio?: {
+    away?: RadioBroadcastInfo;
+    home?: RadioBroadcastInfo;
+  };
   decisions?: {
     winner?: string;
     loser?: string;
@@ -57,6 +61,19 @@ export interface ScheduleGame {
     away?: string;
     home?: string;
   };
+}
+
+export interface RadioBroadcastInfo {
+  teamCode: string;
+  side: "away" | "home";
+  circuitName: string;
+  stationName: string;
+  dial: string;
+  city: string;
+  webPlayerUrl?: string;
+  streamUrl?: string;
+  narrators?: string;
+  isSpanish?: boolean;
 }
 
 export interface PitchPoint {
@@ -193,6 +210,10 @@ export interface GamedayData {
   venueLines?: string;
   tv?: string;
   tvChannels?: string[];
+  radio?: {
+    away?: RadioBroadcastInfo;
+    home?: RadioBroadcastInfo;
+  };
   viewers: number;
   awayTeam: TeamSummary;
   homeTeam: TeamSummary;

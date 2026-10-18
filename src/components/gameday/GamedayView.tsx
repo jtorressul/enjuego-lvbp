@@ -19,6 +19,7 @@ import {
   SkipForward,
   ArrowLeft,
   Volume2,
+  VolumeX,
   MessageSquare,
   Send,
   Flame,
@@ -31,7 +32,13 @@ import {
   Info,
   Sparkles,
   Share2,
+  Loader2,
 } from "lucide-react";
+import {
+  resolveTeamRadio,
+  openOfficialRadio,
+  type RadioBroadcastInfo,
+} from "@/lib/radio-circuits";
 import { AdBanner } from "@/components/AdBanner";
 import type { UserProfile } from "@/lib/user-auth";
 
@@ -183,14 +190,31 @@ export function GamedayView({
   const [votes, setVotes] = useState({ away: 0, home: 0 });
   const [liveViewers, setLiveViewers] = useState<number | null>(null);
 
-  // Radio & Live Chat state
+  // Radio state
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const [radioPlaying, setRadioPlaying] = useState(false);
   const [radioTeam, setRadioTeam] = useState<"away" | "home">("home");
+  const [audioBuffering, setAudioBuffering] = useState(false);
+  const [audioError, setAudioError] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [radioVolume, setRadioVolume] = useState(1);
   const [chatUser, setChatUser] = useState("");
   const [chatMessages, setChatMessages] = useState<
     { id: string | number; author: string; team: string; time: string; text: string }[]
   >([]);
   const [chatInput, setChatInput] = useState("");
+
+  const activeRadio: RadioBroadcastInfo = React.useMemo(() => {
+    if (!game) {
+      return resolveTeamRadio("CAR", "home");
+    }
+    const sideRadio = radioTeam === "away" ? game.radio?.away : game.radio?.home;
+    if (sideRadio) return sideRadio;
+    return resolveTeamRadio(
+      radioTeam === "away" ? game.awayTeam.code : game.homeTeam.code,
+      radioTeam
+    );
+  }, [game, radioTeam]);
 
   useEffect(() => {
     let active = true;
@@ -303,34 +327,52 @@ export function GamedayView({
     };
   }, [gameId, game?.awayTeam?.code, game?.homeTeam?.code]);
 
-  // Live Spanish Radio Narrator when radioPlaying is enabled
+  // Handle Real Radio Audio Stream Playback
   useEffect(() => {
-    if (!radioPlaying || !game || typeof window === "undefined" || !("speechSynthesis" in window)) {
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-      }
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (!radioPlaying) {
+      audio.pause();
+      setAudioBuffering(false);
       return;
     }
 
-    const stationName =
-      LVBP_TEAMS[radioTeam === "away" ? game.awayTeam.code : game.homeTeam.code]?.radioName ||
-      "Circuito Radial LVBP";
-    const lastPlayText =
-      (game.feed || []).filter((p) => p.text).slice(-1)[0]?.text ||
-      "Duelo cerrado desde el terreno de juego.";
+    if (activeRadio?.streamUrl) {
+      setAudioBuffering(true);
+      setAudioError(false);
+      audio.src = activeRadio.streamUrl;
+      audio.volume = isMuted ? 0 : radioVolume;
+      audio.load();
+      audio
+        .play()
+        .then(() => {
+          setAudioBuffering(false);
+        })
+        .catch((err) => {
+          console.warn("Direct stream playback blocked or failed:", err);
+          setAudioBuffering(false);
+          setAudioError(true);
+        });
+    } else {
+      setAudioBuffering(false);
+      setAudioError(false);
+    }
+  }, [radioPlaying, activeRadio, isMuted, radioVolume]);
 
-    const narration = `Transmitiendo en vivo por ${stationName}. Pizarra en ${game.venue}: ${game.awayTeam.name} ${game.awayScore}, ${game.homeTeam.name} ${game.homeScore}. Última jugada: ${lastPlayText}`;
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = isMuted ? 0 : radioVolume;
+    }
+  }, [radioVolume, isMuted]);
 
-    window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(narration);
-    utter.lang = "es-VE";
-    utter.rate = 1.04;
-    window.speechSynthesis.speak(utter);
-
+  useEffect(() => {
     return () => {
-      window.speechSynthesis.cancel();
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
     };
-  }, [radioPlaying, radioTeam, game?.awayScore, game?.homeScore, game?.feed?.length]);
+  }, [gameId]);
 
   if (loading || !game) {
     return (
@@ -1730,68 +1772,168 @@ export function GamedayView({
 
           {/* 2. CIRCUITO RADIAL EN VIVO */}
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-700">
+            <audio
+              ref={audioRef}
+              preload="none"
+              onWaiting={() => setAudioBuffering(true)}
+              onPlaying={() => {
+                setAudioBuffering(false);
+                setAudioError(false);
+              }}
+              onError={() => {
+                setAudioBuffering(false);
+                setAudioError(true);
+              }}
+            />
+
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-700 shrink-0 shadow-2xs">
                   <Radio className="w-5 h-5" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" /> Circuito Radial
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" /> Circuito Radial Oficial
                   </span>
-                  <h3 className="text-sm font-black text-slate-900">
-                    {
-                      LVBP_TEAMS[
-                        radioTeam === "away" ? game.awayTeam.code : game.homeTeam.code
-                      ]?.radioName
-                    }
+                  <h3 className="text-sm font-black text-slate-900 truncate" title={activeRadio.circuitName}>
+                    {activeRadio.circuitName}
                   </h3>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setRadioPlaying((p) => !p)}
-                className={`w-10 h-10 rounded-full flex items-center justify-center transition cursor-pointer ${
-                  radioPlaying
-                    ? "bg-amber-400 text-slate-950 shadow-md shadow-amber-400/25"
-                    : "bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200"
-                }`}
-                aria-label="Reproducir o pausar radio"
-              >
-                {radioPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
-              </button>
+              {activeRadio.streamUrl ? (
+                <button
+                  type="button"
+                  onClick={() => setRadioPlaying((p) => !p)}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center transition cursor-pointer shrink-0 shadow-sm active:scale-95 ${
+                    radioPlaying
+                      ? "bg-amber-400 text-slate-950 shadow-md shadow-amber-400/25 ring-2 ring-amber-300"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200"
+                  }`}
+                  aria-label="Reproducir o pausar circuito radial"
+                >
+                  {audioBuffering ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+                  ) : radioPlaying ? (
+                    <Pause className="w-4 h-4 fill-slate-950" />
+                  ) : (
+                    <Play className="w-4 h-4 ml-0.5 fill-slate-700" />
+                  )}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => openOfficialRadio(activeRadio)}
+                  title="Sintonizar en ventana flotante"
+                  className="px-2.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition cursor-pointer flex items-center gap-1.5 shadow-2xs shrink-0 active:scale-95"
+                >
+                  <Play className="w-3 h-3 fill-slate-950" />
+                  <span>Sintonizar</span>
+                </button>
+              )}
             </div>
 
+            {/* Selector de Equipo: Visitante vs Home Club */}
             <div className="grid grid-cols-2 gap-2">
               {(["away", "home"] as const).map((side) => {
                 const t = side === "away" ? game.awayTeam : game.homeTeam;
+                const isSelected = radioTeam === side;
                 return (
                   <button
                     key={side}
                     type="button"
-                    onClick={() => setRadioTeam(side)}
+                    onClick={() => {
+                      if (radioTeam !== side) {
+                        setRadioTeam(side);
+                        setAudioError(false);
+                      }
+                    }}
                     className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-black border transition cursor-pointer ${
-                      radioTeam === side
-                        ? "bg-amber-50/80 border-amber-400 text-amber-950 shadow-2xs"
+                      isSelected
+                        ? "bg-amber-50/90 border-amber-400 text-amber-950 shadow-2xs"
                         : "bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900"
                     }`}
                   >
                     <img src={t.logoUrl} alt="" className="w-4 h-4 object-contain" />
-                    {t.nick}
+                    <span>{t.nick}</span>
                   </button>
                 );
               })}
             </div>
 
-            {radioPlaying && (
-              <div className="flex items-center justify-between gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 border border-amber-200">
-                <span className="flex items-center gap-1.5 font-semibold">
-                  <Volume2 className="w-4 h-4 animate-bounce text-amber-600" /> Narración de jugadas activa…
+            {/* Ficha Informativa del Circuito Radial */}
+            <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 text-xs space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="font-black text-slate-900 flex items-center gap-1.5">
+                    <span>{activeRadio.stationName}</span>
+                  </div>
+                  <div className="text-[11px] font-bold text-amber-700 mt-0.5">
+                    {activeRadio.dial}
+                  </div>
+                </div>
+                <span className="shrink-0 text-[10px] font-bold text-slate-500 bg-slate-200/60 px-2 py-0.5 rounded">
+                  {activeRadio.city}
                 </span>
-                <span className="text-[10px] font-black uppercase bg-amber-200/80 px-1.5 py-0.5 rounded text-amber-900">AUDIO</span>
               </div>
-            )}
+
+              {activeRadio.narrators && (
+                <div className="text-[11px] text-slate-600 font-medium pt-1 border-t border-slate-200/60">
+                  <span className="font-bold text-slate-700">Narración: </span>
+                  {activeRadio.narrators}
+                </div>
+              )}
+
+              {/* Barra de Estado y Botón Sintonizar PiP */}
+              <div className="pt-2 border-t border-slate-200/60 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  {audioBuffering ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700">
+                      <Loader2 className="w-3 h-3 animate-spin" /> Conectando señal…
+                    </span>
+                  ) : radioPlaying && !audioError ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-black text-emerald-700">
+                      <Volume2 className="w-3.5 h-3.5 animate-pulse text-emerald-600" /> Transmisión en vivo
+                    </span>
+                  ) : (
+                    <span className="text-[11px] font-medium text-slate-500">
+                      Señal radial verificada
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  {activeRadio.streamUrl && radioPlaying && (
+                    <button
+                      type="button"
+                      onClick={() => setIsMuted((m) => !m)}
+                      className="p-1 rounded text-slate-500 hover:text-slate-900 transition cursor-pointer"
+                      title={isMuted ? "Activar audio" : "Silenciar audio"}
+                    >
+                      {isMuted ? <VolumeX className="w-3.5 h-3.5 text-rose-500" /> : <Volume2 className="w-3.5 h-3.5" />}
+                    </button>
+                  )}
+
+                  {activeRadio.webPlayerUrl && (
+                    <button
+                      type="button"
+                      onClick={() => openOfficialRadio(activeRadio)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 border border-amber-300 text-[11px] font-black text-amber-950 transition cursor-pointer"
+                      title="Abrir reproductor oficial de la emisora en ventana flotante"
+                    >
+                      <span>Sintonizar en PiP</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {audioError && (
+                <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-900 leading-snug">
+                  La señal directa de esta emisora requiere su reproductor web oficial. Toca <strong>"Sintonizar en PiP"</strong> arriba para escucharla en una ventanita flotante sin cerrar el juego.
+                </div>
+              )}
+            </div>
           </section>
 
           {/* 2. QUINIELA DEL JUEGO */}

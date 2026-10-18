@@ -6,6 +6,7 @@ import {
   resolveRealGameBroadcast,
   OfficialBroadcastEntry,
 } from "./lvbp-broadcasts";
+import { resolveTeamRadio } from "./radio-circuits";
 import {
   BattingBoxRow,
   FieldDefender,
@@ -311,6 +312,10 @@ export async function fetchLvbpSchedule(season = "2026"): Promise<ScheduleGame[]
           venueCity: homeMeta.venueCity,
           tv: tvChannels.join(" · "),
           tvChannels,
+          radio: {
+            away: resolveTeamRadio(awayTeam.code, "away", g.broadcasts),
+            home: resolveTeamRadio(homeTeam.code, "home", g.broadcasts),
+          },
           decisions: g.decisions
             ? {
                 winner: g.decisions.winner?.fullName,
@@ -570,6 +575,10 @@ export function transformMlbLiveFeedToGameday(raw: any): GamedayData {
     venueLines: homeMeta.dimensions,
     tv: tvChannels.join(" · "),
     tvChannels,
+    radio: {
+      away: resolveTeamRadio(awayTeam.code, "away", raw.broadcasts || gd.broadcasts),
+      home: resolveTeamRadio(homeTeam.code, "home", raw.broadcasts || gd.broadcasts),
+    },
     viewers: 140 + ((Number(raw.gamePk || 1) * 19) % 320),
     awayTeam,
     homeTeam,
@@ -1063,6 +1072,10 @@ export async function fetchMlbSchedule(season = "2026"): Promise<ScheduleGame[]>
           venueCity: homeMeta.venueCity,
           tv: tvChannels.join(" · "),
           tvChannels,
+          radio: {
+            away: resolveTeamRadio(awayTeam.code, "away", g.broadcasts),
+            home: resolveTeamRadio(homeTeam.code, "home", g.broadcasts),
+          },
           decisions: g.decisions
             ? {
                 winner: g.decisions.winner?.fullName,

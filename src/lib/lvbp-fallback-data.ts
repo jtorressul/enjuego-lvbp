@@ -1,5 +1,6 @@
 import { LVBP_TEAMS, playerHeadshot } from "./lvbp-teams";
 import { GamedayData, RosterPlayer, ScheduleGame } from "./types";
+import { resolveTeamRadio } from "./radio-circuits";
 
 function teamSummary(code: string, wins: number, losses: number) {
   const m = LVBP_TEAMS[code] || LVBP_TEAMS.CAR;
@@ -175,6 +176,10 @@ export function getFallbackGameday(gameId: string): GamedayData {
     venueCity: "Valencia",
     venueLines: "LF 338' · CF 403' · RF 338'",
     tv: "IVC · 1Baseball · ByM Sport",
+    radio: {
+      away: resolveTeamRadio(awayTeam.code, "away"),
+      home: resolveTeamRadio(homeTeam.code, "home"),
+    },
     viewers: 284,
     awayTeam,
     homeTeam,

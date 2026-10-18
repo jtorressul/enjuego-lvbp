@@ -76,6 +76,9 @@ export function PwaInstallModal({
       setInstalling(false);
       if (success) {
         setInstalledSuccess(true);
+        try {
+          localStorage.setItem("enjuego_pwa_install_prompt_seen", "true");
+        } catch {}
         setTimeout(() => {
           onClose();
         }, 1500);
@@ -104,8 +107,8 @@ export function PwaInstallModal({
 
         {/* Modal Header */}
         <div className="text-center pt-2 space-y-2">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-rose-600 via-rose-500 to-amber-500 mx-auto flex items-center justify-center shadow-lg border border-white/20">
-            <span className="text-2xl font-black text-white tracking-tight">EJ</span>
+          <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center shadow-lg border border-white/10 p-1.5 bg-slate-950 overflow-hidden">
+            <img src="/favicon.png" alt="EnJuego" className="w-full h-full object-contain" />
           </div>
           <div>
             <h3 className="text-lg font-black tracking-tight text-white">

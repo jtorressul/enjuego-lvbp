@@ -352,9 +352,9 @@ export function EnJuegoPortal({
       if (isPwa && !hasOnboarded && !storedUser) {
         setPwaOnboardingOpen(true);
       } else if (!isPwa) {
-        // When opening the web in browser: show the floating download & notifications modal
-        const dismissed = sessionStorage.getItem("enjuego_pwa_install_dismissed");
-        if (!dismissed) {
+        // When opening the web in browser: show the floating download & notifications modal ONLY ONCE
+        const seen = localStorage.getItem("enjuego_pwa_install_prompt_seen");
+        if (!seen) {
           setTimeout(() => {
             setPwaModalOpen(true);
           }, 800);
@@ -3777,7 +3777,7 @@ export function EnJuegoPortal({
         isOpen={pwaModalOpen}
         onClose={() => {
           try {
-            sessionStorage.setItem("enjuego_pwa_install_dismissed", "true");
+            localStorage.setItem("enjuego_pwa_install_prompt_seen", "true");
           } catch {}
           setPwaModalOpen(false);
         }}

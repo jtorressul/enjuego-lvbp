@@ -12,25 +12,25 @@
   "categories": ["sports", "news"],
   "icons": [
     {
-      "src": "/icon.png",
+      "src": "/favicon.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon.png",
+      "src": "/favicon.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icon.png",
+      "src": "/favicon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon.png",
+      "src": "/favicon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -42,21 +42,21 @@
       "short_name": "Juegos",
       "description": "Marcadores y pizarras en vivo",
       "url": "/inicio",
-      "icons": [{ "src": "/icon.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
     },
     {
       "name": "Posiciones LVBP",
       "short_name": "Tabla",
       "description": "Tabla de posiciones actualizada",
       "url": "/posiciones",
-      "icons": [{ "src": "/icon.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
     },
     {
       "name": "Calendario",
       "short_name": "Calendario",
       "description": "Cronograma de la temporada",
       "url": "/calendario",
-      "icons": [{ "src": "/icon.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
     }
   ]
 }

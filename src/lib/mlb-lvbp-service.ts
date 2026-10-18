@@ -243,7 +243,7 @@ export async function fetchLvbpSchedule(season = "2026"): Promise<ScheduleGame[]
     const broadcastMapPromise = getOfficialBroadcastsMap().catch(() => ({} as Record<string, OfficialBroadcastEntry>));
     const url = `${MLB_BASE}/v1/schedule?sportId=${WINTER_SPORT_ID}&leagueId=${LVBP_LEAGUE_ID}&season=${season}&gameType=R,F,D,L,W&hydrate=linescore(runners),team,decisions,probablePitcher,broadcasts`;
     const [res, broadcastMap] = await Promise.all([
-      fetch(url, { next: { revalidate: 15 } }),
+      fetch(url, { cache: "no-store" }),
       broadcastMapPromise,
     ]);
     if (!res.ok) {
@@ -985,7 +985,7 @@ export async function fetchMlbSchedule(season = "2025"): Promise<ScheduleGame[]>
     const mlbSeason = season === "2026" ? "2025" : season;
     // Query Postseason + Final Regular Season window from MLB StatsAPI (sportId=1)
     const url = `${MLB_BASE}/v1/schedule?sportId=${MLB_SPORT_ID}&season=${mlbSeason}&startDate=${mlbSeason}-09-25&endDate=${mlbSeason}-11-05&gameType=R,F,D,L,W&hydrate=linescore(runners),team,decisions,probablePitcher,broadcasts`;
-    const res = await fetch(url, { next: { revalidate: 30 } });
+    const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) {
       return getMlbFallbackSchedule();
     }

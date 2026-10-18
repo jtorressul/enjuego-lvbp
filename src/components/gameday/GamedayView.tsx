@@ -191,11 +191,18 @@ export function GamedayView({
 
   useEffect(() => {
     let active = true;
+    let latestStatus: string | undefined;
+    setLoading(true);
+    setGame(null);
+
     const loadGame = async () => {
       try {
-        const res = await fetch(`/api/lvbp/game/${gameId}`, { cache: "no-store" });
+        const res = await fetch(`/api/lvbp/game/${gameId}?_t=${Date.now()}`, {
+          cache: "no-store",
+        });
         const data = await res.json();
         if (active && !data.error) {
+          latestStatus = data.status;
           setGame(data);
         }
       } catch {
@@ -208,16 +215,26 @@ export function GamedayView({
     loadGame();
 
     const timer = setInterval(() => {
-      if (game?.status === "IN_PROGRESS") {
+      if (latestStatus !== "FINISHED") {
         loadGame();
       }
     }, 5000);
 
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === "visible" && latestStatus !== "FINISHED") {
+        loadGame();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+    window.addEventListener("focus", handleVisibilityOrFocus);
+
     return () => {
       active = false;
       clearInterval(timer);
+      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+      window.removeEventListener("focus", handleVisibilityOrFocus);
     };
-  }, [gameId, game?.status]);
+  }, [gameId]);
 
   // Sync Quiniela, Live Chat, and Viewer Presence from Cloudflare KV
   useEffect(() => {

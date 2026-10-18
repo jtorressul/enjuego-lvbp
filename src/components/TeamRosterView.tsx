@@ -58,19 +58,26 @@ export function TeamRosterView({
   const isFavorite = favoriteTeamCode === currentTeam.code;
 
   useEffect(() => {
-    let active = true;
+    const controller = new AbortController();
     setLoading(true);
-    fetch(`/api/lvbp/roster?team=${currentTeam.code}&league=${league}`)
+    setRoster([]);
+    fetch(`/api/lvbp/roster?team=${currentTeam.code}&league=${league}`, {
+      signal: controller.signal,
+    })
       .then((r) => r.json())
       .then((data) => {
-        if (active) setRoster(data.players || []);
+        if (!controller.signal.aborted) {
+          setRoster(data.players || []);
+        }
       })
       .catch(() => {})
       .finally(() => {
-        if (active) setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       });
     return () => {
-      active = false;
+      controller.abort();
     };
   }, [currentTeam.code, league]);
 

@@ -142,13 +142,14 @@ export function EnJuegoPortal({
     return initialSection;
   }, [pathname, initialSection]);
 
-  const [schedule, setSchedule] = useState<ScheduleGame[]>(getFallbackSchedule);
+  const [schedule, setSchedule] = useState<ScheduleGame[]>([]);
+  const [mlbHomeGames, setMlbHomeGames] = useState<ScheduleGame[]>([]);
   const [standings, setStandings] = useState<StandingRow[]>([]);
   const [leaders, setLeaders] = useState<{ hitting: LeaderCategory[]; pitching: LeaderCategory[] }>({
     hitting: [],
     pitching: [],
   });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
   const [userSelectedDateManually, setUserSelectedDateManually] = useState(false);
   const [selectedGameId, setSelectedGameId] = useState<string>(
@@ -191,6 +192,7 @@ export function EnJuegoPortal({
   });
   const [mlbStandingsFilter, setMlbStandingsFilter] = useState<"ALL" | "AL" | "NL">("ALL");
   const [openNavDropdown, setOpenNavDropdown] = useState<string | null>(null);
+  const [mobileExpandedSection, setMobileExpandedSection] = useState<string | null>(null);
   const navMenuRef = useRef<HTMLElement>(null);
 
   const activeTeamsCatalog = useMemo(
@@ -231,18 +233,21 @@ export function EnJuegoPortal({
   const [authModalTab, setAuthModalTab] = useState<"quick" | "login" | "register" | "profile">("quick");
 
   const switchLeague = (nextLeague: "lvbp" | "mlb") => {
-    setActiveLeague(nextLeague);
+    setActiveLeague((prev) => {
+      if (prev !== nextLeague) {
+        setLoading(true);
+        setSchedule([]);
+        setStandings([]);
+        setLeaders({ hitting: [], pitching: [] });
+      }
+      return nextLeague;
+    });
     setTeamFilter("");
     setUserSelectedDateManually(false);
     setSelectedTeamCode((prev) => {
       if (nextLeague === "mlb") return MLB_TEAMS[prev] ? prev : "NYY";
       return LVBP_TEAMS[prev] ? prev : "CAR";
     });
-    try {
-      localStorage.setItem("enjuego_active_league", nextLeague);
-    } catch {
-      // ignore
-    }
   };
 
   // Sync activeLeague immediately whenever URL ?liga=lvbp|mlb changes
@@ -250,6 +255,8 @@ export function EnJuegoPortal({
     const qLeague = (searchParams?.get("liga") || searchParams?.get("league") || "").toLowerCase();
     if (qLeague === "mlb" || qLeague === "lvbp") {
       switchLeague(qLeague);
+    } else if (pathname === "/inicio" || pathname === "/") {
+      switchLeague("lvbp");
     }
     setMobileDrawerOpen(false);
     setTeamsDropdownOpen(false);
@@ -288,15 +295,6 @@ export function EnJuegoPortal({
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", "light");
     try {
-      const savedLeague = localStorage.getItem("enjuego_active_league");
-      const qLeague = (searchParams?.get("liga") || searchParams?.get("league") || "").toLowerCase();
-      if (!qLeague && (savedLeague === "mlb" || savedLeague === "lvbp")) {
-        setActiveLeague(savedLeague);
-        if (savedLeague === "mlb" && !resolvedUrlTeam) {
-          setSelectedTeamCode("NYY");
-        }
-      }
-
       const fav = localStorage.getItem("enjuego_fav_team");
       if (fav && (LVBP_TEAMS[fav] || MLB_TEAMS[fav])) setFavoriteTeamCode(fav);
 
@@ -330,9 +328,9 @@ export function EnJuegoPortal({
     if (resolvedUrlTeam) {
       setSelectedTeamCode(resolvedUrlTeam.code);
       if (MLB_TEAMS[resolvedUrlTeam.code]) {
-        setActiveLeague("mlb");
+        switchLeague("mlb");
       } else if (LVBP_TEAMS[resolvedUrlTeam.code]) {
-        setActiveLeague("lvbp");
+        switchLeague("lvbp");
       }
       if (section === "calendario") {
         setTeamFilter(resolvedUrlTeam.code);
@@ -409,21 +407,31 @@ export function EnJuegoPortal({
     const loadAllData = async (isInitial: boolean) => {
       if (isInitial) setLoading(true);
       try {
-        const [schRes, stdRes, commRes] = await Promise.all([
-          fetch(`/api/lvbp/schedule?season=${seasonParam}&league=${targetLeague}`, {
-            signal: controller.signal,
-          }),
-          fetch(`/api/lvbp/standings?season=${seasonParam}&league=${targetLeague}`, {
-            signal: controller.signal,
-          }),
-          fetch("/api/lvbp/interactive?mode=community", {
+        const ts = Date.now();
+        const [schRes, stdRes, commRes, mlbRes] = await Promise.all([
+          fetch(`/api/lvbp/schedule?season=${seasonParam}&league=${targetLeague}&_t=${ts}`, {
             cache: "no-store",
             signal: controller.signal,
           }),
+          fetch(`/api/lvbp/standings?season=${seasonParam}&league=${targetLeague}&_t=${ts}`, {
+            cache: "no-store",
+            signal: controller.signal,
+          }),
+          fetch(`/api/lvbp/interactive?mode=community&_t=${ts}`, {
+            cache: "no-store",
+            signal: controller.signal,
+          }),
+          targetLeague === "lvbp"
+            ? fetch(`/api/lvbp/schedule?season=2025&league=mlb&_t=${ts}`, {
+                cache: "no-store",
+                signal: controller.signal,
+              }).catch(() => null)
+            : Promise.resolve(null),
         ]);
         const schData = await schRes.json();
         const stdData = await stdRes.json();
         const commData = await commRes.json().catch(() => ({}));
+        const mlbData = mlbRes ? await mlbRes.json().catch(() => ({})) : null;
 
         if (controller.signal.aborted) return;
 
@@ -447,6 +455,15 @@ export function EnJuegoPortal({
         setLeaders(stdData.leaders || { hitting: [], pitching: [] });
         if (Array.isArray(commData?.posts)) {
           setCommunityPosts(mapServerPosts(commData.posts));
+        }
+
+        if (targetLeague === "mlb") {
+          setMlbHomeGames(loadedGames);
+        } else if (Array.isArray(mlbData?.games)) {
+          const cleanMlbGames = (mlbData.games as ScheduleGame[]).filter((g) =>
+            Boolean(MLB_TEAMS[g.homeTeam.code] || MLB_TEAMS[g.awayTeam.code])
+          );
+          setMlbHomeGames(cleanMlbGames);
         }
 
         const uniqueDates = [...new Set(loadedGames.map((g) => g.date))].sort();
@@ -475,10 +492,21 @@ export function EnJuegoPortal({
     };
 
     loadAllData(true);
-    const interval = setInterval(() => loadAllData(false), 20000);
+    const interval = setInterval(() => loadAllData(false), 10000);
+
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === "visible") {
+        loadAllData(false);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+    window.addEventListener("focus", handleVisibilityOrFocus);
+
     return () => {
       controller.abort();
       clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+      window.removeEventListener("focus", handleVisibilityOrFocus);
     };
   }, [userSelectedDateManually, activeLeague]);
 
@@ -502,6 +530,18 @@ export function EnJuegoPortal({
     });
   }, [schedule, activeDate, favoriteTeamCode]);
 
+  // Featured MLB games of the day for /inicio
+  const mlbFeaturedGames = useMemo(() => {
+    if (mlbHomeGames.length === 0) return [];
+    const todayIso = getTodayCaracasIso();
+    const live = mlbHomeGames.filter((g) => g.status === "IN_PROGRESS");
+    if (live.length >= 4) return live.slice(0, 4);
+    const uniqueMlbDates = [...new Set(mlbHomeGames.map((g) => g.date))].sort();
+    let targetDate = uniqueMlbDates.find((d) => d >= todayIso) || uniqueMlbDates[uniqueMlbDates.length - 1];
+    const byDate = mlbHomeGames.filter((g) => g.date === targetDate);
+    return (byDate.length > 0 ? byDate : mlbHomeGames.slice(-4)).slice(0, 4);
+  }, [mlbHomeGames]);
+
   const liveGames = useMemo(
     () => schedule.filter((g) => g.status === "IN_PROGRESS"),
     [schedule]
@@ -514,11 +554,12 @@ export function EnJuegoPortal({
 
   const openTeamPage = (code: string) => {
     const meta = anyTeamsCatalog[code] || activeTeamsCatalog[code] || LVBP_TEAMS.CAR;
+    const teamLeague = MLB_TEAMS[meta.code] ? "mlb" : "lvbp";
     setSelectedTeamCode(meta.code);
     if (pathname?.startsWith("/equipos/")) {
-      router.push(`/equipos/${meta.slug}`);
+      router.push(`/equipos/${meta.slug}?liga=${teamLeague}`);
     } else {
-      router.push(`/teams?team=${meta.slug}`);
+      router.push(`/teams?team=${meta.slug}&liga=${teamLeague}`);
     }
   };
 
@@ -1699,15 +1740,18 @@ export function EnJuegoPortal({
               )}
             </div>
 
-            {/* Navigation Links with LVBP / MLB Sub-options */}
-            <div className="p-4 space-y-2 border-b border-slate-100">
+            {/* Navigation Links with Collapsible Arrow Dropdowns (like Inicio) */}
+            <div className="p-4 space-y-1.5 border-b border-slate-100">
               <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 px-2 block mb-2">
                 Navegación por Liga (LVBP · MLB)
               </span>
 
               <Link
                 href="/inicio"
-                onClick={() => setMobileDrawerOpen(false)}
+                onClick={() => {
+                  setMobileExpandedSection(null);
+                  setMobileDrawerOpen(false);
+                }}
                 className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-black transition ${
                   section === "home"
                     ? "bg-amber-400 text-slate-950 shadow-2xs"
@@ -1761,51 +1805,80 @@ export function EnJuegoPortal({
                 ] as const
               ).map(({ key, label, Icon, lvbpHref, mlbHref }) => {
                 const active = section === key || (section === "juego" && key === "resultados");
+                const isExpanded = mobileExpandedSection === key;
                 return (
-                  <div
-                    key={key}
-                    className={`rounded-2xl border p-2.5 space-y-2 transition ${
-                      active
-                        ? "bg-amber-50/60 border-amber-300"
-                        : "bg-slate-50/70 border-slate-200/80"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 px-1 text-xs font-black text-slate-900">
-                      <Icon className="w-4 h-4 text-amber-600 shrink-0" />
-                      <span>{label}</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Link
-                        href={lvbpHref}
-                        onClick={() => {
-                          switchLeague("lvbp");
-                          setMobileDrawerOpen(false);
-                        }}
-                        className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-black border transition ${
-                          active && activeLeague === "lvbp"
-                            ? "bg-amber-400 text-slate-950 border-amber-400 shadow-2xs"
-                            : "bg-white text-slate-800 border-slate-200 hover:border-amber-400"
+                  <div key={key} className="space-y-1">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setMobileExpandedSection((prev) => (prev === key ? null : key))
+                      }
+                      className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-black transition cursor-pointer ${
+                        active
+                          ? "bg-amber-50 text-slate-950 border border-amber-300 shadow-2xs"
+                          : isExpanded
+                            ? "bg-slate-100 text-slate-950"
+                            : "text-slate-800 hover:bg-slate-100"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className="w-4.5 h-4.5 text-amber-600 shrink-0" />
+                        <span>{label}</span>
+                        {active && (
+                          <span className="px-1.5 py-0.5 rounded bg-amber-400/30 text-amber-900 text-[10px] font-black uppercase">
+                            {activeLeague.toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <ChevronRight
+                        className={`w-4 h-4 text-slate-400 transition-transform duration-150 ${
+                          isExpanded ? "rotate-90 text-amber-600" : ""
                         }`}
-                      >
-                        <span>🇻🇪</span>
-                        <span>LVBP</span>
-                      </Link>
-                      <Link
-                        href={mlbHref}
-                        onClick={() => {
-                          switchLeague("mlb");
-                          setMobileDrawerOpen(false);
-                        }}
-                        className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-black border transition ${
-                          active && activeLeague === "mlb"
-                            ? "bg-sky-400 text-slate-950 border-sky-400 shadow-2xs"
-                            : "bg-white text-slate-800 border-slate-200 hover:border-sky-400"
-                        }`}
-                      >
-                        <span>⚾</span>
-                        <span>MLB</span>
-                      </Link>
-                    </div>
+                      />
+                    </button>
+
+                    {isExpanded && (
+                      <div className="pl-7 pr-2 py-1 space-y-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                        <Link
+                          href={lvbpHref}
+                          onClick={() => {
+                            switchLeague("lvbp");
+                            setMobileExpandedSection(null);
+                            setMobileDrawerOpen(false);
+                          }}
+                          className={`flex items-center justify-between py-2 px-3 rounded-xl text-xs font-black border transition ${
+                            active && activeLeague === "lvbp"
+                              ? "bg-amber-400 text-slate-950 border-amber-400 shadow-2xs"
+                              : "bg-slate-50 text-slate-800 border-slate-200 hover:border-amber-400"
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span>🇻🇪</span>
+                            <span>LVBP — Liga Venezolana</span>
+                          </span>
+                          <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                        </Link>
+                        <Link
+                          href={mlbHref}
+                          onClick={() => {
+                            switchLeague("mlb");
+                            setMobileExpandedSection(null);
+                            setMobileDrawerOpen(false);
+                          }}
+                          className={`flex items-center justify-between py-2 px-3 rounded-xl text-xs font-black border transition ${
+                            active && activeLeague === "mlb"
+                              ? "bg-sky-400 text-slate-950 border-sky-400 shadow-2xs"
+                              : "bg-slate-50 text-slate-800 border-slate-200 hover:border-sky-400"
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span>⚾</span>
+                            <span>MLB — Grandes Ligas</span>
+                          </span>
+                          <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -1830,7 +1903,7 @@ export function EnJuegoPortal({
                       className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200/80 bg-slate-50/70 hover:bg-amber-50/60 hover:border-amber-300 transition"
                     >
                       <Link
-                        href={`/teams?team=${team.slug}`}
+                        href={`/teams?team=${team.slug}&liga=${activeLeague}`}
                         onClick={() => {
                           openTeamPage(team.code);
                           setMobileDrawerOpen(false);
@@ -2019,7 +2092,7 @@ export function EnJuegoPortal({
         {section === "juego" && (
           <GamedayView
             gameId={selectedGameId}
-            onBack={() => router.push("/resultados")}
+            onBack={() => router.push(`/resultados?liga=${activeLeague}`)}
             onSelectTeam={openTeamPage}
             currentUser={currentUser}
             onRequireAuth={() => {
@@ -2064,14 +2137,12 @@ export function EnJuegoPortal({
               </div>
             </div>
 
-            {/* 1. Pizarra Destacada del Día */}
+            {/* 1A. Pizarra Destacada del Día — LVBP */}
             <section className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
-                    {activeLeague === "mlb"
-                      ? "Pizarra MLB · Grandes Ligas"
-                      : "Pizarra de Juegos · Temporada 2026-2027"}
+                    🇻🇪 Pizarra de Juegos · Temporada LVBP 2026-2027
                   </span>
                   <h1 className="text-xl sm:text-2xl font-black text-slate-950 capitalize">
                     {dayFormatted.fullLabel}
@@ -2079,10 +2150,10 @@ export function EnJuegoPortal({
                 </div>
                 <div className="flex items-center gap-2">
                   <Link
-                    href="/calendario"
+                    href="/calendario?liga=lvbp"
                     className="inline-flex items-center gap-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 px-3.5 py-2 text-xs font-extrabold transition cursor-pointer shadow-2xs"
                   >
-                    <Calendar className="w-3.5 h-3.5 text-amber-600" /> Ver calendario y TV ›
+                    <Calendar className="w-3.5 h-3.5 text-amber-600" /> Calendario LVBP y TV ›
                   </Link>
                 </div>
               </div>
@@ -2099,6 +2170,49 @@ export function EnJuegoPortal({
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {gamesOfDay.map((game) => renderScoreboardCard(game))}
+                </div>
+              )}
+            </section>
+
+            {/* 1B. Pizarra Destacada del Día — GRANDES LIGAS (MLB) */}
+            <section className="space-y-4 pt-2 border-t border-slate-200/80">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-sky-600">
+                    ⚾ Grandes Ligas (MLB) · Cobertura en Vivo
+                  </span>
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-950">
+                    Pizarra Destacada <em className="text-sky-600 not-italic">MLB</em>
+                  </h2>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link
+                    href="/posiciones?liga=mlb"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 px-3.5 py-2 text-xs font-extrabold transition cursor-pointer shadow-2xs"
+                  >
+                    <Trophy className="w-3.5 h-3.5 text-sky-600" /> 6 Divisiones MLB ›
+                  </Link>
+                  <Link
+                    href="/resultados?liga=mlb"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-900 px-3.5 py-2 text-xs font-extrabold transition cursor-pointer shadow-2xs"
+                  >
+                    <Activity className="w-3.5 h-3.5 text-sky-600" /> Ver toda la Pizarra MLB ›
+                  </Link>
+                </div>
+              </div>
+
+              {loading && mlbFeaturedGames.length === 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[1, 2, 3, 4].map((n) => (
+                    <div
+                      key={n}
+                      className="h-52 rounded-2xl border border-slate-200 bg-white animate-pulse"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {mlbFeaturedGames.map((game) => renderScoreboardCard(game))}
                 </div>
               )}
             </section>
@@ -2524,9 +2638,20 @@ export function EnJuegoPortal({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {gamesOfDay.map((game) => renderScoreboardCard(game))}
-            </div>
+            {loading && gamesOfDay.length === 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map((n) => (
+                  <div
+                    key={n}
+                    className="h-52 rounded-2xl border border-slate-200 bg-white animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {gamesOfDay.map((game) => renderScoreboardCard(game))}
+              </div>
+            )}
           </div>
         )}
 
@@ -2948,7 +3073,16 @@ export function EnJuegoPortal({
               )}
             </div>
 
-            {activeLeague === "mlb" ? (
+            {loading && standings.length === 0 ? (
+              <div className="space-y-4">
+                {[1, 2].map((n) => (
+                  <div
+                    key={n}
+                    className="h-64 rounded-2xl border border-slate-200 bg-white animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : activeLeague === "mlb" ? (
               /* MLB: 6 SEPARATED DIVISIONAL TABLES (AL EAST, AL CENTRAL, AL WEST, NL EAST, NL CENTRAL, NL WEST) */
               <div className="space-y-6">
                 <div className="grid grid-cols-1 gap-6">

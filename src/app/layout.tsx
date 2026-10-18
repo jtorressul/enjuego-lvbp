@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { PwaManager } from "@/components/pwa/PwaManager";
 
 export const viewport: Viewport = {
   themeColor: "#060a12",
@@ -57,6 +58,7 @@ export default function RootLayout({
     <html lang="es" data-theme="light">
       <body className="min-h-screen antialiased selection:bg-amber-400 selection:text-slate-950 transition-colors duration-300">
         {children}
+        <PwaManager />
       </body>
     </html>
   );

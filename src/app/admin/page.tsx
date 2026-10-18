@@ -6,6 +6,7 @@ import {
   Activity,
   ArrowLeft,
   BarChart3,
+  Bell,
   Calendar,
   CheckCircle2,
   Clock,
@@ -59,6 +60,22 @@ const SocialCardGenerator = dynamic(
       <div className="py-16 text-center text-slate-400">
         <div className="w-8 h-8 border-3 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
         <p className="text-xs font-bold">Cargando Generador de Artes…</p>
+      </div>
+    ),
+  }
+);
+
+const PushNotificationSender = dynamic(
+  () =>
+    import("@/components/admin/PushNotificationSender").then(
+      (m) => m.PushNotificationSender
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="py-16 text-center text-slate-400">
+        <div className="w-8 h-8 border-3 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+        <p className="text-xs font-bold">Cargando Centro de Notificaciones…</p>
       </div>
     ),
   }
@@ -129,7 +146,7 @@ export default function AdminDashboardPage() {
   const [statusMessage, setStatusMessage] = useState("");
 
   const [activeTab, setActiveTab] = useState<
-    "ads" | "generator" | "users" | "system"
+    "ads" | "generator" | "push" | "users" | "system"
   >("ads");
   const [autoRefresh, setAutoRefresh] = useState(true);
 
@@ -941,6 +958,19 @@ export default function AdminDashboardPage() {
 
             <button
               type="button"
+              onClick={() => setActiveTab("push")}
+              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                activeTab === "push"
+                  ? "bg-white text-slate-900 shadow-2xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-white/40"
+              }`}
+            >
+              <Bell className="w-3.5 h-3.5 text-slate-500" />
+              <span>Notificaciones Push</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setActiveTab("users")}
               className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                 activeTab === "users"
@@ -979,6 +1009,13 @@ export default function AdminDashboardPage() {
            =================================================================== */}
         {activeTab === "generator" && (
           <SocialCardGenerator campaigns={campaigns} />
+        )}
+
+        {/* ===================================================================
+            TAB: NOTIFICACIONES PUSH & ANUNCIOS COMERCIALES
+           =================================================================== */}
+        {activeTab === "push" && (
+          <PushNotificationSender adminPassword={password} />
         )}
 
         {/* ===================================================================

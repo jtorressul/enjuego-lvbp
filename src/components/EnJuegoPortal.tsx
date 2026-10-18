@@ -143,7 +143,6 @@ export function EnJuegoPortal({
   }, [pathname, initialSection]);
 
   const [schedule, setSchedule] = useState<ScheduleGame[]>([]);
-  const [mlbHomeGames, setMlbHomeGames] = useState<ScheduleGame[]>([]);
   const [standings, setStandings] = useState<StandingRow[]>([]);
   const [leaders, setLeaders] = useState<{ hitting: LeaderCategory[]; pitching: LeaderCategory[] }>({
     hitting: [],
@@ -417,7 +416,7 @@ export function EnJuegoPortal({
       if (isInitial) setLoading(true);
       try {
         const ts = Date.now();
-        const [schRes, stdRes, commRes, mlbRes] = await Promise.all([
+        const [schRes, stdRes, commRes] = await Promise.all([
           fetch(`/api/lvbp/schedule?season=${seasonParam}&league=${targetLeague}&_t=${ts}`, {
             cache: "no-store",
             signal: controller.signal,
@@ -430,17 +429,10 @@ export function EnJuegoPortal({
             cache: "no-store",
             signal: controller.signal,
           }),
-          targetLeague === "lvbp"
-            ? fetch(`/api/lvbp/schedule?season=2026&league=mlb&_t=${ts}`, {
-                cache: "no-store",
-                signal: controller.signal,
-              }).catch(() => null)
-            : Promise.resolve(null),
         ]);
         const schData = await schRes.json();
         const stdData = await stdRes.json();
         const commData = await commRes.json().catch(() => ({}));
-        const mlbData = mlbRes ? await mlbRes.json().catch(() => ({})) : null;
 
         if (controller.signal.aborted) return;
 
@@ -464,15 +456,6 @@ export function EnJuegoPortal({
         setLeaders(stdData.leaders || { hitting: [], pitching: [] });
         if (Array.isArray(commData?.posts)) {
           setCommunityPosts(mapServerPosts(commData.posts));
-        }
-
-        if (targetLeague === "mlb") {
-          setMlbHomeGames(loadedGames);
-        } else if (Array.isArray(mlbData?.games)) {
-          const cleanMlbGames = (mlbData.games as ScheduleGame[]).filter((g) =>
-            Boolean(MLB_TEAMS[g.homeTeam.code] || MLB_TEAMS[g.awayTeam.code])
-          );
-          setMlbHomeGames(cleanMlbGames);
         }
 
         const uniqueDates = [...new Set(loadedGames.map((g) => g.date))].sort();
@@ -538,18 +521,6 @@ export function EnJuegoPortal({
       return bFav - aFav;
     });
   }, [schedule, activeDate, favoriteTeamCode]);
-
-  // Featured MLB games of the day for /inicio
-  const mlbFeaturedGames = useMemo(() => {
-    if (mlbHomeGames.length === 0) return [];
-    const todayIso = getTodayCaracasIso();
-    const live = mlbHomeGames.filter((g) => g.status === "IN_PROGRESS");
-    if (live.length >= 4) return live.slice(0, 4);
-    const uniqueMlbDates = [...new Set(mlbHomeGames.map((g) => g.date))].sort();
-    let targetDate = uniqueMlbDates.find((d) => d >= todayIso) || uniqueMlbDates[uniqueMlbDates.length - 1];
-    const byDate = mlbHomeGames.filter((g) => g.date === targetDate);
-    return (byDate.length > 0 ? byDate : mlbHomeGames.slice(-4)).slice(0, 4);
-  }, [mlbHomeGames]);
 
   const liveGames = useMemo(
     () => schedule.filter((g) => g.status === "IN_PROGRESS"),
@@ -2012,108 +1983,107 @@ export function EnJuegoPortal({
       {/* SCORE STRIP / TICKER BAR (SINGLE COMPACT HORIZONTAL ROW ON MOBILE & DESKTOP) */}
       <section className="border-b border-slate-200 bg-slate-50/90">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 flex items-center gap-2">
-          {/* Quick League Switcher Pill in Ticker Bar */}
-          <div className="inline-flex items-center rounded-xl bg-slate-900 p-1 border border-slate-800 shrink-0 shadow-2xs">
-            <button
-              type="button"
-              onClick={() => {
-                switchLeague("lvbp");
-                if (section !== "home" && section !== "juego") {
-                  router.push(
-                    section === "equipos"
-                      ? "/teams?team=leones&liga=lvbp"
-                      : `/${section}?liga=lvbp`
-                  );
-                }
-              }}
-              className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-black transition cursor-pointer flex items-center gap-1 ${
-                activeLeague === "lvbp"
-                  ? "bg-amber-400 text-slate-950 shadow-2xs"
-                  : "text-slate-300 hover:text-white"
-              }`}
-              title="Ver Liga Venezolana (LVBP)"
-            >
-              <span>🇻🇪</span>
-              <span>LVBP</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                switchLeague("mlb");
-                if (section !== "home" && section !== "juego") {
-                  router.push(
-                    section === "equipos"
-                      ? "/teams?team=yankees&liga=mlb"
-                      : `/${section}?liga=mlb`
-                  );
-                }
-              }}
-              className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-black transition cursor-pointer flex items-center gap-1 ${
-                activeLeague === "mlb"
-                  ? "bg-sky-400 text-slate-950 shadow-2xs"
-                  : "text-slate-300 hover:text-white"
-              }`}
-              title="Ver Grandes Ligas (MLB 2026)"
-            >
-              <span>⚾</span>
-              <span>MLB</span>
-            </button>
-          </div>
-
-          {/* Date Selector Box */}
-          <div className="flex items-center gap-1 sm:gap-2 bg-white border border-slate-200 rounded-xl px-1.5 sm:px-2.5 py-1.5 shrink-0 shadow-2xs">
-            <button
-              type="button"
-              disabled={selectedDateIndex <= 0}
-              onClick={() => {
-                setUserSelectedDateManually(true);
-                setSelectedDateIndex((i) => Math.max(0, i - 1));
-              }}
-              className="p-1 rounded-lg hover:bg-slate-100 disabled:opacity-30 text-slate-700 cursor-pointer"
-              aria-label="Día anterior"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <div className="text-center min-w-[54px] sm:min-w-[74px]">
-              <span className="block text-[8px] sm:text-[9px] font-extrabold uppercase tracking-wider text-amber-600 leading-none">
-                {activeLeague === "mlb" ? "MLB 2026" : "Jornada"}
-              </span>
-              <strong className="text-xs sm:text-sm font-black text-slate-900 leading-tight">
-                {dayFormatted.dayNum}{" "}
-                <small className="text-[10px] sm:text-xs text-slate-500">{dayFormatted.monthShort}</small>
-              </strong>
+          {/* Date Selector Box with League Selector right above the Jornada */}
+          <div className="flex flex-col items-center justify-center bg-white border border-slate-200 rounded-xl px-1.5 sm:px-2.5 py-1 shrink-0 shadow-2xs">
+            {/* Compact League Switcher right above Jornada */}
+            <div className="inline-flex items-center gap-1 bg-slate-100 rounded-lg p-0.5 mb-0.5 w-full justify-center">
+              <button
+                type="button"
+                onClick={() => {
+                  switchLeague("lvbp");
+                  if (section !== "home" && section !== "juego") {
+                    router.push(
+                      section === "equipos"
+                        ? "/teams?team=leones&liga=lvbp"
+                        : `/${section}?liga=lvbp`
+                    );
+                  }
+                }}
+                className={`flex-1 px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-black uppercase transition cursor-pointer flex items-center justify-center gap-1 ${
+                  activeLeague === "lvbp"
+                    ? "bg-amber-400 text-slate-950 shadow-2xs"
+                    : "text-slate-500 hover:text-slate-900"
+                }`}
+                title="Cambiar a LVBP"
+              >
+                <span>🇻🇪</span>
+                <span>LVBP</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  switchLeague("mlb");
+                  if (section !== "home" && section !== "juego") {
+                    router.push(
+                      section === "equipos"
+                        ? "/teams?team=yankees&liga=mlb"
+                        : `/${section}?liga=mlb`
+                    );
+                  }
+                }}
+                className={`flex-1 px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-black uppercase transition cursor-pointer flex items-center justify-center gap-1 ${
+                  activeLeague === "mlb"
+                    ? "bg-amber-400 text-slate-950 shadow-2xs"
+                    : "text-slate-500 hover:text-slate-900"
+                }`}
+                title="Cambiar a MLB"
+              >
+                <span>⚾</span>
+                <span>MLB</span>
+              </button>
             </div>
-            <button
-              type="button"
-              disabled={selectedDateIndex >= dates.length - 1}
-              onClick={() => {
-                setUserSelectedDateManually(true);
-                setSelectedDateIndex((i) => Math.min(dates.length - 1, i + 1));
-              }}
-              className="p-1 rounded-lg hover:bg-slate-100 disabled:opacity-30 text-slate-700 cursor-pointer"
-              aria-label="Día siguiente"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
 
-            {dates.length > 0 &&
-              dates[selectedDateIndex] !== getTodayCaracasIso() &&
-              dates.includes(getTodayCaracasIso()) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const todayIdx = dates.indexOf(getTodayCaracasIso());
-                    if (todayIdx !== -1) {
-                      setSelectedDateIndex(todayIdx);
-                      setUserSelectedDateManually(false);
-                    }
-                  }}
-                  className="hidden sm:inline-flex ml-1 items-center gap-1 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 px-2 py-0.5 text-[10px] font-black uppercase transition cursor-pointer"
-                  title="Ir a los juegos de hoy"
-                >
-                  Hoy
-                </button>
-              )}
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <button
+                type="button"
+                disabled={selectedDateIndex <= 0}
+                onClick={() => {
+                  setUserSelectedDateManually(true);
+                  setSelectedDateIndex((i) => Math.max(0, i - 1));
+                }}
+                className="p-0.5 rounded-lg hover:bg-slate-100 disabled:opacity-30 text-slate-700 cursor-pointer"
+                aria-label="Día anterior"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <div className="text-center min-w-[54px] sm:min-w-[68px]">
+                <strong className="text-xs sm:text-sm font-black text-slate-900 leading-tight">
+                  {dayFormatted.dayNum}{" "}
+                  <small className="text-[10px] sm:text-xs text-slate-500">{dayFormatted.monthShort}</small>
+                </strong>
+              </div>
+              <button
+                type="button"
+                disabled={selectedDateIndex >= dates.length - 1}
+                onClick={() => {
+                  setUserSelectedDateManually(true);
+                  setSelectedDateIndex((i) => Math.min(dates.length - 1, i + 1));
+                }}
+                className="p-0.5 rounded-lg hover:bg-slate-100 disabled:opacity-30 text-slate-700 cursor-pointer"
+                aria-label="Día siguiente"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+
+              {dates.length > 0 &&
+                dates[selectedDateIndex] !== getTodayCaracasIso() &&
+                dates.includes(getTodayCaracasIso()) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const todayIdx = dates.indexOf(getTodayCaracasIso());
+                      if (todayIdx !== -1) {
+                        setSelectedDateIndex(todayIdx);
+                        setUserSelectedDateManually(false);
+                      }
+                    }}
+                    className="hidden sm:inline-flex ml-0.5 items-center gap-1 rounded-md bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 px-1.5 py-0.5 text-[9px] font-black uppercase transition cursor-pointer"
+                    title="Ir a los juegos de hoy"
+                  >
+                    Hoy
+                  </button>
+                )}
+            </div>
           </div>
 
           {/* Horizontal Livebugs Strip with Official Logos & Direct /juego/[id] Links */}
@@ -2218,68 +2188,6 @@ export function EnJuegoPortal({
         {/* SECTION: HOME (/ & /inicio) */}
         {section === "home" && (
           <div className="space-y-8">
-            {/* Dual-League Broadcast Hub Banner — Makes MLB & LVBP Immediately Visible */}
-            <div
-              className="rounded-2xl p-3.5 sm:p-4 border shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-3.5"
-              style={{
-                background: "linear-gradient(135deg, #090d16 0%, #111c33 100%)",
-                borderColor: "#1e293b",
-                color: "#ffffff",
-              }}
-            >
-              <div className="flex flex-wrap items-center gap-2.5">
-                <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-400/15 border border-amber-400/40 px-2.5 py-1 text-[11px] font-black uppercase tracking-wider text-amber-300">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  Doble Cobertura Oficial 2026
-                </span>
-                <p className="text-xs sm:text-sm font-extrabold text-slate-100">
-                  Sigue en vivo la <span className="text-amber-400">🇻🇪 LVBP 2026-27</span> y las{" "}
-                  <span className="text-sky-400">⚾ Grandes Ligas (MLB 2026)</span> en tiempo real
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => switchLeague("lvbp")}
-                  className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-black transition cursor-pointer border ${
-                    activeLeague === "lvbp"
-                      ? "bg-amber-400 text-slate-950 border-amber-400 shadow-xs"
-                      : "bg-slate-900/90 text-slate-200 border-slate-700 hover:border-amber-400"
-                  }`}
-                >
-                  <span>🇻🇪</span>
-                  <span>Pizarra LVBP</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => switchLeague("mlb")}
-                  className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-black transition cursor-pointer border ${
-                    activeLeague === "mlb"
-                      ? "bg-sky-400 text-slate-950 border-sky-400 shadow-xs"
-                      : "bg-slate-900/90 text-slate-200 border-slate-700 hover:border-sky-400"
-                  }`}
-                >
-                  <span>⚾</span>
-                  <span>Pizarra MLB 2026</span>
-                </button>
-                <Link
-                  href="/posiciones?liga=mlb"
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-800 text-sky-300 border border-slate-700 px-3 py-2 text-xs font-extrabold transition cursor-pointer"
-                >
-                  <Trophy className="w-3.5 h-3.5 text-sky-400" />
-                  <span>6 Divisiones MLB</span>
-                </Link>
-                <Link
-                  href="/teams?team=yankees&liga=mlb"
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-800 text-amber-300 border border-slate-700 px-3 py-2 text-xs font-extrabold transition cursor-pointer"
-                >
-                  <Users className="w-3.5 h-3.5 text-amber-400" />
-                  <span>30 Equipos MLB ›</span>
-                </Link>
-              </div>
-            </div>
-
             {/* Favorite Team Selector Bar */}
             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
               <div className="flex items-center gap-2 text-xs">
@@ -2312,37 +2220,57 @@ export function EnJuegoPortal({
               </div>
             </div>
 
-            {/* 1A. Pizarra Principal Activa (LVBP o MLB según selección) */}
+            {/* 1. Pizarra de Juegos de la Jornada con Selector Limpio Arriba de la Jornada */}
             <section className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <span
-                    className={`text-xs font-extrabold uppercase tracking-wider ${
-                      activeLeague === "mlb" ? "text-sky-600" : "text-amber-600"
-                    }`}
-                  >
-                    {activeLeague === "mlb"
-                      ? "⚾ Pizarra de Juegos · Grandes Ligas (MLB) Temporada 2026"
-                      : "🇻🇪 Pizarra de Juegos · Temporada LVBP 2026-2027"}
-                  </span>
-                  <h1 className="text-xl sm:text-2xl font-black text-slate-950 capitalize">
-                    {dayFormatted.fullLabel}
-                  </h1>
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div className="space-y-2">
+                  {/* Clean League Selector right above the Jornada title */}
+                  <div className="inline-flex items-center rounded-xl bg-white p-1 border border-slate-200 shadow-2xs">
+                    <button
+                      type="button"
+                      onClick={() => switchLeague("lvbp")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer flex items-center gap-1.5 ${
+                        activeLeague === "lvbp"
+                          ? "bg-amber-400 text-slate-950 shadow-2xs"
+                          : "text-slate-600 hover:text-slate-950"
+                      }`}
+                    >
+                      <span>🇻🇪</span>
+                      <span>Jornada LVBP</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => switchLeague("mlb")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer flex items-center gap-1.5 ${
+                        activeLeague === "mlb"
+                          ? "bg-amber-400 text-slate-950 shadow-2xs"
+                          : "text-slate-600 hover:text-slate-950"
+                      }`}
+                    >
+                      <span>⚾</span>
+                      <span>Jornada MLB</span>
+                    </button>
+                  </div>
+
+                  <div>
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600 block">
+                      {activeLeague === "mlb"
+                        ? "⚾ Pizarra de Juegos · Grandes Ligas (MLB) 2026"
+                        : "🇻🇪 Pizarra de Juegos · Temporada LVBP 2026-2027"}
+                    </span>
+                    <h1 className="text-xl sm:text-2xl font-black text-slate-950 capitalize">
+                      {dayFormatted.fullLabel}
+                    </h1>
+                  </div>
                 </div>
+
                 <div className="flex flex-wrap items-center gap-2">
-                  <Link
-                    href={`/teams?team=${activeLeague === "mlb" ? "yankees" : "leones"}&liga=${activeLeague}`}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 px-3.5 py-2 text-xs font-extrabold transition cursor-pointer shadow-2xs"
-                  >
-                    <Users className="w-3.5 h-3.5 text-amber-600" />{" "}
-                    {activeLeague === "mlb" ? "Equipos MLB (30) ›" : "Equipos LVBP (8) ›"}
-                  </Link>
                   <Link
                     href={`/calendario?liga=${activeLeague}`}
                     className="inline-flex items-center gap-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 px-3.5 py-2 text-xs font-extrabold transition cursor-pointer shadow-2xs"
                   >
                     <Calendar className="w-3.5 h-3.5 text-amber-600" />{" "}
-                    {activeLeague === "mlb" ? "Calendario MLB ›" : "Calendario LVBP y TV ›"}
+                    {activeLeague === "mlb" ? "Calendario MLB ›" : "Calendario y TV ›"}
                   </Link>
                 </div>
               </div>
@@ -2362,57 +2290,6 @@ export function EnJuegoPortal({
                 </div>
               )}
             </section>
-
-            {/* 1B. Vitrina Destacada de Grandes Ligas (MLB 2026) cuando estás en LVBP */}
-            {activeLeague === "lvbp" && (
-              <section className="space-y-4 pt-3 border-t border-slate-200/80">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-sky-600">
-                      ⚾ Grandes Ligas (MLB 2026) · Postemporada y Cobertura en Vivo
-                    </span>
-                    <h2 className="text-xl sm:text-2xl font-black text-slate-950">
-                      Pizarra Destacada <em className="text-sky-600 not-italic">MLB 2026</em>
-                    </h2>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Link
-                      href="/teams?team=yankees&liga=mlb"
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 px-3.5 py-2 text-xs font-extrabold transition cursor-pointer shadow-2xs"
-                    >
-                      <Users className="w-3.5 h-3.5 text-sky-600" /> Equipos MLB ›
-                    </Link>
-                    <Link
-                      href="/posiciones?liga=mlb"
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 px-3.5 py-2 text-xs font-extrabold transition cursor-pointer shadow-2xs"
-                    >
-                      <Trophy className="w-3.5 h-3.5 text-sky-600" /> 6 Divisiones MLB ›
-                    </Link>
-                    <Link
-                      href="/resultados?liga=mlb"
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-900 px-3.5 py-2 text-xs font-extrabold transition cursor-pointer shadow-2xs"
-                    >
-                      <Activity className="w-3.5 h-3.5 text-sky-600" /> Ver Pizarra MLB ›
-                    </Link>
-                  </div>
-                </div>
-
-                {loading && mlbFeaturedGames.length === 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {[1, 2, 3, 4].map((n) => (
-                      <div
-                        key={n}
-                        className="h-52 rounded-2xl border border-slate-200 bg-white animate-pulse"
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {mlbFeaturedGames.map((game) => renderScoreboardCard(game))}
-                  </div>
-                )}
-              </section>
-            )}
 
             {/* 2. LÍDERES Y POSICIONES */}
             <section className="space-y-4">

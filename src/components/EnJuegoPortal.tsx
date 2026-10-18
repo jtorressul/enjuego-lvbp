@@ -11,6 +11,7 @@ import { LeadersWidget } from "@/components/LeadersWidget";
 import { TeamRosterView } from "@/components/TeamRosterView";
 import { BroadcastChannelsRow } from "@/components/BroadcastChannelsRow";
 import { AuthModal } from "@/components/AuthModal";
+import { PwaInstallModal } from "@/components/pwa/PwaInstallModal";
 import { AdBanner } from "@/components/AdBanner";
 import MlbPlayoffBracket from "@/components/MlbPlayoffBracket";
 import { ShareGameBannerModal } from "@/components/ShareGameBannerModal";
@@ -245,6 +246,7 @@ export function EnJuegoPortal({
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState<"quick" | "login" | "register" | "profile">("quick");
+  const [pwaModalOpen, setPwaModalOpen] = useState(false);
 
   const switchLeague = (nextLeague: "lvbp" | "mlb") => {
     setActiveLeague((prev) => {
@@ -1507,16 +1509,15 @@ export function EnJuegoPortal({
               <button
                 type="button"
                 onClick={() => {
-                  setAuthModalTab("quick");
+                  setAuthModalTab("login");
                   setAuthModalOpen(true);
                 }}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
-                title="Elige tu equipo y activa alertas de sus juegos"
               >
-                <Sparkles className="w-4 h-4" />
-                <span>{favoriteTeamCode ? `Fan ${favoriteTeamCode}` : "Mi Equipo / Entrar"}</span>
+                <User className="w-4 h-4" />
+                <span>Iniciar Sesión</span>
                 <span className="hidden xl:inline text-[10px] font-extrabold bg-slate-950/10 px-1.5 py-0.5 rounded-md">
-                  🔔 Alertas
+                  Fan {activeLeague.toUpperCase()}
                 </span>
               </button>
             )}
@@ -1524,14 +1525,7 @@ export function EnJuegoPortal({
             {/* PWA Install Button (Desktop) */}
             <button
               type="button"
-              onClick={() => {
-                if (window.__ENJUEGO_PWA_PROMPT__) {
-                  window.__ENJUEGO_TRIGGER_INSTALL__?.();
-                } else {
-                  setAuthModalTab(currentUser ? "profile" : "quick");
-                  setAuthModalOpen(true);
-                }
-              }}
+              onClick={() => setPwaModalOpen(true)}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-200 hover:text-white border text-xs font-bold transition cursor-pointer shadow-2xs hover:border-amber-400"
               style={{ backgroundColor: "#0f172a", borderColor: "#1e293b" }}
               title="Instalar App EnJuego en tu teléfono o PC"
@@ -1578,7 +1572,7 @@ export function EnJuegoPortal({
               />
             </button>
 
-            {currentUser ? (
+            {currentUser && (
               <button
                 type="button"
                 onClick={() => {
@@ -1594,21 +1588,6 @@ export function EnJuegoPortal({
                 aria-label="Ver perfil de usuario"
               >
                 {currentUser.name.slice(0, 1).toUpperCase()}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthModalTab("quick");
-                  setAuthModalOpen(true);
-                }}
-                className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-black transition cursor-pointer shadow-xs active:scale-95 text-slate-950 bg-amber-400 hover:bg-amber-300"
-                title="Elige tu equipo y activa alertas"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span className="font-extrabold text-[11px] sm:text-xs">
-                  {favoriteTeamCode ? `Fan ${favoriteTeamCode}` : "Mi Equipo"}
-                </span>
               </button>
             )}
 
@@ -1909,12 +1888,7 @@ export function EnJuegoPortal({
                 type="button"
                 onClick={() => {
                   setMobileDrawerOpen(false);
-                  if (window.__ENJUEGO_PWA_PROMPT__) {
-                    window.__ENJUEGO_TRIGGER_INSTALL__?.();
-                  } else {
-                    setAuthModalTab(currentUser ? "profile" : "quick");
-                    setAuthModalOpen(true);
-                  }
+                  setPwaModalOpen(true);
                 }}
                 className="w-full p-3 rounded-xl bg-slate-900 border border-slate-700/80 text-white flex items-center justify-between text-xs font-bold transition hover:border-amber-400 cursor-pointer shadow-xs"
               >
@@ -3763,6 +3737,12 @@ export function EnJuegoPortal({
         currentUser={currentUser}
         onUserUpdate={handleUserUpdate}
         initialTab={authModalTab}
+      />
+
+      {/* PWA Floating Install Modal */}
+      <PwaInstallModal
+        isOpen={pwaModalOpen}
+        onClose={() => setPwaModalOpen(false)}
       />
 
       {/* Share Game Official Banner Modal (Previa, En Vivo, Resultado Final) */}

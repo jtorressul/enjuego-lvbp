@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Sparkles, Mail, Lock, User, LogIn, UserPlus, Star, CheckCircle, ShieldCheck, LogOut } from "lucide-react";
+import { X, Sparkles, Mail, Lock, User, LogIn, UserPlus, Star, CheckCircle, ShieldCheck, LogOut, Bell, Smartphone, Share } from "lucide-react";
 import { LVBP_TEAMS } from "@/lib/lvbp-teams";
 import { UserProfile } from "@/lib/user-auth";
+import { urlBase64ToUint8Array } from "@/lib/push-config";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -35,6 +36,74 @@ export function AuthModal({
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
+  // Push & PWA State
+  const [pushSubscribed, setPushSubscribed] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const [wantNotifications, setWantNotifications] = useState(true);
+  const [canInstall, setCanInstall] = useState(false);
+  const [isIosDevice, setIsIosDevice] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      // Check push status
+      if ("Notification" in window && Notification.permission === "granted") {
+        setPushSubscribed(true);
+      }
+      // Check PWA install status
+      if (window.__ENJUEGO_PWA_PROMPT__) {
+        setCanInstall(true);
+      }
+      const ua = window.navigator.userAgent.toLowerCase();
+      setIsIosDevice(/iphone|ipad|ipod/.test(ua));
+      setIsStandalone(
+        (window.navigator as any).standalone === true ||
+        window.matchMedia("(display-mode: standalone)").matches
+      );
+    }
+  }, []);
+
+  const subscribeDeviceToPush = async (teamCode: string) => {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+      return;
+    }
+    setPushLoading(true);
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        setPushLoading(false);
+        return;
+      }
+
+      const res = await fetch("/api/push/subscribe");
+      const { vapidPublicKey } = await res.json();
+      if (!vapidPublicKey) return;
+
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as unknown as BufferSource,
+        });
+      }
+
+      await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subscription: sub.toJSON(),
+          teamPreference: teamCode,
+        }),
+      });
+      setPushSubscribed(true);
+    } catch (err) {
+      console.warn("Could not subscribe to push:", err);
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   const handleQuickLogin = async (e: React.FormEvent) => {
@@ -65,6 +134,9 @@ export function AuthModal({
       localStorage.setItem("enjuego_user_session", JSON.stringify(user));
       localStorage.setItem("enjuego_fav_team", user.favoriteTeam);
       onUserUpdate(user);
+      if (wantNotifications) {
+        subscribeDeviceToPush(user.favoriteTeam);
+      }
       setSuccessMsg(`¡Bienvenido ${user.name}!`);
       setTimeout(() => {
         onClose();
@@ -175,6 +247,9 @@ export function AuthModal({
         localStorage.setItem("enjuego_user_session", JSON.stringify(data.user));
         localStorage.setItem("enjuego_fav_team", teamCode);
         onUserUpdate(data.user);
+        if (pushSubscribed) {
+          subscribeDeviceToPush(teamCode);
+        }
         setSuccessMsg("¡Equipo favorito actualizado!");
         setTimeout(() => setSuccessMsg(""), 2000);
       }
@@ -368,6 +443,62 @@ export function AuthModal({
                 </div>
               </div>
 
+              {/* Notification & PWA Preferences */}
+              <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span className="text-xs font-black text-slate-900">
+                      Alertas de {activeTeamObj.name}
+                    </span>
+                  </div>
+                  {pushSubscribed ? (
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> Activas
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => subscribeDeviceToPush(selectedTeam)}
+                      disabled={pushLoading}
+                      className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black rounded-lg transition cursor-pointer shadow-xs disabled:opacity-50"
+                    >
+                      {pushLoading ? "Activando..." : "Activar"}
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-600 leading-snug">
+                  Recibe avisos al comenzar el juego de {activeTeamObj.nick}, cuadrangulares y pizarra final en tu pantalla.
+                </p>
+              </div>
+
+              {/* Install PWA Option */}
+              {canInstall && (
+                <div className="p-3.5 rounded-2xl bg-slate-900 text-white flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <Smartphone className="w-5 h-5 text-amber-400 shrink-0" />
+                    <div>
+                      <p className="text-xs font-black">Instalar App EnJuego</p>
+                      <p className="text-[11px] text-slate-300">Acceso directo en tu pantalla de inicio</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => window.__ENJUEGO_TRIGGER_INSTALL__?.()}
+                    className="px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black rounded-xl transition cursor-pointer"
+                  >
+                    Instalar
+                  </button>
+                </div>
+              )}
+
+              {isIosDevice && !isStandalone && (
+                <div className="p-3 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-[11px] leading-relaxed flex items-start gap-2">
+                  <Share className="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />
+                  <span>Para instalar en iPhone: toca <strong>Compartir ⎋</strong> en Safari y luego <strong>"Añadir a pantalla de inicio ⊞"</strong>.</span>
+                </div>
+              )}
+
               <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
                 <button
                   type="button"
@@ -442,6 +573,18 @@ export function AuthModal({
                   })}
                 </div>
               </div>
+
+              <label className="flex items-start gap-2.5 text-xs font-bold text-slate-700 cursor-pointer pt-1">
+                <input
+                  type="checkbox"
+                  checked={wantNotifications}
+                  onChange={(e) => setWantNotifications(e.target.checked)}
+                  className="w-4 h-4 mt-0.5 rounded border-slate-300 accent-amber-500 cursor-pointer"
+                />
+                <span className="leading-snug">
+                  Activar notificaciones en mi celular cuando juegue {activeTeamObj.nick} 🔔
+                </span>
+              </label>
 
               <button
                 type="submit"
@@ -593,6 +736,18 @@ export function AuthModal({
                   })}
                 </div>
               </div>
+
+              <label className="flex items-start gap-2.5 text-xs font-bold text-slate-700 cursor-pointer pt-1">
+                <input
+                  type="checkbox"
+                  checked={wantNotifications}
+                  onChange={(e) => setWantNotifications(e.target.checked)}
+                  className="w-4 h-4 mt-0.5 rounded border-slate-300 accent-amber-500 cursor-pointer"
+                />
+                <span className="leading-snug">
+                  Activar notificaciones en mi celular cuando juegue {activeTeamObj.nick} 🔔
+                </span>
+              </label>
 
               <button
                 type="submit"

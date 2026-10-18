@@ -37,6 +37,8 @@ import {
   X,
   User,
   Sparkles,
+  Smartphone,
+  Bell,
   LogIn,
   Send,
   MessageSquare,
@@ -1509,14 +1511,34 @@ export function EnJuegoPortal({
                   setAuthModalOpen(true);
                 }}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                title="Elige tu equipo y activa alertas de sus juegos"
               >
-                <User className="w-4 h-4" />
-                <span>Iniciar Sesión</span>
+                <Sparkles className="w-4 h-4" />
+                <span>{favoriteTeamCode ? `Fan ${favoriteTeamCode}` : "Mi Equipo / Entrar"}</span>
                 <span className="hidden xl:inline text-[10px] font-extrabold bg-slate-950/10 px-1.5 py-0.5 rounded-md">
-                  Fan {activeLeague.toUpperCase()}
+                  🔔 Alertas
                 </span>
               </button>
             )}
+
+            {/* PWA Install Button (Desktop) */}
+            <button
+              type="button"
+              onClick={() => {
+                if (window.__ENJUEGO_PWA_PROMPT__) {
+                  window.__ENJUEGO_TRIGGER_INSTALL__?.();
+                } else {
+                  setAuthModalTab(currentUser ? "profile" : "quick");
+                  setAuthModalOpen(true);
+                }
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-200 hover:text-white border text-xs font-bold transition cursor-pointer shadow-2xs hover:border-amber-400"
+              style={{ backgroundColor: "#0f172a", borderColor: "#1e293b" }}
+              title="Instalar App EnJuego en tu teléfono o PC"
+            >
+              <Smartphone className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden xl:inline">Instalar App</span>
+            </button>
           </div>
 
           {/* Mobile & Tablet Right Controls (<1024px): Perfectly Fitted Touch Buttons */}
@@ -1556,7 +1578,7 @@ export function EnJuegoPortal({
               />
             </button>
 
-            {currentUser && (
+            {currentUser ? (
               <button
                 type="button"
                 onClick={() => {
@@ -1572,6 +1594,21 @@ export function EnJuegoPortal({
                 aria-label="Ver perfil de usuario"
               >
                 {currentUser.name.slice(0, 1).toUpperCase()}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthModalTab("quick");
+                  setAuthModalOpen(true);
+                }}
+                className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-black transition cursor-pointer shadow-xs active:scale-95 text-slate-950 bg-amber-400 hover:bg-amber-300"
+                title="Elige tu equipo y activa alertas"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span className="font-extrabold text-[11px] sm:text-xs">
+                  {favoriteTeamCode ? `Fan ${favoriteTeamCode}` : "Mi Equipo"}
+                </span>
               </button>
             )}
 
@@ -1864,6 +1901,31 @@ export function EnJuegoPortal({
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* PWA Mobile Drawer Install Option */}
+            <div className="px-4 pb-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileDrawerOpen(false);
+                  if (window.__ENJUEGO_PWA_PROMPT__) {
+                    window.__ENJUEGO_TRIGGER_INSTALL__?.();
+                  } else {
+                    setAuthModalTab(currentUser ? "profile" : "quick");
+                    setAuthModalOpen(true);
+                  }
+                }}
+                className="w-full p-3 rounded-xl bg-slate-900 border border-slate-700/80 text-white flex items-center justify-between text-xs font-bold transition hover:border-amber-400 cursor-pointer shadow-xs"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Smartphone className="w-4 h-4 text-amber-400" />
+                  <span>📲 Instalar App en tu Celular</span>
+                </div>
+                <span className="text-[10px] text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-md font-extrabold">
+                  Gratis
+                </span>
+              </button>
             </div>
 
             {/* Navigation Links with Collapsible Arrow Dropdowns */}

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { LVBP_TEAMS } from "@/lib/lvbp-teams";
+import { MLB_TEAMS } from "@/lib/mlb-teams";
 import { RosterPlayer, ScheduleGame } from "@/lib/types";
 import { Users, MapPin, Calendar, Shield, Tv, Search, Star, Clock } from "lucide-react";
 
@@ -15,6 +16,7 @@ export function TeamRosterView({
   onOpenGame,
   favoriteTeamCode,
   onToggleFavoriteTeam,
+  league = "lvbp",
 }: {
   selectedTeamCode: string;
   onSelectTeam: (code: string) => void;
@@ -22,6 +24,7 @@ export function TeamRosterView({
   onOpenGame: (gameId: string) => void;
   favoriteTeamCode?: string;
   onToggleFavoriteTeam?: (code: string) => void;
+  league?: "lvbp" | "mlb";
 }) {
   const searchParams = useSearchParams();
   const initialPos = searchParams?.get("pos")?.toUpperCase() || "ALL";
@@ -48,13 +51,16 @@ export function TeamRosterView({
     }
   }, [searchParams]);
 
-  const currentTeam = LVBP_TEAMS[selectedTeamCode] || LVBP_TEAMS.CAR;
+  const activeTeamsCatalog = league === "mlb" ? MLB_TEAMS : LVBP_TEAMS;
+  const currentTeam =
+    activeTeamsCatalog[selectedTeamCode] ||
+    (league === "mlb" ? MLB_TEAMS.NYY : LVBP_TEAMS.CAR);
   const isFavorite = favoriteTeamCode === currentTeam.code;
 
   useEffect(() => {
     let active = true;
     setLoading(true);
-    fetch(`/api/lvbp/roster?team=${currentTeam.code}`)
+    fetch(`/api/lvbp/roster?team=${currentTeam.code}&league=${league}`)
       .then((r) => r.json())
       .then((data) => {
         if (active) setRoster(data.players || []);
@@ -66,7 +72,7 @@ export function TeamRosterView({
     return () => {
       active = false;
     };
-  }, [currentTeam.code]);
+  }, [currentTeam.code, league]);
 
   // Filter roster by searchQuery and posFilter
   const filteredRoster = roster.filter((p) => {
@@ -104,9 +110,15 @@ export function TeamRosterView({
 
   return (
     <div className="space-y-5">
-      {/* 8 LVBP Teams Selector Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
-        {Object.values(LVBP_TEAMS).map((team) => {
+      {/* Teams Selector Strip */}
+      <div
+        className={
+          league === "mlb"
+            ? "grid grid-cols-3 sm:grid-cols-6 lg:grid-cols-10 gap-2"
+            : "grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2"
+        }
+      >
+        {Object.values(activeTeamsCatalog).map((team) => {
           const isSelected = team.code === currentTeam.code;
           const isFav = favoriteTeamCode === team.code;
           return (
@@ -129,7 +141,7 @@ export function TeamRosterView({
                 </span>
               )}
               <img src={team.logoSvg} alt={team.name} className="w-10 h-10 object-contain" />
-              <span className="text-xs font-extrabold">{team.nick}</span>
+              <span className="text-xs font-extrabold truncate max-w-full">{team.nick}</span>
             </button>
           );
         })}

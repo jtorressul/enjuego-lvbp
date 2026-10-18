@@ -44,7 +44,7 @@ async function loadPageSlotAds(
     assignedSlotsCache = null;
     const slotsQuery = getSlotsForRoute(routeKey);
     fetchPromise = fetch(
-      `/api/banners?slots=${encodeURIComponent(slotsQuery)}&_t=${Date.now()}`,
+      `/api/banners?slots=${encodeURIComponent(slotsQuery)}&path=${encodeURIComponent(routeKey)}&_t=${Date.now()}`,
       { cache: "no-store" }
     )
       .then(async (res) => {

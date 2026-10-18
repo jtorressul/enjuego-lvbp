@@ -4,9 +4,11 @@ import {
   getAdCampaigns,
   getAdminKv,
   getLivePresenceSummary,
+  getRecentAdClickLog,
   getRegisteredUsersList,
   isAdCampaignLive,
   normalizeSlotKey,
+  resetCampaignMetricsInStore,
   saveAdCampaigns,
   updateAdminPassword,
   verifyAdminPassword,
@@ -32,11 +34,13 @@ export async function GET(request: Request) {
       campaigns,
       presence,
       registeredUsers,
+      clickLog,
     ] = await Promise.all([
       getAdminKv(),
       getAdCampaigns(),
       getLivePresenceSummary(),
       getRegisteredUsersList(),
+      getRecentAdClickLog(),
     ]);
 
     let mlbApiStatus: "online" | "degraded" = "online";
@@ -61,6 +65,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       slots: AD_SLOTS_CATALOG,
       campaigns: enrichedCampaigns,
+      clickLog,
       presence,
       registeredUsers,
       systemHealth: {
@@ -101,7 +106,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     }
 
-    // Create a new ad directly from the "Nuevo anuncio" form (exact jugadaenvivo.com logic)
     if (action === "create_ad") {
       const imageUrl = body.imageUrl ? String(body.imageUrl).trim() : "";
       if (!imageUrl) {
@@ -138,7 +142,6 @@ export async function POST(request: Request) {
       });
     }
 
-    // Update a single ad (toggle active, change dates, slot, link, etc.)
     if (action === "update_ad") {
       const adId = String(body.id || "");
       const campaigns = await getAdCampaigns();
@@ -180,7 +183,6 @@ export async function POST(request: Request) {
       });
     }
 
-    // Delete a single ad
     if (action === "delete_ad") {
       const adId = String(body.id || "");
       const campaigns = await getAdCampaigns();
@@ -193,11 +195,24 @@ export async function POST(request: Request) {
     }
 
     if (action === "reset_metrics") {
-      const targetId = body?.campaignId;
+      const targetId = body?.campaignId ? String(body.campaignId) : undefined;
+      await resetCampaignMetricsInStore(targetId);
       const campaigns = await getAdCampaigns();
       const updated = campaigns.map((c) => {
         if (!targetId || c.id === targetId) {
-          return { ...c, impressions: 0, clicks: 0 };
+          return {
+            ...c,
+            impressions: 0,
+            clicks: 0,
+            mobileImpressions: 0,
+            desktopImpressions: 0,
+            mobileClicks: 0,
+            desktopClicks: 0,
+            todayImpressions: 0,
+            todayClicks: 0,
+            bySlot: {},
+            daily: {},
+          };
         }
         return c;
       });

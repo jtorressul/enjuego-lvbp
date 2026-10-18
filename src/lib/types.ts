@@ -307,6 +307,9 @@ export interface StandingRow {
   runsScored: number;
   runsAllowed: number;
   runDiff: number;
+  league?: "AL" | "NL";
+  division?: string;
+  divisionEs?: string;
 }
 
 export interface LeaderEntry {

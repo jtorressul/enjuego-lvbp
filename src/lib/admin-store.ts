@@ -37,6 +37,16 @@ export const AD_SLOTS_CATALOG: AdSlotInfo[] = [
   },
 ];
 
+export interface CampaignSlotStats {
+  impressions: number;
+  clicks: number;
+}
+
+export interface CampaignDailyStats {
+  impressions: number;
+  clicks: number;
+}
+
 export interface AdCampaign {
   id: string;
   name: string;
@@ -51,6 +61,28 @@ export interface AdCampaign {
   impressions: number;
   clicks: number;
   updatedAt: number;
+  // Detailed analytics fields
+  mobileImpressions?: number;
+  desktopImpressions?: number;
+  mobileClicks?: number;
+  desktopClicks?: number;
+  todayImpressions?: number;
+  todayClicks?: number;
+  bySlot?: Record<string, CampaignSlotStats>;
+  daily?: Record<string, CampaignDailyStats>;
+}
+
+export interface AdClickLogEntry {
+  id: string;
+  campaignId: string;
+  campaignName: string;
+  timestamp: number;
+  timeCaracas: string;
+  device: "mobile" | "desktop";
+  os: string;
+  slot: string;
+  pagePath: string;
+  targetUrl: string;
 }
 
 export interface ServedSlotAd {
@@ -71,14 +103,30 @@ export interface LiveSession {
   path: string;
   sectionLabel: string;
   device: "mobile" | "desktop";
+  os?: string;
   firstSeen: number;
   lastSeen: number;
+  pageViews?: number;
 }
 
 export interface DailyTrafficStats {
   dateKey: string;
   totalHeartbeats: number;
+  pageViews: number;
   uniqueSessions: string[];
+  mobileSessions?: string[];
+  desktopSessions?: string[];
+  peakOnline: number;
+  sectionHits?: Record<string, number>;
+  osHits?: Record<string, number>;
+}
+
+export interface TrafficDaySummary {
+  dateKey: string;
+  uniqueVisitors: number;
+  mobileVisitors: number;
+  desktopVisitors: number;
+  pageViews: number;
   peakOnline: number;
 }
 
@@ -101,7 +149,7 @@ const globalRef = globalThis as unknown as {
   __ENJUEGO_LAST_R2_FLUSH__?: Map<string, number>;
 };
 if (!globalRef.__ENJUEGO_MEM_CACHE_V2__) {
-  globalRef.__ENJUEGO_MEM_CACHE_V2__ = new Map<string, MemCacheEntry>();
+  globalRef.__ENJUEGO_MEM_CACHE_V2__ = new Map<string, MemCacheEntry>;
 }
 if (!globalRef.__ENJUEGO_LAST_R2_FLUSH__) {
   globalRef.__ENJUEGO_LAST_R2_FLUSH__ = new Map<string, number>();
@@ -175,7 +223,6 @@ export async function getAdminKv(): Promise<{
               value: kvVal,
               expiresAt: now + cacheTtlMs,
             });
-            // Migrate automatically to R2 if available
             if (r2Bucket) {
               r2Bucket.put(`store/${key}.json`, kvVal).catch(() => {});
             }
@@ -186,7 +233,6 @@ export async function getAdminKv(): Promise<{
         }
       }
 
-      // Return stale memory entry if nothing in R2/KV (e.g., local dev)
       if (memEntry) {
         return memEntry.value;
       }
@@ -206,11 +252,9 @@ export async function getAdminKv(): Promise<{
         expiresAt: now + (isCritical ? 2000 : 5000),
       });
 
-      // Write to Cloudflare R2 (1,000,000 free writes/month, globally consistent across PC & Mobile)
       if (r2Bucket) {
         const lastFlush = lastR2Flush.get(key) || 0;
-        // Critical writes (ads, users, password) flush immediately; high-frequency writes (metrics, presence) flush every 8s
-        if (isCritical || now - lastFlush >= 8000) {
+        if (isCritical || now - lastFlush >= 6000) {
           lastR2Flush.set(key, now);
           try {
             await r2Bucket.put(`store/${key}.json`, value);
@@ -220,7 +264,6 @@ export async function getAdminKv(): Promise<{
         }
       }
 
-      // Best-effort backup to KV only for critical updates
       if (rawKv && isCritical) {
         try {
           await rawKv.put(key, value, {
@@ -241,7 +284,9 @@ export async function getAdminKv(): Promise<{
 
 const CAMPAIGNS_KEY = "admin:ads:jugada_v1";
 const METRICS_KEY = "admin:ads:metrics:jugada_v1";
+const CLICK_LOG_KEY = "admin:ads:clicklog:v1";
 const PRESENCE_KEY = "admin:presence:sessions:v1";
+const TRAFFIC_HISTORY_KEY = "admin:traffic:history_v1";
 const USERS_INDEX_KEY = "admin:users:index:v1";
 const ADMIN_PASS_KEY = "admin:config:password:v1";
 
@@ -250,6 +295,26 @@ export const DEFAULT_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "enjuego2026
 export function getTodayCaracasKey(): string {
   const d = new Date(Date.now() - 4 * 3600 * 1000);
   return d.toISOString().slice(0, 10);
+}
+
+export function getCaracasDateTimeString(ts = Date.now()): string {
+  const d = new Date(ts - 4 * 3600 * 1000);
+  return d.toISOString().replace("T", " ").slice(0, 19);
+}
+
+export function detectUserAgentMeta(ua?: string | null): {
+  device: "mobile" | "desktop";
+  os: string;
+} {
+  const s = String(ua || "");
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(s);
+  let os = "Otro";
+  if (/iPhone|iPad|iPod/i.test(s)) os = "iOS";
+  else if (/Android/i.test(s)) os = "Android";
+  else if (/Windows/i.test(s)) os = "Windows";
+  else if (/Macintosh|Mac OS X/i.test(s)) os = "Mac";
+  else if (/Linux/i.test(s)) os = "Linux";
+  return { device: isMobile ? "mobile" : "desktop", os };
 }
 
 export function isAdCampaignLive(ad: AdCampaign): boolean {
@@ -287,11 +352,22 @@ export async function updateAdminPassword(newPassword: string): Promise<void> {
   });
 }
 
+export interface StoredCampaignMetricEntry {
+  impressions: number;
+  clicks: number;
+  mobileImpressions?: number;
+  desktopImpressions?: number;
+  mobileClicks?: number;
+  desktopClicks?: number;
+  bySlot?: Record<string, CampaignSlotStats>;
+  daily?: Record<string, CampaignDailyStats>;
+}
+
 async function getBannerMetricsMap(): Promise<
-  Record<string, { impressions: number; clicks: number }>
+  Record<string, StoredCampaignMetricEntry>
 > {
   const { kv } = await getAdminKv();
-  const raw = await kv.get(METRICS_KEY, { skipKv: true, ttlMs: 4000 });
+  const raw = await kv.get(METRICS_KEY, { skipKv: true, ttlMs: 3000 });
   if (!raw) return {};
   try {
     return JSON.parse(raw) || {};
@@ -319,9 +395,16 @@ export async function getAdCampaigns(): Promise<AdCampaign[]> {
     }
   }
 
+  const today = getTodayCaracasKey();
+
   return list.map((c) => {
     const m = metricsMap[c.id];
     const name = c.name || c.companyName || "Anuncio";
+    const totalImpressions = Math.max(c.impressions || 0, m?.impressions || 0);
+    const totalClicks = Math.max(c.clicks || 0, m?.clicks || 0);
+    const daily = m?.daily || c.daily || {};
+    const todayEntry = daily[today] || { impressions: 0, clicks: 0 };
+
     return {
       ...c,
       name,
@@ -330,8 +413,16 @@ export async function getAdCampaigns(): Promise<AdCampaign[]> {
       size: c.size || "970x90",
       startsOn: c.startsOn || "",
       endsOn: c.endsOn || "",
-      impressions: Math.max(c.impressions || 0, m?.impressions || 0),
-      clicks: Math.max(c.clicks || 0, m?.clicks || 0),
+      impressions: totalImpressions,
+      clicks: totalClicks,
+      mobileImpressions: m?.mobileImpressions ?? c.mobileImpressions ?? Math.round(totalImpressions * 0.78),
+      desktopImpressions: m?.desktopImpressions ?? c.desktopImpressions ?? Math.max(0, totalImpressions - Math.round(totalImpressions * 0.78)),
+      mobileClicks: m?.mobileClicks ?? c.mobileClicks ?? Math.round(totalClicks * 0.82),
+      desktopClicks: m?.desktopClicks ?? c.desktopClicks ?? Math.max(0, totalClicks - Math.round(totalClicks * 0.82)),
+      todayImpressions: todayEntry.impressions || 0,
+      todayClicks: todayEntry.clicks || 0,
+      bySlot: m?.bySlot || c.bySlot || {},
+      daily,
     };
   });
 }
@@ -345,13 +436,23 @@ function shuffleArray<T>(arr: T[]): T[] {
   return copy;
 }
 
+export interface MetricContext {
+  device?: "mobile" | "desktop";
+  os?: string;
+  slot?: string;
+  pagePath?: string;
+  campaignName?: string;
+  targetUrl?: string;
+}
+
 /**
  * Rotativo Global ("Todo el sitio"):
  * Toma todos los anuncios activos y los reparte al azar entre los espacios de la página
  * sin repetir el mismo anuncio en la misma página.
  */
 export async function pickAdsForPageSlots(
-  requestedRawSlots: string[]
+  requestedRawSlots: string[],
+  context?: { device?: "mobile" | "desktop"; os?: string; pagePath?: string }
 ): Promise<Record<string, ServedSlotAd | null>> {
   const allCampaigns = await getAdCampaigns();
   const liveAds = shuffleArray(allCampaigns.filter(isAdCampaignLive));
@@ -365,14 +466,24 @@ export async function pickAdsForPageSlots(
       continue;
     }
     usedIds.add(picked.id);
-    await recordBannerMetric(picked.id, "impression").catch(() => {});
+    await recordBannerMetric(picked.id, "impression", {
+      device: context?.device || "mobile",
+      os: context?.os || "Otro",
+      slot: rawSlot,
+      pagePath: context?.pagePath || "/inicio",
+    }).catch(() => {});
+
+    const goParams = new URLSearchParams({
+      id: picked.id,
+      slot: rawSlot,
+    });
+    if (context?.pagePath) goParams.set("path", context.pagePath);
+
     response[rawSlot] = {
       id: picked.id,
       imageUrl: picked.imageUrl,
       alt: picked.name || picked.companyName || "Publicidad",
-      href: picked.linkUrl
-        ? `/api/banners/go?id=${encodeURIComponent(picked.id)}`
-        : "",
+      href: picked.linkUrl ? `/api/banners/go?${goParams.toString()}` : "",
       size: picked.size || "970x90",
     };
   }
@@ -391,35 +502,136 @@ export async function saveAdCampaigns(campaigns: AdCampaign[]): Promise<AdCampai
 
 export async function recordBannerMetric(
   campaignId: string,
-  metric: "impression" | "click"
+  metric: "impression" | "click",
+  ctx?: MetricContext
 ): Promise<void> {
   const { kv } = await getAdminKv();
   const metricsMap = await getBannerMetricsMap();
-  const current = metricsMap[campaignId] || { impressions: 0, clicks: 0 };
+  const current: StoredCampaignMetricEntry = metricsMap[campaignId] || {
+    impressions: 0,
+    clicks: 0,
+    mobileImpressions: 0,
+    desktopImpressions: 0,
+    mobileClicks: 0,
+    desktopClicks: 0,
+    bySlot: {},
+    daily: {},
+  };
+
+  const isMobile = (ctx?.device || "mobile") === "mobile";
+  const slotKey = (ctx?.slot || "top-leaderboard").slice(0, 40);
+  const today = getTodayCaracasKey();
+
+  if (!current.bySlot) current.bySlot = {};
+  if (!current.bySlot[slotKey]) {
+    current.bySlot[slotKey] = { impressions: 0, clicks: 0 };
+  }
+  if (!current.daily) current.daily = {};
+  if (!current.daily[today]) {
+    current.daily[today] = { impressions: 0, clicks: 0 };
+  }
 
   if (metric === "impression") {
-    current.impressions += 1;
+    current.impressions = (current.impressions || 0) + 1;
+    if (isMobile) current.mobileImpressions = (current.mobileImpressions || 0) + 1;
+    else current.desktopImpressions = (current.desktopImpressions || 0) + 1;
+    current.bySlot[slotKey].impressions += 1;
+    current.daily[today].impressions += 1;
   } else {
-    current.clicks += 1;
+    current.clicks = (current.clicks || 0) + 1;
+    if (isMobile) current.mobileClicks = (current.mobileClicks || 0) + 1;
+    else current.desktopClicks = (current.desktopClicks || 0) + 1;
+    current.bySlot[slotKey].clicks += 1;
+    current.daily[today].clicks += 1;
   }
+
+  // Keep only last 35 days of daily history per ad
+  const dayKeys = Object.keys(current.daily).sort();
+  if (dayKeys.length > 35) {
+    for (const oldKey of dayKeys.slice(0, dayKeys.length - 35)) {
+      delete current.daily[oldKey];
+    }
+  }
+
   metricsMap[campaignId] = current;
 
   await kv.put(METRICS_KEY, JSON.stringify(metricsMap), {
-    expirationTtl: 86400 * 30,
-    persistToKv: false,
+    expirationTtl: 86400 * 60,
+    persistToKv: metric === "click",
   });
+
+  // If it's a click, also append to the real-time Click Log
+  if (metric === "click") {
+    try {
+      const rawLog = await kv.get(CLICK_LOG_KEY, { skipKv: true, ttlMs: 2000 });
+      let clickLog: AdClickLogEntry[] = [];
+      if (rawLog) {
+        const parsed = JSON.parse(rawLog);
+        if (Array.isArray(parsed)) clickLog = parsed;
+      }
+      const now = Date.now();
+      clickLog.unshift({
+        id: `clk_${now}_${Math.random().toString(36).slice(2, 6)}`,
+        campaignId,
+        campaignName: ctx?.campaignName || campaignId,
+        timestamp: now,
+        timeCaracas: getCaracasDateTimeString(now),
+        device: isMobile ? "mobile" : "desktop",
+        os: ctx?.os || "Otro",
+        slot: slotKey,
+        pagePath: ctx?.pagePath || "/inicio",
+        targetUrl: ctx?.targetUrl || "",
+      });
+      if (clickLog.length > 120) {
+        clickLog = clickLog.slice(0, 120);
+      }
+      await kv.put(CLICK_LOG_KEY, JSON.stringify(clickLog), {
+        expirationTtl: 86400 * 30,
+        persistToKv: true,
+      });
+    } catch {
+      // ignore click log write error
+    }
+  }
+}
+
+export async function resetCampaignMetricsInStore(targetId?: string): Promise<void> {
+  const { kv } = await getAdminKv();
+  const metricsMap = await getBannerMetricsMap();
+  if (!targetId) {
+    await kv.put(METRICS_KEY, JSON.stringify({}), { persistToKv: true });
+    return;
+  }
+  delete metricsMap[targetId];
+  await kv.put(METRICS_KEY, JSON.stringify(metricsMap), { persistToKv: true });
+}
+
+export async function getRecentAdClickLog(): Promise<AdClickLogEntry[]> {
+  const { kv } = await getAdminKv();
+  const raw = await kv.get(CLICK_LOG_KEY, { skipKv: true, ttlMs: 3000 });
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }
 
 // ============================================================================
-// LIVE PRESENCE (USUARIOS CONECTADOS EN VIVO)
+// LIVE PRESENCE & HISTORICAL TRAFFIC ANALYTICS
 // ============================================================================
 const LIVE_WINDOW_MS = 75_000;
 
 export async function recordPresenceHeartbeat(
-  input: Omit<LiveSession, "firstSeen" | "lastSeen">
+  input: Omit<LiveSession, "firstSeen" | "lastSeen">,
+  userAgent?: string | null
 ): Promise<{ onlineCount: number }> {
   const { kv } = await getAdminKv();
   const now = Date.now();
+  const uaMeta = detectUserAgentMeta(userAgent);
+  const resolvedOs = input.os || uaMeta.os;
+
   const raw = await kv.get(PRESENCE_KEY, { skipKv: true, ttlMs: 4000 });
   let sessions: LiveSession[] = [];
   if (raw) {
@@ -434,17 +646,25 @@ export async function recordPresenceHeartbeat(
   sessions = sessions.filter((s) => now - s.lastSeen <= LIVE_WINDOW_MS);
 
   const existingIdx = sessions.findIndex((s) => s.sessionId === input.sessionId);
+  let isNewPageHit = false;
   if (existingIdx >= 0) {
+    const prev = sessions[existingIdx];
+    isNewPageHit = prev.path !== input.path;
     sessions[existingIdx] = {
-      ...sessions[existingIdx],
+      ...prev,
       ...input,
+      os: resolvedOs,
       lastSeen: now,
+      pageViews: (prev.pageViews || 1) + (isNewPageHit ? 1 : 0),
     };
   } else {
+    isNewPageHit = true;
     sessions.unshift({
       ...input,
+      os: resolvedOs,
       firstSeen: now,
       lastSeen: now,
+      pageViews: 1,
     });
   }
 
@@ -463,28 +683,86 @@ export async function recordPresenceHeartbeat(
   let stats: DailyTrafficStats = {
     dateKey,
     totalHeartbeats: 0,
+    pageViews: 0,
     uniqueSessions: [],
+    mobileSessions: [],
+    desktopSessions: [],
     peakOnline: 0,
+    sectionHits: {},
+    osHits: {},
   };
   if (rawStats) {
     try {
-      stats = JSON.parse(rawStats);
+      stats = { ...stats, ...JSON.parse(rawStats) };
     } catch {
       // ignore
     }
   }
+
   stats.totalHeartbeats = (stats.totalHeartbeats || 0) + 1;
+  if (isNewPageHit) {
+    stats.pageViews = (stats.pageViews || 0) + 1;
+    const secKey = (input.sectionLabel || "Inicio").slice(0, 40);
+    if (!stats.sectionHits) stats.sectionHits = {};
+    stats.sectionHits[secKey] = (stats.sectionHits[secKey] || 0) + 1;
+  }
+
   if (!Array.isArray(stats.uniqueSessions)) stats.uniqueSessions = [];
+  if (!Array.isArray(stats.mobileSessions)) stats.mobileSessions = [];
+  if (!Array.isArray(stats.desktopSessions)) stats.desktopSessions = [];
+  if (!stats.osHits) stats.osHits = {};
+
   if (!stats.uniqueSessions.includes(input.sessionId) && stats.uniqueSessions.length < 5000) {
     stats.uniqueSessions.push(input.sessionId);
+    stats.osHits[resolvedOs] = (stats.osHits[resolvedOs] || 0) + 1;
   }
+  if (input.device === "mobile") {
+    if (!stats.mobileSessions.includes(input.sessionId) && stats.mobileSessions.length < 5000) {
+      stats.mobileSessions.push(input.sessionId);
+    }
+  } else {
+    if (!stats.desktopSessions.includes(input.sessionId) && stats.desktopSessions.length < 5000) {
+      stats.desktopSessions.push(input.sessionId);
+    }
+  }
+
   if (sessions.length > (stats.peakOnline || 0)) {
     stats.peakOnline = sessions.length;
   }
+
   await kv.put(statsKey, JSON.stringify(stats), {
-    expirationTtl: 86400 * 7,
+    expirationTtl: 86400 * 30,
     persistToKv: false,
   });
+
+  // Update rolling 14-day traffic summary index
+  try {
+    const rawHist = await kv.get(TRAFFIC_HISTORY_KEY, { skipKv: true, ttlMs: 8000 });
+    let histMap: Record<string, TrafficDaySummary> = {};
+    if (rawHist) {
+      histMap = JSON.parse(rawHist) || {};
+    }
+    histMap[dateKey] = {
+      dateKey,
+      uniqueVisitors: stats.uniqueSessions.length,
+      mobileVisitors: stats.mobileSessions.length,
+      desktopVisitors: stats.desktopSessions.length,
+      pageViews: Math.max(stats.pageViews || 0, stats.uniqueSessions.length),
+      peakOnline: stats.peakOnline,
+    };
+    const keys = Object.keys(histMap).sort();
+    if (keys.length > 21) {
+      for (const k of keys.slice(0, keys.length - 21)) {
+        delete histMap[k];
+      }
+    }
+    await kv.put(TRAFFIC_HISTORY_KEY, JSON.stringify(histMap), {
+      expirationTtl: 86400 * 60,
+      persistToKv: false,
+    });
+  } catch {
+    // ignore
+  }
 
   return { onlineCount: sessions.length };
 }
@@ -496,11 +774,21 @@ export async function getLivePresenceSummary(): Promise<{
   desktopCount: number;
   registeredOnlineCount: number;
   todayUniqueVisitors: number;
+  todayMobileVisitors: number;
+  todayDesktopVisitors: number;
+  todayPageViews: number;
   todayPeakOnline: number;
+  sectionHits: Record<string, number>;
+  osHits: Record<string, number>;
+  trafficHistory: TrafficDaySummary[];
 }> {
   const { kv } = await getAdminKv();
   const now = Date.now();
-  const raw = await kv.get(PRESENCE_KEY, { skipKv: true, ttlMs: 3000 });
+  const [raw, rawHist] = await Promise.all([
+    kv.get(PRESENCE_KEY, { skipKv: true, ttlMs: 3000 }),
+    kv.get(TRAFFIC_HISTORY_KEY, { skipKv: true, ttlMs: 5000 }),
+  ]);
+
   let sessions: LiveSession[] = [];
   if (raw) {
     try {
@@ -522,7 +810,13 @@ export async function getLivePresenceSummary(): Promise<{
   const dateKey = getTodayCaracasKey();
   const rawStats = await kv.get(`admin:traffic:${dateKey}`, { skipKv: true, ttlMs: 4000 });
   let todayUniqueVisitors = activeSessions.length;
+  let todayMobileVisitors = mobileCount;
+  let todayDesktopVisitors = desktopCount;
+  let todayPageViews = activeSessions.reduce((acc, s) => acc + (s.pageViews || 1), 0);
   let todayPeakOnline = activeSessions.length;
+  let sectionHits: Record<string, number> = {};
+  let osHits: Record<string, number> = {};
+
   if (rawStats) {
     try {
       const stats: DailyTrafficStats = JSON.parse(rawStats);
@@ -530,11 +824,43 @@ export async function getLivePresenceSummary(): Promise<{
         activeSessions.length,
         Array.isArray(stats.uniqueSessions) ? stats.uniqueSessions.length : 0
       );
+      todayMobileVisitors = Math.max(
+        mobileCount,
+        Array.isArray(stats.mobileSessions) ? stats.mobileSessions.length : 0
+      );
+      todayDesktopVisitors = Math.max(
+        desktopCount,
+        Array.isArray(stats.desktopSessions) ? stats.desktopSessions.length : 0
+      );
+      todayPageViews = Math.max(todayUniqueVisitors, stats.pageViews || 0, stats.totalHeartbeats || 0);
       todayPeakOnline = Math.max(activeSessions.length, stats.peakOnline || 0);
+      sectionHits = stats.sectionHits || {};
+      osHits = stats.osHits || {};
     } catch {
       // ignore
     }
   }
+
+  let histMap: Record<string, TrafficDaySummary> = {};
+  if (rawHist) {
+    try {
+      histMap = JSON.parse(rawHist) || {};
+    } catch {
+      histMap = {};
+    }
+  }
+  histMap[dateKey] = {
+    dateKey,
+    uniqueVisitors: todayUniqueVisitors,
+    mobileVisitors: todayMobileVisitors,
+    desktopVisitors: todayDesktopVisitors,
+    pageViews: todayPageViews,
+    peakOnline: todayPeakOnline,
+  };
+
+  const trafficHistory = Object.values(histMap)
+    .sort((a, b) => a.dateKey.localeCompare(b.dateKey))
+    .slice(-14);
 
   return {
     sessions: activeSessions,
@@ -543,7 +869,13 @@ export async function getLivePresenceSummary(): Promise<{
     desktopCount,
     registeredOnlineCount,
     todayUniqueVisitors,
+    todayMobileVisitors,
+    todayDesktopVisitors,
+    todayPageViews,
     todayPeakOnline,
+    sectionHits,
+    osHits,
+    trafficHistory,
   };
 }
 

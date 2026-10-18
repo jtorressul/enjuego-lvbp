@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { LeaderCategory, ScheduleGame, StandingRow } from "@/lib/types";
 import { LVBP_OFFICIAL_LOGO, LVBP_TEAMS, resolveLvbpTeam } from "@/lib/lvbp-teams";
+import { MLB_TEAMS, resolveMlbTeam, resolveAnyBaseballTeam } from "@/lib/mlb-teams";
 import { GamedayView } from "@/components/gameday/GamedayView";
 import { LeadersWidget } from "@/components/LeadersWidget";
 import { TeamRosterView } from "@/components/TeamRosterView";
@@ -169,7 +170,7 @@ export function EnJuegoPortal({
     if (!qTeam && searchParams) {
       for (const key of searchParams.keys()) {
         if (key && !searchParams.get(key)) {
-          const candidate = resolveLvbpTeam(key);
+          const candidate = resolveAnyBaseballTeam(key);
           if (candidate) return candidate;
         }
       }
@@ -178,8 +179,27 @@ export function EnJuegoPortal({
     // 4. Initial team slug from route params
     if (!qTeam) qTeam = initialTeamSlug;
     if (!qTeam) return null;
-    return resolveLvbpTeam(qTeam);
+    return resolveAnyBaseballTeam(qTeam);
   }, [searchParams, initialTeamSlug]);
+
+  const [activeLeague, setActiveLeague] = useState<"lvbp" | "mlb">(() => {
+    const qLeague = (searchParams?.get("liga") || searchParams?.get("league") || "").toLowerCase();
+    if (qLeague === "mlb") return "mlb";
+    if (qLeague === "lvbp") return "lvbp";
+    if (resolvedUrlTeam && MLB_TEAMS[resolvedUrlTeam.code]) return "mlb";
+    return "lvbp";
+  });
+  const [mlbStandingsFilter, setMlbStandingsFilter] = useState<"ALL" | "AL" | "NL">("ALL");
+
+  const activeTeamsCatalog = useMemo(
+    () => (activeLeague === "mlb" ? MLB_TEAMS : LVBP_TEAMS),
+    [activeLeague]
+  );
+
+  const anyTeamsCatalog = useMemo(
+    () => ({ ...LVBP_TEAMS, ...MLB_TEAMS }),
+    []
+  );
 
   const [selectedTeamCode, setSelectedTeamCode] = useState<string>(
     resolvedUrlTeam?.code || "CAR"
@@ -207,6 +227,19 @@ export function EnJuegoPortal({
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState<"quick" | "login" | "register" | "profile">("quick");
+
+  const switchLeague = (nextLeague: "lvbp" | "mlb") => {
+    if (nextLeague === activeLeague) return;
+    setActiveLeague(nextLeague);
+    setTeamFilter("");
+    setUserSelectedDateManually(false);
+    setSelectedTeamCode(nextLeague === "mlb" ? "NYY" : "CAR");
+    try {
+      localStorage.setItem("enjuego_active_league", nextLeague);
+    } catch {
+      // ignore
+    }
+  };
 
   useEffect(() => {
     setMobileDrawerOpen(false);
@@ -242,15 +275,24 @@ export function EnJuegoPortal({
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", "light");
     try {
+      const savedLeague = localStorage.getItem("enjuego_active_league");
+      const qLeague = (searchParams?.get("liga") || searchParams?.get("league") || "").toLowerCase();
+      if (!qLeague && (savedLeague === "mlb" || savedLeague === "lvbp")) {
+        setActiveLeague(savedLeague);
+        if (savedLeague === "mlb" && !resolvedUrlTeam) {
+          setSelectedTeamCode("NYY");
+        }
+      }
+
       const fav = localStorage.getItem("enjuego_fav_team");
-      if (fav && LVBP_TEAMS[fav]) setFavoriteTeamCode(fav);
+      if (fav && (LVBP_TEAMS[fav] || MLB_TEAMS[fav])) setFavoriteTeamCode(fav);
 
       const storedUser = localStorage.getItem("enjuego_user_session");
       if (storedUser) {
         const parsed = JSON.parse(storedUser);
         if (parsed?.id) {
           setCurrentUser(parsed);
-          if (parsed.favoriteTeam && LVBP_TEAMS[parsed.favoriteTeam]) {
+          if (parsed.favoriteTeam && (LVBP_TEAMS[parsed.favoriteTeam] || MLB_TEAMS[parsed.favoriteTeam])) {
             setFavoriteTeamCode(parsed.favoriteTeam);
             setPostTeam(parsed.favoriteTeam);
           }
@@ -274,6 +316,11 @@ export function EnJuegoPortal({
   useEffect(() => {
     if (resolvedUrlTeam) {
       setSelectedTeamCode(resolvedUrlTeam.code);
+      if (MLB_TEAMS[resolvedUrlTeam.code]) {
+        setActiveLeague("mlb");
+      } else if (LVBP_TEAMS[resolvedUrlTeam.code]) {
+        setActiveLeague("lvbp");
+      }
       if (section === "calendario") {
         setTeamFilter(resolvedUrlTeam.code);
       }
@@ -314,7 +361,7 @@ export function EnJuegoPortal({
   const handleUserUpdate = (updated: UserProfile | null) => {
     setCurrentUser(updated);
     if (updated) {
-      if (updated.favoriteTeam && LVBP_TEAMS[updated.favoriteTeam]) {
+      if (updated.favoriteTeam && (LVBP_TEAMS[updated.favoriteTeam] || MLB_TEAMS[updated.favoriteTeam])) {
         setFavoriteTeamCode(updated.favoriteTeam);
         setPostTeam(updated.favoriteTeam);
       }
@@ -344,8 +391,8 @@ export function EnJuegoPortal({
   const loadAllData = async () => {
     try {
       const [schRes, stdRes, commRes] = await Promise.all([
-        fetch("/api/lvbp/schedule?season=2026"),
-        fetch("/api/lvbp/standings?season=2026"),
+        fetch(`/api/lvbp/schedule?season=2026&league=${activeLeague}`),
+        fetch(`/api/lvbp/standings?season=2026&league=${activeLeague}`),
         fetch("/api/lvbp/interactive?mode=community", { cache: "no-store" }),
       ]);
       const schData = await schRes.json();
@@ -385,10 +432,11 @@ export function EnJuegoPortal({
   };
 
   useEffect(() => {
+    setLoading(true);
     loadAllData();
     const interval = setInterval(loadAllData, 20000);
     return () => clearInterval(interval);
-  }, [userSelectedDateManually]);
+  }, [userSelectedDateManually, activeLeague]);
 
   const dates = useMemo(
     () => [...new Set(schedule.map((g) => g.date))].sort(),
@@ -421,7 +469,7 @@ export function EnJuegoPortal({
   };
 
   const openTeamPage = (code: string) => {
-    const meta = LVBP_TEAMS[code] || LVBP_TEAMS.CAR;
+    const meta = anyTeamsCatalog[code] || activeTeamsCatalog[code] || LVBP_TEAMS.CAR;
     setSelectedTeamCode(meta.code);
     if (pathname?.startsWith("/equipos/")) {
       router.push(`/equipos/${meta.slug}`);
@@ -916,8 +964,8 @@ export function EnJuegoPortal({
         }}
       >
         <div className="max-w-7xl mx-auto px-3 sm:px-4 h-15 sm:h-17 flex items-center justify-between gap-2 sm:gap-3">
-          {/* Brand Horizontal Logo + .online Pill */}
-          <div className="flex items-center shrink-0 min-w-0">
+          {/* Brand Horizontal Logo + .online Pill + League Switcher */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
             <Link
               href="/inicio"
               className="flex items-center gap-1.5 sm:gap-2 py-1 group cursor-pointer select-none"
@@ -940,6 +988,39 @@ export function EnJuegoPortal({
                 <span style={{ color: "#ffffff" }}>.online</span>
               </span>
             </Link>
+
+            {/* LEAGUE SWITCHER PILL: LVBP 🇻🇪 | MLB ⚾ */}
+            <div
+              className="inline-flex items-center p-1 rounded-xl border shrink-0"
+              style={{ backgroundColor: "#0f172a", borderColor: "#1e293b" }}
+              role="group"
+              aria-label="Selector de Liga"
+            >
+              <button
+                type="button"
+                onClick={() => switchLeague("lvbp")}
+                className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-black transition cursor-pointer ${
+                  activeLeague === "lvbp"
+                    ? "bg-amber-400 text-slate-950 shadow-2xs"
+                    : "text-slate-300 hover:text-white"
+                }`}
+              >
+                <span>🇻🇪</span>
+                <span>LVBP</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => switchLeague("mlb")}
+                className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-black transition cursor-pointer ${
+                  activeLeague === "mlb"
+                    ? "bg-sky-400 text-slate-950 shadow-2xs"
+                    : "text-slate-300 hover:text-white"
+                }`}
+              >
+                <span>⚾</span>
+                <span>MLB</span>
+              </button>
+            </div>
           </div>
 
           {/* Desktop Main Navigation with Real URLs (lg+ to match right controls) */}
@@ -955,7 +1036,11 @@ export function EnJuegoPortal({
                 ["calendario", "/calendario", "Calendario"],
                 ["posiciones", "/posiciones", "Posiciones"],
                 ["lideres", "/lideres", "Líderes"],
-                ["equipos", `/teams?team=${LVBP_TEAMS[selectedTeamCode]?.slug || "leones"}`, "Equipos"],
+                [
+                  "equipos",
+                  `/teams?team=${anyTeamsCatalog[selectedTeamCode]?.slug || (activeLeague === "mlb" ? "yankees" : "leones")}`,
+                  "Equipos",
+                ],
               ] as const
             ).map(([key, href, label]) => (
               <Link
@@ -989,14 +1074,14 @@ export function EnJuegoPortal({
                     : { backgroundColor: "#0f172a", borderColor: "#1e293b", color: "#f8fafc" }
                 }
                 aria-expanded={teamsDropdownOpen}
-                aria-label="Desplegable de equipos de la LVBP"
+                aria-label="Desplegable de equipos"
               >
                 <img
-                  src={LVBP_TEAMS[selectedTeamCode]?.logoSvg || LVBP_OFFICIAL_LOGO}
+                  src={activeTeamsCatalog[selectedTeamCode]?.logoSvg || anyTeamsCatalog[selectedTeamCode]?.logoSvg || LVBP_OFFICIAL_LOGO}
                   alt=""
                   className="w-5 h-5 object-contain"
                 />
-                <span>{LVBP_TEAMS[selectedTeamCode]?.nick || "Equipos"}</span>
+                <span>{activeTeamsCatalog[selectedTeamCode]?.nick || "Equipos"}</span>
                 <ChevronDown
                   className={`w-4 h-4 transition-transform duration-200 ${
                     teamsDropdownOpen ? "rotate-180 text-slate-950" : "text-slate-400"
@@ -1007,7 +1092,7 @@ export function EnJuegoPortal({
               {/* DESKTOP TEAMS DROPDOWN */}
               {teamsDropdownOpen && (
                 <div
-                  className="absolute right-0 top-full mt-2 w-80 rounded-2xl bg-white border border-slate-200 shadow-2xl p-3 z-50 text-slate-900 animate-in fade-in slide-in-from-top-2 duration-150"
+                  className="absolute right-0 top-full mt-2 w-88 max-h-[75vh] overflow-y-auto rounded-2xl bg-white border border-slate-200 shadow-2xl p-3 z-50 text-slate-900 animate-in fade-in slide-in-from-top-2 duration-150"
                   style={{ backgroundColor: "#ffffff", color: "#0f172a" }}
                 >
                   <div className="flex items-center justify-between px-1 pb-2 mb-2 border-b border-slate-100">
@@ -1016,10 +1101,11 @@ export function EnJuegoPortal({
                         className="text-xs font-black flex items-center gap-1.5"
                         style={{ color: "#0f172a" }}
                       >
-                        <Users className="w-3.5 h-3.5 text-amber-600" /> Equipos LVBP
+                        <Users className="w-3.5 h-3.5 text-amber-600" />{" "}
+                        {activeLeague === "mlb" ? "Equipos MLB" : "Equipos LVBP"}
                       </div>
                       <p className="text-[10px]" style={{ color: "#64748b" }}>
-                        8 franquicias de la liga
+                        {activeLeague === "mlb" ? "30 franquicias de Grandes Ligas" : "8 franquicias de la liga"}
                       </p>
                     </div>
                     <Link
@@ -1033,7 +1119,7 @@ export function EnJuegoPortal({
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
-                    {Object.values(LVBP_TEAMS).map((team) => {
+                    {Object.values(activeTeamsCatalog).map((team) => {
                       const isSelected = selectedTeamCode === team.code;
                       const isFav = favoriteTeamCode === team.code;
                       return (
@@ -1102,15 +1188,15 @@ export function EnJuegoPortal({
                   className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black text-white shrink-0"
                   style={{
                     backgroundColor:
-                      LVBP_TEAMS[currentUser.favoriteTeam]?.color || "#d97706",
+                      anyTeamsCatalog[currentUser.favoriteTeam]?.color || "#d97706",
                   }}
                 >
                   {currentUser.name.slice(0, 1).toUpperCase()}
                 </div>
                 <span className="max-w-[110px] truncate font-extrabold">{currentUser.name}</span>
-                {currentUser.favoriteTeam && LVBP_TEAMS[currentUser.favoriteTeam] && (
+                {currentUser.favoriteTeam && anyTeamsCatalog[currentUser.favoriteTeam] && (
                   <img
-                    src={LVBP_TEAMS[currentUser.favoriteTeam].logoSvg}
+                    src={anyTeamsCatalog[currentUser.favoriteTeam].logoSvg}
                     alt=""
                     className="w-4 h-4 object-contain shrink-0"
                   />
@@ -1128,7 +1214,7 @@ export function EnJuegoPortal({
                 <User className="w-4 h-4" />
                 <span>Iniciar Sesión</span>
                 <span className="hidden xl:inline text-[10px] font-extrabold bg-slate-950/10 px-1.5 py-0.5 rounded-md">
-                  Fan LVBP
+                  Fan {activeLeague.toUpperCase()}
                 </span>
               </button>
             )}
@@ -1151,18 +1237,18 @@ export function EnJuegoPortal({
                   : { backgroundColor: "#0f172a", borderColor: "#1e293b", color: "#f8fafc" }
               }
               aria-expanded={teamsDropdownOpen}
-              aria-label="Desplegable de equipos de la LVBP"
+              aria-label="Desplegable de equipos"
             >
               <img
-                src={LVBP_TEAMS[selectedTeamCode]?.logoSvg || LVBP_OFFICIAL_LOGO}
+                src={activeTeamsCatalog[selectedTeamCode]?.logoSvg || anyTeamsCatalog[selectedTeamCode]?.logoSvg || LVBP_OFFICIAL_LOGO}
                 alt=""
                 className="w-5 h-5 object-contain shrink-0"
               />
               <span className="font-extrabold sm:hidden">
-                {LVBP_TEAMS[selectedTeamCode]?.shortName || "LVBP"}
+                {activeTeamsCatalog[selectedTeamCode]?.shortName || activeLeague.toUpperCase()}
               </span>
               <span className="font-extrabold hidden sm:inline">
-                {LVBP_TEAMS[selectedTeamCode]?.nick || "Equipos"}
+                {activeTeamsCatalog[selectedTeamCode]?.nick || "Equipos"}
               </span>
               <ChevronDown
                 className={`w-3.5 h-3.5 transition-transform duration-200 shrink-0 ${
@@ -1181,7 +1267,7 @@ export function EnJuegoPortal({
                 className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-white font-black text-xs sm:text-sm shrink-0 shadow-2xs border border-slate-700 cursor-pointer active:scale-95"
                 style={{
                   backgroundColor:
-                    LVBP_TEAMS[currentUser.favoriteTeam]?.color || "#d97706",
+                    anyTeamsCatalog[currentUser.favoriteTeam]?.color || "#d97706",
                 }}
                 title={`Perfil de ${currentUser.name}`}
                 aria-label="Ver perfil de usuario"
@@ -1227,7 +1313,7 @@ export function EnJuegoPortal({
                 </div>
                 <div>
                   <div className="font-black text-slate-950 text-base leading-tight">
-                    Equipos LVBP
+                    {activeLeague === "mlb" ? "Equipos MLB (30)" : "Equipos LVBP (8)"}
                   </div>
                   <p className="text-xs text-slate-500 font-medium">Toca para filtrar o ver nómina</p>
                 </div>
@@ -1252,7 +1338,7 @@ export function EnJuegoPortal({
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
-              {Object.values(LVBP_TEAMS).map((team) => {
+              {Object.values(activeTeamsCatalog).map((team) => {
                 const isSelected = selectedTeamCode === team.code;
                 const isFav = favoriteTeamCode === team.code;
                 return (
@@ -1345,6 +1431,35 @@ export function EnJuegoPortal({
 
             {/* Scrollable Drawer Body */}
             <div className="flex-1 overflow-y-auto overscroll-contain pb-10">
+            {/* League Switcher inside Mobile Drawer */}
+            <div className="px-4 pt-3.5 pb-1 bg-slate-50">
+              <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-900 border border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => switchLeague("lvbp")}
+                  className={`py-2 px-3 rounded-lg text-xs font-black flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                    activeLeague === "lvbp"
+                      ? "bg-amber-400 text-slate-950 shadow-2xs"
+                      : "text-slate-300 hover:text-white"
+                  }`}
+                >
+                  <span>🇻🇪</span>
+                  <span>LVBP Venezuela</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => switchLeague("mlb")}
+                  className={`py-2 px-3 rounded-lg text-xs font-black flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                    activeLeague === "mlb"
+                      ? "bg-sky-400 text-slate-950 shadow-2xs"
+                      : "text-slate-300 hover:text-white"
+                  }`}
+                >
+                  <span>⚾</span>
+                  <span>MLB Grandes Ligas</span>
+                </button>
+              </div>
+            </div>
 
             {/* Fan Profile / Login Card in Drawer */}
             <div className="p-4 bg-slate-50 border-b border-slate-200">
@@ -1355,7 +1470,7 @@ export function EnJuegoPortal({
                       className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-black text-base shadow-inner shrink-0"
                       style={{
                         backgroundColor:
-                          LVBP_TEAMS[currentUser.favoriteTeam]?.color || "#d97706",
+                          anyTeamsCatalog[currentUser.favoriteTeam]?.color || "#d97706",
                       }}
                     >
                       {currentUser.name.slice(0, 2).toUpperCase()}
@@ -1367,7 +1482,7 @@ export function EnJuegoPortal({
                       <div className="text-xs text-slate-400 truncate">{currentUser.handle}</div>
                       <div className="text-xs text-amber-600 font-extrabold flex items-center gap-1 mt-0.5">
                         <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
-                        {LVBP_TEAMS[currentUser.favoriteTeam]?.name || "Fan LVBP"}
+                        {anyTeamsCatalog[currentUser.favoriteTeam]?.name || "Fanático"}
                       </div>
                     </div>
                   </div>
@@ -1466,7 +1581,12 @@ export function EnJuegoPortal({
                   ["calendario", "/calendario", "Calendario y Canales TV", Calendar],
                   ["posiciones", "/posiciones", "Tabla de Posiciones", Trophy],
                   ["lideres", "/lideres", "Líderes y Estadísticas", BarChart3],
-                  ["equipos", `/teams?team=${LVBP_TEAMS[selectedTeamCode]?.slug || "leones"}`, "Equipos y Rosters", Users],
+                  [
+                    "equipos",
+                    `/teams?team=${anyTeamsCatalog[selectedTeamCode]?.slug || (activeLeague === "mlb" ? "yankees" : "leones")}`,
+                    "Equipos y Rosters",
+                    Users,
+                  ],
                 ] as const
               ).map(([key, href, label, Icon]) => {
                 const active = section === key || (section === "juego" && key === "resultados");
@@ -1491,16 +1611,18 @@ export function EnJuegoPortal({
               })}
             </div>
 
-            {/* LVBP Teams Directory */}
+            {/* Teams Directory in Mobile Drawer */}
             <div className="p-4 flex-1">
               <div className="flex items-center justify-between px-1 mb-2.5">
                 <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
-                  Equipos de la LVBP
+                  {activeLeague === "mlb" ? "Equipos de la MLB" : "Equipos de la LVBP"}
                 </span>
-                <span className="text-xs font-bold text-amber-600">8 Clubes</span>
+                <span className="text-xs font-bold text-amber-600">
+                  {activeLeague === "mlb" ? "30 Clubes" : "8 Clubes"}
+                </span>
               </div>
               <div className="space-y-2">
-                {Object.values(LVBP_TEAMS).map((team) => {
+                {Object.values(activeTeamsCatalog).map((team) => {
                   const isFav = favoriteTeamCode === team.code;
                   return (
                     <div
@@ -1541,7 +1663,7 @@ export function EnJuegoPortal({
 
             {/* Drawer Bottom info */}
             <div className="p-4 border-t border-slate-200 bg-slate-50 text-xs text-slate-500">
-              <p className="font-extrabold text-slate-800">EN JUEGO · Béisbol Venezolano</p>
+              <p className="font-extrabold text-slate-800">EN JUEGO · LVBP & MLB</p>
               <p className="text-[11px] text-slate-400 mt-0.5">Marcadores y jugada a jugada en vivo</p>
             </div>
             </div>
@@ -1715,13 +1837,13 @@ export function EnJuegoPortal({
               <div className="flex items-center gap-2 text-xs">
                 <Star className="w-4 h-4 text-amber-500 fill-amber-400 shrink-0" />
                 <span className="font-extrabold text-slate-800">
-                  {favoriteTeamCode && LVBP_TEAMS[favoriteTeamCode]
-                    ? `Tu equipo favorito: ${LVBP_TEAMS[favoriteTeamCode].name} (fijado de 1° en pizarra)`
+                  {favoriteTeamCode && anyTeamsCatalog[favoriteTeamCode]
+                    ? `Tu equipo favorito: ${anyTeamsCatalog[favoriteTeamCode].name} (fijado de 1° en pizarra)`
                     : "Elige tu equipo favorito para fijar sus juegos de primero:"}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
-                {Object.values(LVBP_TEAMS).map((t) => {
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 no-scrollbar max-w-full">
+                {Object.values(activeTeamsCatalog).map((t) => {
                   const active = favoriteTeamCode === t.code;
                   return (
                     <button
@@ -1747,7 +1869,9 @@ export function EnJuegoPortal({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
-                    Pizarra de Juegos · Temporada 2026-2027
+                    {activeLeague === "mlb"
+                      ? "Pizarra MLB · Grandes Ligas"
+                      : "Pizarra de Juegos · Temporada 2026-2027"}
                   </span>
                   <h1 className="text-xl sm:text-2xl font-black text-slate-950 capitalize">
                     {dayFormatted.fullLabel}
@@ -1810,8 +1934,12 @@ export function EnJuegoPortal({
                 <article className="lg:col-span-4 rounded-2xl border border-slate-200 bg-white p-4 flex flex-col justify-between shadow-xs">
                   <div>
                     <header className="flex items-center justify-between pb-3 border-b border-slate-200">
-                      <h3 className="text-sm font-black text-slate-950">Tabla de posiciones</h3>
-                      <span className="text-[11px] font-bold text-amber-600">Temporada regular</span>
+                      <h3 className="text-sm font-black text-slate-950">
+                        Tabla de posiciones {activeLeague === "mlb" ? "(MLB)" : "(LVBP)"}
+                      </h3>
+                      <span className="text-[11px] font-bold text-amber-600">
+                        {activeLeague === "mlb" ? "Top MLB" : "Temporada regular"}
+                      </span>
                     </header>
 
                     <table className="w-full text-xs mt-2 border-collapse">
@@ -1826,7 +1954,7 @@ export function EnJuegoPortal({
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {standings.map((row, idx) => {
+                        {standings.slice(0, 10).map((row, idx) => {
                           const isFav = favoriteTeamCode === row.team.code;
                           const zoneDot =
                             idx < 4
@@ -1869,12 +1997,20 @@ export function EnJuegoPortal({
                   </div>
 
                   <div className="pt-3 mt-2 border-t border-slate-100 flex flex-wrap items-center gap-3 text-[10px] font-bold text-slate-500">
-                    <span className="flex items-center gap-1">
-                      <i className="w-2 h-2 rounded-full bg-emerald-500" /> 1°-4° Round Robin
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <i className="w-2 h-2 rounded-full bg-amber-400" /> 5°-6° Comodín
-                    </span>
+                    {activeLeague === "mlb" ? (
+                      <Link href="/posiciones" className="text-amber-600 hover:underline font-extrabold">
+                        Ver las 30 franquicias y divisiones AL / NL ›
+                      </Link>
+                    ) : (
+                      <>
+                        <span className="flex items-center gap-1">
+                          <i className="w-2 h-2 rounded-full bg-emerald-500" /> 1°-4° Round Robin
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <i className="w-2 h-2 rounded-full bg-amber-400" /> 5°-6° Comodín
+                        </span>
+                      </>
+                    )}
                   </div>
                 </article>
               </div>
@@ -1928,7 +2064,7 @@ export function EnJuegoPortal({
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
-                        Comunidad LVBP
+                        Comunidad Béisbol
                       </span>
                       <h2 className="text-xl sm:text-2xl font-black text-slate-950 flex items-center gap-2">
                         <span>Mundo</span> <em className="text-amber-600 not-italic">Jugadas</em>
@@ -1937,7 +2073,7 @@ export function EnJuegoPortal({
                     </div>
                   </div>
                   <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                    Comenta la jornada en tiempo real con fanáticos de los 8 equipos de la LVBP.
+                    Comenta la jornada en tiempo real con fanáticos de la LVBP y la MLB.
                   </p>
                   {/* User Identity Banner or Inputs */}
                   {currentUser ? (
@@ -1955,7 +2091,7 @@ export function EnJuegoPortal({
                             className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-black text-xs shrink-0 shadow-inner"
                             style={{
                               backgroundColor:
-                                LVBP_TEAMS[currentUser.favoriteTeam]?.color || "#d97706",
+                                anyTeamsCatalog[currentUser.favoriteTeam]?.color || "#d97706",
                             }}
                           >
                             {currentUser.name.slice(0, 2).toUpperCase()}
@@ -1969,7 +2105,7 @@ export function EnJuegoPortal({
                               style={{ color: "#fbbf24" }}
                             >
                               <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-                              Fan de {LVBP_TEAMS[currentUser.favoriteTeam]?.nick || "LVBP"}
+                              Fan de {anyTeamsCatalog[currentUser.favoriteTeam]?.nick || "LVBP"}
                             </div>
                           </div>
                         </div>
@@ -2064,7 +2200,7 @@ export function EnJuegoPortal({
                   <div className="space-y-3 max-h-[460px] overflow-y-auto pr-1">
                     {communityPosts.length > 0 ? (
                       communityPosts.map((post) => {
-                        const club = LVBP_TEAMS[post.team] || LVBP_TEAMS.CAR;
+                        const club = anyTeamsCatalog[post.team] || LVBP_TEAMS.CAR;
                         return (
                           <article
                             key={post.id}
@@ -2152,7 +2288,7 @@ export function EnJuegoPortal({
                   Pizarras C · H · E y Transmisiones TV
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-950">
-                  Resultados de la LVBP
+                  Resultados de la {activeLeague === "mlb" ? "MLB" : "LVBP"}
                 </h1>
               </div>
 
@@ -2193,10 +2329,12 @@ export function EnJuegoPortal({
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
               <div>
                 <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
-                  Temporada 2026-2027 · Señales de TV y Estadios
+                  {activeLeague === "mlb"
+                    ? "Grandes Ligas · Señales de TV y Estadios"
+                    : "Temporada 2026-2027 · Señales de TV y Estadios"}
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-950">
-                  Calendario de Juegos
+                  Calendario de Juegos ({activeLeague.toUpperCase()})
                 </h1>
               </div>
 
@@ -2244,10 +2382,10 @@ export function EnJuegoPortal({
                   }`}
                 >
                   <img src={LVBP_OFFICIAL_LOGO} alt="" className="w-5 h-5 object-contain" />
-                  <span>Todos los equipos (8)</span>
+                  <span>Todos los equipos ({Object.keys(activeTeamsCatalog).length})</span>
                 </button>
 
-                {Object.values(LVBP_TEAMS).map((t) => {
+                {Object.values(activeTeamsCatalog).map((t) => {
                   const active = teamFilter === t.code;
                   return (
                     <button
@@ -2276,10 +2414,10 @@ export function EnJuegoPortal({
             </div>
 
             {/* CASE A: SINGLE TEAM SELECTED — CLEAR TEAM-CENTRIC SCHEDULE */}
-            {teamFilter && LVBP_TEAMS[teamFilter] ? (
+            {teamFilter && anyTeamsCatalog[teamFilter] ? (
               <div className="space-y-4">
                 {(() => {
-                  const club = LVBP_TEAMS[teamFilter];
+                  const club = anyTeamsCatalog[teamFilter];
                   const homeCount = filteredCalendarGames.filter(
                     (g) => g.homeTeam.code === teamFilter
                   ).length;
@@ -2537,44 +2675,71 @@ export function EnJuegoPortal({
           </div>
         )}
 
-        {/* SECTION: POSICIONES (/posiciones) WITH ROUND ROBIN QUALIFICATION ZONES */}
+        {/* SECTION: POSICIONES (/posiciones) WITH ROUND ROBIN OR MLB DIVISIONAL ZONES */}
         {section === "posiciones" && (
           <div className="space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
-                  Tabla de Clasificación · Rumbo al Round Robin
+                  {activeLeague === "mlb"
+                    ? "Clasificación Grandes Ligas · Liga Americana y Nacional"
+                    : "Tabla de Clasificación · Rumbo al Round Robin"}
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-950">
-                  Tabla de Posiciones
+                  Tabla de Posiciones ({activeLeague.toUpperCase()})
                 </h1>
               </div>
 
-              <div className="inline-flex rounded-xl bg-white p-1 border border-slate-200 shadow-2xs">
-                {(
-                  [
-                    ["REGULAR", "Temporada Regular"],
-                    ["ROUND_ROBIN", "Round Robin"],
-                    ["FINAL", "Serie Final"],
-                  ] as const
-                ).map(([key, label]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setStandingsPhase(key)}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer ${
-                      standingsPhase === key
-                        ? "bg-amber-400 text-slate-950"
-                        : "text-slate-600 hover:text-slate-950"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+              {activeLeague === "mlb" ? (
+                <div className="inline-flex rounded-xl bg-white p-1 border border-slate-200 shadow-2xs">
+                  {(
+                    [
+                      ["ALL", "Todas (30)"],
+                      ["AL", "Liga Americana (AL)"],
+                      ["NL", "Liga Nacional (NL)"],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setMlbStandingsFilter(key)}
+                      className={`px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer ${
+                        mlbStandingsFilter === key
+                          ? "bg-amber-400 text-slate-950"
+                          : "text-slate-600 hover:text-slate-950"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="inline-flex rounded-xl bg-white p-1 border border-slate-200 shadow-2xs">
+                  {(
+                    [
+                      ["REGULAR", "Temporada Regular"],
+                      ["ROUND_ROBIN", "Round Robin"],
+                      ["FINAL", "Serie Final"],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setStandingsPhase(key)}
+                      className={`px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer ${
+                        standingsPhase === key
+                          ? "bg-amber-400 text-slate-950"
+                          : "text-slate-600 hover:text-slate-950"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {standingsPhase !== "REGULAR" ? (
+            {activeLeague === "lvbp" && standingsPhase !== "REGULAR" ? (
               <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center space-y-2 shadow-xs">
                 <Trophy className="w-8 h-8 text-amber-500 mx-auto" />
                 <h3 className="text-base font-black text-slate-950">
@@ -2590,7 +2755,9 @@ export function EnJuegoPortal({
                   <table className="w-full min-w-[720px] text-xs text-right border-collapse">
                     <thead>
                       <tr className="bg-slate-50 text-slate-500 border-b border-slate-200 font-extrabold">
-                        <th className="py-3 px-4 text-left">POS / ZONA</th>
+                        <th className="py-3 px-4 text-left">
+                          {activeLeague === "mlb" ? "POS / DIVISIÓN" : "POS / ZONA"}
+                        </th>
                         <th className="py-3 px-4 text-left">Equipo</th>
                         <th className="py-3 px-3">JJ</th>
                         <th className="py-3 px-3">JG</th>
@@ -2606,91 +2773,103 @@ export function EnJuegoPortal({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 tabular-nums">
-                      {standings.map((row, idx) => {
-                        const isFav = favoriteTeamCode === row.team.code;
-                        const zoneBadge =
-                          idx < 4 ? (
-                            <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 px-2 py-0.5 text-[10px] font-extrabold">
-                              Round Robin
-                            </span>
-                          ) : idx < 6 ? (
-                            <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200 text-amber-800 px-2 py-0.5 text-[10px] font-extrabold">
-                              Comodín
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 border border-slate-200 text-slate-500 px-2 py-0.5 text-[10px] font-bold">
-                              Fuera
-                            </span>
-                          );
-
-                        return (
-                          <tr
-                            key={row.team.code}
-                            onClick={() => openTeamPage(row.team.code)}
-                            className={`hover:bg-slate-50 transition cursor-pointer ${
-                              isFav ? "bg-amber-50/60" : ""
-                            }`}
-                          >
-                            <td className="py-3 px-4 text-left font-bold text-slate-600 whitespace-nowrap">
-                              <span className="inline-flex items-center gap-2">
-                                <b className="w-4 text-slate-900">{idx + 1}°</b>
-                                {zoneBadge}
+                      {standings
+                        .filter((r) =>
+                          activeLeague === "mlb" && mlbStandingsFilter !== "ALL"
+                            ? r.league === mlbStandingsFilter
+                            : true
+                        )
+                        .map((row, idx) => {
+                          const isFav = favoriteTeamCode === row.team.code;
+                          const zoneBadge =
+                            activeLeague === "mlb" ? (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 border border-sky-200 text-sky-800 px-2 py-0.5 text-[10px] font-extrabold">
+                                {row.divisionEs || "MLB"}
                               </span>
-                            </td>
-                            <td className="py-3 px-4 text-left font-black text-slate-950 flex items-center gap-3">
-                              <img
-                                src={row.team.logoUrl}
-                                alt=""
-                                className="w-8 h-8 object-contain"
-                              />
-                              <span>{row.team.name}</span>
-                              {isFav && (
-                                <span title="Tu Equipo Favorito">
-                                  <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-3 px-3 text-slate-600">{row.gamesPlayed}</td>
-                            <td className="py-3 px-3 font-extrabold text-slate-950">{row.wins}</td>
-                            <td className="py-3 px-3 text-slate-600">{row.losses}</td>
-                            <td className="py-3 px-3 font-black text-amber-600">{row.pct}</td>
-                            <td className="py-3 px-3 text-slate-600">{row.gamesBehind}</td>
-                            <td className="py-3 px-3 text-slate-500">{row.homeRecord}</td>
-                            <td className="py-3 px-3 text-slate-500">{row.awayRecord}</td>
-                            <td className="py-3 px-3 text-slate-600">{row.runsScored}</td>
-                            <td className="py-3 px-3 text-slate-600">{row.runsAllowed}</td>
-                            <td
-                              className={`py-3 px-3 font-bold ${
-                                row.runDiff >= 0 ? "text-emerald-600" : "text-rose-600"
+                            ) : idx < 4 ? (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 px-2 py-0.5 text-[10px] font-extrabold">
+                                Round Robin
+                              </span>
+                            ) : idx < 6 ? (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200 text-amber-800 px-2 py-0.5 text-[10px] font-extrabold">
+                                Comodín
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 border border-slate-200 text-slate-500 px-2 py-0.5 text-[10px] font-bold">
+                                Fuera
+                              </span>
+                            );
+
+                          return (
+                            <tr
+                              key={row.team.code}
+                              onClick={() => openTeamPage(row.team.code)}
+                              className={`hover:bg-slate-50 transition cursor-pointer ${
+                                isFav ? "bg-amber-50/60" : ""
                               }`}
                             >
-                              {row.runDiff > 0 ? `+${row.runDiff}` : row.runDiff}
-                            </td>
-                            <td className="py-3 px-4 font-bold text-slate-900">{row.streak}</td>
-                          </tr>
-                        );
-                      })}
+                              <td className="py-3 px-4 text-left font-bold text-slate-600 whitespace-nowrap">
+                                <span className="inline-flex items-center gap-2">
+                                  <b className="w-4 text-slate-900">{idx + 1}°</b>
+                                  {zoneBadge}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-left font-black text-slate-950 flex items-center gap-3">
+                                <img
+                                  src={row.team.logoUrl}
+                                  alt=""
+                                  className="w-8 h-8 object-contain"
+                                />
+                                <span>{row.team.name}</span>
+                                {isFav && (
+                                  <span title="Tu Equipo Favorito">
+                                    <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3 px-3 text-slate-600">{row.gamesPlayed}</td>
+                              <td className="py-3 px-3 font-extrabold text-slate-950">{row.wins}</td>
+                              <td className="py-3 px-3 text-slate-600">{row.losses}</td>
+                              <td className="py-3 px-3 font-black text-amber-600">{row.pct}</td>
+                              <td className="py-3 px-3 text-slate-600">{row.gamesBehind}</td>
+                              <td className="py-3 px-3 text-slate-500">{row.homeRecord}</td>
+                              <td className="py-3 px-3 text-slate-500">{row.awayRecord}</td>
+                              <td className="py-3 px-3 text-slate-600">{row.runsScored}</td>
+                              <td className="py-3 px-3 text-slate-600">{row.runsAllowed}</td>
+                              <td
+                                className={`py-3 px-3 font-bold ${
+                                  row.runDiff >= 0 ? "text-emerald-600" : "text-rose-600"
+                                }`}
+                              >
+                                {row.runDiff > 0 ? `+${row.runDiff}` : row.runDiff}
+                              </td>
+                              <td className="py-3 px-4 font-bold text-slate-900">{row.streak}</td>
+                            </tr>
+                          );
+                        })}
                     </tbody>
                   </table>
                 </div>
 
                 {/* Qualification Legend */}
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600 shadow-2xs">
-                  <div className="flex flex-wrap items-center gap-4">
-                    <span className="inline-flex items-center gap-2 font-bold text-emerald-800">
-                      <span className="w-3 h-3 rounded bg-emerald-500" />
-                      1° al 4° lugar: Clasificación directa al Round Robin (Enero)
-                    </span>
-                    <span className="inline-flex items-center gap-2 font-bold text-amber-800">
-                      <span className="w-3 h-3 rounded bg-amber-400" />
-                      5° y 6° lugar: Serie del Comodín (Play-In por el 5° cupo)
-                    </span>
-                    <span className="inline-flex items-center gap-2 font-semibold text-slate-500">
-                      <span className="w-3 h-3 rounded bg-slate-300" />
-                      7° y 8° lugar: Eliminados
-                    </span>
+                {activeLeague === "lvbp" && (
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600 shadow-2xs">
+                    <div className="flex flex-wrap items-center gap-4">
+                      <span className="inline-flex items-center gap-2 font-bold text-emerald-800">
+                        <span className="w-3 h-3 rounded bg-emerald-500" />
+                        1° al 4° lugar: Clasificación directa al Round Robin (Enero)
+                      </span>
+                      <span className="inline-flex items-center gap-2 font-bold text-amber-800">
+                        <span className="w-3 h-3 rounded bg-amber-400" />
+                        5° y 6° lugar: Serie del Comodín (Play-In por el 5° cupo)
+                      </span>
+                      <span className="inline-flex items-center gap-2 font-semibold text-slate-500">
+                        <span className="w-3 h-3 rounded bg-slate-300" />
+                        7° y 8° lugar: Eliminados
+                      </span>
+                    </div>
                   </div>
-                </div>
+                )}
               </>
             )}
           </div>
@@ -2702,10 +2881,10 @@ export function EnJuegoPortal({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
-                  Estadísticas de la Liga · Temporada 2026-2027
+                  Estadísticas de la {activeLeague === "mlb" ? "MLB" : "LVBP"}
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-950">
-                  Líderes Individuales de Bateo y Pitcheo
+                  Líderes Individuales de Bateo y Pitcheo ({activeLeague.toUpperCase()})
                 </h1>
               </div>
               <Link
@@ -2723,6 +2902,7 @@ export function EnJuegoPortal({
         {/* SECTION: EQUIPOS Y ROSTER (/equipos & /equipos/[slug]) */}
         {section === "equipos" && (
           <TeamRosterView
+            league={activeLeague}
             selectedTeamCode={selectedTeamCode}
             onSelectTeam={(code) => openTeamPage(code)}
             schedule={schedule}
@@ -2750,7 +2930,12 @@ export function EnJuegoPortal({
             ["resultados", "/resultados", "Pizarra", Activity],
             ["calendario", "/calendario", "Calendario", Calendar],
             ["posiciones", "/posiciones", "Posiciones", Trophy],
-            ["equipos", `/teams?team=${LVBP_TEAMS[selectedTeamCode]?.slug || "leones"}`, "Equipos", Users],
+            [
+              "equipos",
+              `/teams?team=${anyTeamsCatalog[selectedTeamCode]?.slug || (activeLeague === "mlb" ? "yankees" : "leones")}`,
+              "Equipos",
+              Users,
+            ],
           ] as const
         ).map(([key, href, label, Icon]) => {
           const active = section === key || (section === "juego" && key === "resultados");

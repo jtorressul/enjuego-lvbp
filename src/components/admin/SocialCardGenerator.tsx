@@ -13,6 +13,7 @@ import {
   Upload,
 } from "lucide-react";
 import { LVBP_TEAMS } from "@/lib/lvbp-teams";
+import { MLB_TEAMS } from "@/lib/mlb-teams";
 import type { ScheduleGame } from "@/lib/types";
 import type { AdCampaign } from "@/lib/admin-store";
 
@@ -37,12 +38,14 @@ type MedallionStyleMode = "floating_shield" | "pearl_medallion" | "mascot_color"
 /** How the sponsor ("Presentado por:") is presented */
 type SponsorDisplayLayout = "floating" | "adaptive_card" | "full_banner";
 
-const TEAM_LIST = Object.values(LVBP_TEAMS);
+const ALL_TEAMS: Record<string, any> = { ...LVBP_TEAMS, ...MLB_TEAMS };
 
 /** Official LVBP shields with the white background removed (512x512 transparent PNG) */
-const TEAM_CLEAN_SHIELD = (code: string) => `/logos/clean/${code}.png`;
+const TEAM_CLEAN_SHIELD = (code: string) =>
+  MLB_TEAMS[code] ? MLB_TEAMS[code].logoSvg : `/logos/clean/${code}.png`;
 /** Illustrated mascots (512x512 transparent PNG) */
-const TEAM_MASCOT = (code: string) => `/teams/${code}.png`;
+const TEAM_MASCOT = (code: string) =>
+  MLB_TEAMS[code] ? MLB_TEAMS[code].logoSvg : `/teams/${code}.png`;
 
 const BRAND_LOGO_SRC = "/logo.png";
 
@@ -390,6 +393,13 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const renderVersionRef = useRef<number>(0);
 
+  // League selector ("lvbp" | "mlb")
+  const [cardLeague, setCardLeague] = useState<"lvbp" | "mlb">("lvbp");
+  const activeTeamList = useMemo(
+    () => Object.values(cardLeague === "mlb" ? MLB_TEAMS : LVBP_TEAMS),
+    [cardLeague]
+  );
+
   // Schedule state
   const [allGames, setAllGames] = useState<ScheduleGame[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(getTodayCaracasDate());
@@ -453,8 +463,8 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
     "Meridiano TV",
     "SimpleTV",
     "BeisbolPlay",
-    "Canal i",
-    "TLT",
+    "ESPN",
+    "MLB.TV",
   ];
 
   const toggleTvChannelChip = (channel: string) => {
@@ -498,7 +508,7 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
       setAwayScore(game.awayScore || 0);
       setHomeScore(game.homeScore || 0);
 
-      const homeMeta = LVBP_TEAMS[game.homeTeam.code];
+      const homeMeta = ALL_TEAMS[game.homeTeam.code];
       const resolvedVenue =
         game.venue ||
         (homeMeta ? `${homeMeta.venue} · ${homeMeta.venueCity}` : "");
@@ -527,10 +537,11 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
     [templateMode]
   );
 
-  const fetchSchedule = useCallback(async () => {
+  const fetchSchedule = useCallback(async (leagueOverride?: "lvbp" | "mlb") => {
+    const targetLeague = leagueOverride || cardLeague;
     setLoadingGames(true);
     try {
-      const res = await fetch("/api/lvbp/schedule?season=2026");
+      const res = await fetch(`/api/lvbp/schedule?season=2026&league=${targetLeague}`);
       const data = await res.json();
       if (Array.isArray(data.games) && data.games.length > 0) {
         setAllGames(data.games);
@@ -546,7 +557,7 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
           setHomeCode(lastFinished.homeTeam.code);
           setAwayScore(lastFinished.awayScore || 0);
           setHomeScore(lastFinished.homeScore || 0);
-          const homeMeta = LVBP_TEAMS[lastFinished.homeTeam.code];
+          const homeMeta = ALL_TEAMS[lastFinished.homeTeam.code];
           setVenueText(
             lastFinished.venue ||
               (homeMeta ? `${homeMeta.venue} · ${homeMeta.venueCity}` : "")
@@ -554,7 +565,7 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
           const resolvedTv =
             lastFinished.tvChannels && lastFinished.tvChannels.length > 0
               ? lastFinished.tvChannels.join(" · ")
-              : lastFinished.tv || "IVC · BeisbolPlay";
+              : lastFinished.tv || (targetLeague === "mlb" ? "ESPN · MLB.TV" : "IVC · BeisbolPlay");
           setTvChannelsText(resolvedTv);
         } else {
           const uniqueDates = Array.from(
@@ -564,6 +575,11 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
           const upcoming =
             uniqueDates.find((d) => d >= todayKey) || uniqueDates[uniqueDates.length - 1];
           if (upcoming) setSelectedDate(upcoming);
+          const first = data.games[0] as ScheduleGame;
+          if (first) {
+            setAwayCode(first.awayTeam.code);
+            setHomeCode(first.homeTeam.code);
+          }
         }
       }
     } catch {
@@ -571,11 +587,11 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
     } finally {
       setLoadingGames(false);
     }
-  }, []);
+  }, [cardLeague]);
 
   useEffect(() => {
-    fetchSchedule();
-  }, [fetchSchedule]);
+    fetchSchedule(cardLeague);
+  }, [cardLeague, fetchSchedule]);
 
   const gamesForDate = useMemo(
     () => allGames.filter((g) => g.date === selectedDate),
@@ -656,8 +672,8 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
       await ensureSportsFontsLoaded();
 
       const theme = THEME_PALETTES[backgroundTheme];
-      const awayTeam = LVBP_TEAMS[awayCode] || LVBP_TEAMS.LAR;
-      const homeTeam = LVBP_TEAMS[homeCode] || LVBP_TEAMS.ZUL;
+      const awayTeam = ALL_TEAMS[awayCode] || LVBP_TEAMS.LAR;
+      const homeTeam = ALL_TEAMS[homeCode] || LVBP_TEAMS.ZUL;
 
       const logoSrcFor = (code: string) =>
         medallionStyle === "mascot_color" ? TEAM_MASCOT(code) : TEAM_CLEAN_SHIELD(code);
@@ -1204,14 +1220,14 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
           ctx.fill();
           ctx.restore();
 
-          const aColor = LVBP_TEAMS[g.awayTeam.code]?.color || "#121734";
-          const hColor = LVBP_TEAMS[g.homeTeam.code]?.color || "#121734";
+          const aColor = ALL_TEAMS[g.awayTeam.code]?.color || "#121734";
+          const hColor = ALL_TEAMS[g.homeTeam.code]?.color || "#121734";
           const logoR = isSquare ? 36 : 40;
           drawTeamLogo(rx + 66, cy, logoR, aColor, logos[0]);
           drawTeamLogo(rx + rw - 66, cy, logoR, hColor, logos[1]);
 
           const ov = slateOverrides[g.id] || {};
-          const homeMeta = LVBP_TEAMS[g.homeTeam.code];
+          const homeMeta = ALL_TEAMS[g.homeTeam.code];
           const gVenue =
             ov.venue !== undefined
               ? ov.venue
@@ -1616,15 +1632,50 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
         <div className="lg:col-span-7 space-y-5">
           {/* 1. TEMPLATE, SIZE & DESIGN */}
           <section className="rounded-2xl bg-white border border-slate-200 p-5 shadow-2xs space-y-4">
-            <div>
-              <h2 className="text-lg font-black text-slate-950 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-rose-600" />
-                <span>Generador de Artes Deportivos (PNG HD)</span>
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Crea y descarga artes de <strong>Resultado Final</strong> o{" "}
-                <strong>Juegos de Hoy</strong> con escudos oficiales, estadio y canales de TV.
-              </p>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-black text-slate-950 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-rose-600" />
+                  <span>Generador de Artes Deportivos (PNG HD)</span>
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Crea y descarga artes de <strong>LVBP</strong> o <strong>MLB</strong> con escudos oficiales, estadio y canales de TV.
+                </p>
+              </div>
+
+              {/* Liga LVBP / MLB selector */}
+              <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCardLeague("lvbp");
+                    setAwayCode("LAR");
+                    setHomeCode("ZUL");
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer ${
+                    cardLeague === "lvbp"
+                      ? "bg-slate-900 text-white shadow-2xs"
+                      : "text-slate-600 hover:text-slate-950"
+                  }`}
+                >
+                  🇻🇪 LVBP
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCardLeague("mlb");
+                    setAwayCode("LAD");
+                    setHomeCode("NYY");
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition cursor-pointer ${
+                    cardLeague === "mlb"
+                      ? "bg-slate-900 text-white shadow-2xs"
+                      : "text-slate-600 hover:text-slate-950"
+                  }`}
+                >
+                  ⚾ MLB
+                </button>
+              </div>
             </div>
 
             <div>
@@ -1708,8 +1759,8 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
                     label: "Duelo de Clubes",
                     sub: "Colores de ambos equipos",
                     swatch: `linear-gradient(120deg,${
-                      LVBP_TEAMS[awayCode]?.color || "#b3161a"
-                    } 50%,${LVBP_TEAMS[homeCode]?.color || "#121734"} 50%)`,
+                      ALL_TEAMS[awayCode]?.color || "#b3161a"
+                    } 50%,${ALL_TEAMS[homeCode]?.color || "#121734"} 50%)`,
                   },
                 ].map((t) => (
                   <button
@@ -1758,15 +1809,15 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-sm font-black text-slate-950 flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-rose-600" />
-                <span>3. Partido, Estadio y Canales de TV</span>
+                <span>3. Partido, Estadio y Canales de TV ({cardLeague.toUpperCase()})</span>
               </h3>
               <button
                 type="button"
-                onClick={fetchSchedule}
+                onClick={() => fetchSchedule(cardLeague)}
                 className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${loadingGames ? "animate-spin" : ""}`} />
-                <span>Cargar calendario LVBP</span>
+                <span>Cargar calendario {cardLeague.toUpperCase()}</span>
               </button>
             </div>
 
@@ -1855,7 +1906,7 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
                       onChange={(e) => setAwayCode(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900"
                     >
-                      {TEAM_LIST.map((t) => (
+                      {activeTeamList.map((t) => (
                         <option key={t.code} value={t.code}>
                           {t.name} ({t.code})
                         </option>
@@ -1912,14 +1963,14 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
                       onChange={(e) => {
                         const code = e.target.value;
                         setHomeCode(code);
-                        const meta = LVBP_TEAMS[code];
+                        const meta = ALL_TEAMS[code];
                         if (meta) {
                           setVenueText(`${meta.venue} · ${meta.venueCity}`);
                         }
                       }}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900"
                     >
-                      {TEAM_LIST.map((t) => (
+                      {activeTeamList.map((t) => (
                         <option key={t.code} value={t.code}>
                           {t.name} ({t.code})
                         </option>
@@ -1990,7 +2041,7 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
                 </div>
                 {gamesForDate.slice(0, 4).map((g) => {
                   const ov = slateOverrides[g.id] || {};
-                  const homeMeta = LVBP_TEAMS[g.homeTeam.code];
+                  const homeMeta = ALL_TEAMS[g.homeTeam.code];
                   const valVenue =
                     ov.venue !== undefined
                       ? ov.venue

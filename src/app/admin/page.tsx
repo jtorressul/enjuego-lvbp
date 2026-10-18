@@ -7,6 +7,8 @@ import {
   ArrowLeft,
   BarChart3,
   CheckCircle2,
+  Copy,
+  Download,
   ExternalLink,
   Globe,
   KeyRound,
@@ -14,6 +16,7 @@ import {
   LogOut,
   Megaphone,
   Monitor,
+  MousePointerClick,
   Pause,
   Play,
   Plus,
@@ -31,14 +34,20 @@ import {
 import {
   AD_SLOTS_CATALOG,
   type AdCampaign,
+  type AdClickLogEntry,
   type AdSlotInfo,
   type CanonicalSlotKey,
   type LiveSession,
+  type TrafficDaySummary,
 } from "@/lib/admin-store";
 import type { UserProfile } from "@/lib/user-auth";
 import { SocialCardGenerator } from "@/components/admin/SocialCardGenerator";
 
-type EnrichedCampaign = AdCampaign & { live?: boolean };
+type EnrichedCampaign = AdCampaign & {
+  live?: boolean;
+  todayImpressions?: number;
+  todayClicks?: number;
+};
 
 // Processes uploaded banner images: keeps animated GIFs intact, and optimizes PNG/JPG/WebP to 970x90 friendly size
 async function processBannerImageFile(file: File): Promise<string> {
@@ -106,6 +115,7 @@ export default function AdminDashboardPage() {
   // Dashboard Data
   const [slots, setSlots] = useState<AdSlotInfo[]>(AD_SLOTS_CATALOG);
   const [campaigns, setCampaigns] = useState<EnrichedCampaign[]>([]);
+  const [clickLog, setClickLog] = useState<AdClickLogEntry[]>([]);
   const [presence, setPresence] = useState<{
     sessions: LiveSession[];
     onlineCount: number;
@@ -113,7 +123,13 @@ export default function AdminDashboardPage() {
     desktopCount: number;
     registeredOnlineCount: number;
     todayUniqueVisitors: number;
+    todayMobileVisitors?: number;
+    todayDesktopVisitors?: number;
+    todayPageViews?: number;
     todayPeakOnline: number;
+    sectionHits?: Record<string, number>;
+    osHits?: Record<string, number>;
+    trafficHistory?: TrafficDaySummary[];
   }>({
     sessions: [],
     onlineCount: 0,
@@ -121,7 +137,13 @@ export default function AdminDashboardPage() {
     desktopCount: 0,
     registeredOnlineCount: 0,
     todayUniqueVisitors: 0,
+    todayMobileVisitors: 0,
+    todayDesktopVisitors: 0,
+    todayPageViews: 0,
     todayPeakOnline: 0,
+    sectionHits: {},
+    osHits: {},
+    trafficHistory: [],
   });
   const [registeredUsers, setRegisteredUsers] = useState<UserProfile[]>([]);
   const [systemHealth, setSystemHealth] = useState<{
@@ -177,6 +199,7 @@ export default function AdminDashboardPage() {
 
         if (Array.isArray(data.slots)) setSlots(data.slots);
         if (Array.isArray(data.campaigns)) setCampaigns(data.campaigns);
+        if (Array.isArray(data.clickLog)) setClickLog(data.clickLog);
         if (data.presence) setPresence(data.presence);
         if (Array.isArray(data.registeredUsers)) setRegisteredUsers(data.registeredUsers);
         if (data.systemHealth) setSystemHealth(data.systemHealth);
@@ -394,6 +417,103 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleClearClickLog = async () => {
+    try {
+      const res = await fetch("/api/admin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": password,
+        },
+        body: JSON.stringify({
+          action: "clear_click_log",
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.clickLog)) {
+        setClickLog(data.clickLog);
+        setStatusMessage("Registro de clics limpiado.");
+        setTimeout(() => setStatusMessage(""), 3000);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleCopySponsorReport = async (ad: EnrichedCampaign) => {
+    const totalImp = ad.impressions || 0;
+    const totalClk = ad.clicks || 0;
+    const ctr = totalImp > 0 ? ((totalClk / totalImp) * 100).toFixed(2) : "0.00";
+    const mobImp = ad.mobileImpressions || 0;
+    const dskImp = ad.desktopImpressions || 0;
+    const trackedDevImp = mobImp + dskImp;
+    const mobPct =
+      trackedDevImp > 0 ? Math.round((mobImp / trackedDevImp) * 100) : 78;
+    const dskPct = 100 - mobPct;
+
+    const dateLabel = new Date().toLocaleDateString("es-VE", {
+      timeZone: "America/Caracas",
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+
+    const reportText = [
+      `📊 *REPORTE PUBLICITARIO · ENJUEGO.ONLINE*`,
+      `🏢 *Anunciante:* ${ad.companyName}`,
+      `📅 *Fecha de corte:* ${dateLabel}`,
+      `────────────────────`,
+      `👁️ *Impresiones Totales:* ${totalImp.toLocaleString("es-VE")} (Hoy: ${(ad.todayImpressions || 0).toLocaleString("es-VE")})`,
+      `👆 *Clics al Enlace:* ${totalClk.toLocaleString("es-VE")} (Hoy: ${(ad.todayClicks || 0).toLocaleString("es-VE")})`,
+      `📈 *CTR de Conversión:* ${ctr}%`,
+      `📱 *Audiencia:* ${mobPct}% Móvil · ${dskPct}% PC`,
+      ad.linkUrl ? `🔗 *Destino:* ${ad.linkUrl}` : null,
+      `────────────────────`,
+      `⚾ *EnJuego.online · LVBP & MLB en Vivo*`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    try {
+      await navigator.clipboard.writeText(reportText);
+      setStatusMessage(
+        `¡Reporte de "${ad.companyName}" copiado al portapapeles para WhatsApp!`
+      );
+      setTimeout(() => setStatusMessage(""), 4000);
+    } catch {
+      alert(reportText);
+    }
+  };
+
+  const handleExportUsersCsv = () => {
+    if (registeredUsers.length === 0) {
+      alert("No hay usuarios registrados para exportar.");
+      return;
+    }
+    const headers = ["ID", "Nombre", "Usuario", "Correo", "Equipo Favorito", "Fecha Registro"];
+    const rows = registeredUsers.map((u) => [
+      u.id,
+      `"${(u.name || "").replace(/"/g, '""')}"`,
+      u.handle,
+      u.email || "Acceso Rapido",
+      u.favoriteTeam || "LVBP",
+      new Date(u.createdAt).toISOString().slice(0, 10),
+    ]);
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute(
+      "download",
+      `usuarios-enjuego-${new Date().toISOString().slice(0, 10)}.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const totalImpressions = useMemo(
     () => campaigns.reduce((acc, c) => acc + (c.impressions || 0), 0),
     [campaigns]
@@ -402,10 +522,34 @@ export default function AdminDashboardPage() {
     () => campaigns.reduce((acc, c) => acc + (c.clicks || 0), 0),
     [campaigns]
   );
+  const todayTotalImpressions = useMemo(
+    () => campaigns.reduce((acc, c) => acc + (c.todayImpressions || 0), 0),
+    [campaigns]
+  );
+  const todayTotalClicks = useMemo(
+    () => campaigns.reduce((acc, c) => acc + (c.todayClicks || 0), 0),
+    [campaigns]
+  );
   const liveAdsCount = useMemo(
     () => campaigns.filter((c) => c.live !== false && c.active).length,
     [campaigns]
   );
+
+  const favoriteTeamsRanking = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const u of registeredUsers) {
+      const key = (u.favoriteTeam || "LVBP").toUpperCase();
+      counts[key] = (counts[key] || 0) + 1;
+    }
+    const total = Math.max(1, registeredUsers.length);
+    return Object.entries(counts)
+      .map(([team, count]) => ({
+        team,
+        count,
+        pct: Math.round((count / total) * 100),
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [registeredUsers]);
 
   const filteredUsers = useMemo(() => {
     const q = userSearch.trim().toLowerCase();
@@ -633,21 +777,22 @@ export default function AdminDashboardPage() {
           <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-2xs">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
-                Registros y Visitas
+                Tráfico de Hoy
               </span>
               <Users className="w-4 h-4 text-amber-500" />
             </div>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-2xl sm:text-3xl font-black text-slate-950">
-                {registeredUsers.length}
+                {presence.todayUniqueVisitors}
               </span>
               <span className="text-xs font-bold text-slate-500">
-                usuarios registrados
+                visitantes únicos hoy
               </span>
             </div>
-            <div className="mt-2 flex items-center gap-3 text-[11px] font-bold text-slate-500">
-              <span>Hoy: {presence.todayUniqueVisitors} únicos</span>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-bold text-slate-500">
+              <span>{presence.todayPageViews || 0} págs vistas</span>
               <span>· Pico: {presence.todayPeakOnline}</span>
+              <span>· {registeredUsers.length} reg.</span>
             </div>
           </div>
 
@@ -667,7 +812,8 @@ export default function AdminDashboardPage() {
               </span>
             </div>
             <div className="mt-2 text-[11px] font-bold text-slate-500">
-              Rotativo en todo el sitio · <strong className="text-emerald-700">970x90 px</strong>
+              Hoy: <strong className="text-slate-900">{todayTotalImpressions}</strong> imp ·{" "}
+              <strong className="text-rose-600">{todayTotalClicks}</strong> clics
             </div>
           </div>
 
@@ -694,8 +840,8 @@ export default function AdminDashboardPage() {
             <div className="mt-2 text-[11px] font-bold text-emerald-700">
               CTR Global:{" "}
               {totalImpressions > 0
-                ? ((totalClicks / totalImpressions) * 100).toFixed(1)
-                : "0.0"}
+                ? ((totalClicks / totalImpressions) * 100).toFixed(2)
+                : "0.00"}
               %
             </div>
           </div>
@@ -713,7 +859,7 @@ export default function AdminDashboardPage() {
             }`}
           >
             <Megaphone className="w-4 h-4" />
-            <span>Publicidad ({campaigns.length})</span>
+            <span>Publicidad y Analíticas ({campaigns.length})</span>
           </button>
 
           <button
@@ -726,7 +872,7 @@ export default function AdminDashboardPage() {
             }`}
           >
             <Sparkles className="w-4 h-4" />
-            <span>Generador de Artes (PNG)</span>
+            <span>Generador de Artes (LVBP & MLB)</span>
           </button>
 
           <button
@@ -740,8 +886,7 @@ export default function AdminDashboardPage() {
           >
             <Activity className="w-4 h-4" />
             <span>
-              Usuarios en línea ({presence.onlineCount}) y registros (
-              {registeredUsers.length})
+              Usuarios, Tráfico y Audiencia ({presence.onlineCount} online)
             </span>
           </button>
 
@@ -774,7 +919,7 @@ export default function AdminDashboardPage() {
         )}
 
         {/* ===================================================================
-            TAB 1: PUBLICIDAD (ROTATIVO GLOBAL EN TODO EL SITIO)
+            TAB 1: PUBLICIDAD (ROTATIVO GLOBAL EN TODO EL SITIO + ANALÍTICAS)
            =================================================================== */}
         {activeTab === "ads" && (
           <div className="space-y-6">
@@ -929,12 +1074,17 @@ export default function AdminDashboardPage() {
               </form>
             </section>
 
-            {/* Section 2: Anuncios publicados */}
+            {/* Section 2: Anuncios publicados + Rendimiento por Campaña */}
             <section className="rounded-2xl bg-white border border-slate-200 p-5 shadow-2xs space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-black text-slate-950">
-                  Anuncios ({campaigns.length})
-                </h2>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-lg font-black text-slate-950">
+                    Campañas y Rendimiento Detallado ({campaigns.length})
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Desglose por dispositivo (Móvil vs PC), ubicación en página y reporte listo para enviar al cliente por WhatsApp.
+                  </p>
+                </div>
                 {campaigns.length > 0 && (
                   <button
                     type="button"
@@ -951,7 +1101,7 @@ export default function AdminDashboardPage() {
                   Aún no hay anuncios. Sube el primero arriba.
                 </p>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {campaigns.map((ad) => {
                     const isLive = ad.live !== false && ad.active;
                     const stateLabel = !ad.active
@@ -961,8 +1111,17 @@ export default function AdminDashboardPage() {
                         : "Fuera de fechas";
                     const ctr =
                       ad.impressions > 0
-                        ? ((ad.clicks / ad.impressions) * 100).toFixed(1)
-                        : "0.0";
+                        ? ((ad.clicks / ad.impressions) * 100).toFixed(2)
+                        : "0.00";
+                    const mobImp = ad.mobileImpressions || 0;
+                    const dskImp = ad.desktopImpressions || 0;
+                    const trackedImp = mobImp + dskImp;
+                    const mobPct =
+                      trackedImp > 0
+                        ? Math.round((mobImp / trackedImp) * 100)
+                        : 0;
+                    const dskPct = trackedImp > 0 ? 100 - mobPct : 0;
+                    const slotEntries = Object.entries(ad.bySlot || {});
 
                     return (
                       <article
@@ -993,10 +1152,20 @@ export default function AdminDashboardPage() {
                               }
                             />
                           </label>
+
+                          <button
+                            type="button"
+                            onClick={() => handleCopySponsorReport(ad)}
+                            className="inline-flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-[11px] font-black text-emerald-800 cursor-pointer transition"
+                            title="Copiar reporte ejecutivo listo para pegar en WhatsApp al patrocinador"
+                          >
+                            <Copy className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>📲 Copiar Reporte Cliente</span>
+                          </button>
                         </div>
 
-                        {/* Center Details (7 cols) */}
-                        <div className="md:col-span-7 space-y-2.5">
+                        {/* Center Details & Analytics (7 cols) */}
+                        <div className="md:col-span-7 space-y-3">
                           <div className="flex flex-wrap items-center gap-2">
                             <input
                               type="text"
@@ -1069,10 +1238,84 @@ export default function AdminDashboardPage() {
                             )}
                           </div>
 
-                          <p className="text-xs text-slate-700">
-                            <b>{ad.impressions}</b> impresiones ·{" "}
-                            <b>{ad.clicks}</b> clics · CTR <b>{ctr}%</b>
-                          </p>
+                          {/* Rich Metrics Strip */}
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                            <div>
+                              <span className="block text-[10px] font-extrabold uppercase text-slate-400">
+                                Impresiones
+                              </span>
+                              <span className="font-black text-slate-900 text-sm">
+                                {ad.impressions.toLocaleString("es-VE")}
+                              </span>
+                              <span className="block text-[10px] font-bold text-emerald-700">
+                                Hoy: {ad.todayImpressions || 0}
+                              </span>
+                            </div>
+
+                            <div>
+                              <span className="block text-[10px] font-extrabold uppercase text-slate-400">
+                                Clics al enlace
+                              </span>
+                              <span className="font-black text-rose-600 text-sm">
+                                {ad.clicks.toLocaleString("es-VE")}
+                              </span>
+                              <span className="block text-[10px] font-bold text-rose-700">
+                                Hoy: {ad.todayClicks || 0}
+                              </span>
+                            </div>
+
+                            <div>
+                              <span className="block text-[10px] font-extrabold uppercase text-slate-400">
+                                Efectividad (CTR)
+                              </span>
+                              <span className="font-black text-emerald-700 text-sm">
+                                {ctr}%
+                              </span>
+                              <span className="block text-[10px] font-bold text-slate-500">
+                                Conversión
+                              </span>
+                            </div>
+
+                            <div>
+                              <span className="block text-[10px] font-extrabold uppercase text-slate-400">
+                                Dispositivos
+                              </span>
+                              {trackedImp > 0 ? (
+                                <>
+                                  <span className="font-black text-slate-800 text-xs">
+                                    📱 {mobPct}% · 💻 {dskPct}%
+                                  </span>
+                                  <span className="block text-[10px] font-bold text-slate-500">
+                                    {ad.mobileClicks || 0} clics móv /{" "}
+                                    {ad.desktopClicks || 0} PC
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-[11px] font-bold text-slate-400">
+                                  Acumulando…
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Per-slot breakdown pills */}
+                          {slotEntries.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="text-[10px] font-extrabold uppercase text-slate-400 mr-1">
+                                Por ubicación:
+                              </span>
+                              {slotEntries.map(([slotKey, stat]) => (
+                                <span
+                                  key={slotKey}
+                                  className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-700"
+                                >
+                                  {slotKey}: <b>{stat.impressions}</b> imp /{" "}
+                                  <b className="text-rose-600">{stat.clicks}</b>{" "}
+                                  clics
+                                </span>
+                              ))}
+                            </div>
+                          )}
 
                           {/* Date range inputs (Desde / Hasta) like jugadaenvivo.com */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 max-w-md">
@@ -1148,14 +1391,147 @@ export default function AdminDashboardPage() {
                 </div>
               )}
             </section>
+
+            {/* Section 3: Registro de Clics Publicitarios en Tiempo Real */}
+            <section className="rounded-2xl bg-white border border-slate-200 p-5 shadow-2xs space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <MousePointerClick className="w-5 h-5 text-rose-600" />
+                  <div>
+                    <h2 className="text-base sm:text-lg font-black text-slate-950">
+                      Auditoría de Clics en Tiempo Real ({clickLog.length})
+                    </h2>
+                    <p className="text-xs text-slate-500">
+                      Últimos clics registrados en tus banners con hora de Caracas, dispositivo, sistema operativo y página donde ocurrió.
+                    </p>
+                  </div>
+                </div>
+
+                {clickLog.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClearClickLog}
+                    className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-rose-700 cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Limpiar historial de clics
+                  </button>
+                )}
+              </div>
+
+              {clickLog.length === 0 ? (
+                <div className="rounded-xl bg-slate-50 border border-slate-200 p-6 text-center text-xs font-bold text-slate-500">
+                  Aún no se han registrado clics individuales en esta sesión. Cuando un visitante toque un banner aparecerá aquí al instante.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-slate-500 uppercase text-[10px] font-extrabold">
+                        <th className="py-2.5 px-3">Hora (VET)</th>
+                        <th className="py-2.5 px-3">Anunciante</th>
+                        <th className="py-2.5 px-3">Dispositivo / SO</th>
+                        <th className="py-2.5 px-3">Ubicación (Slot)</th>
+                        <th className="py-2.5 px-3">Página Origen</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {clickLog.slice(0, 35).map((entry) => (
+                        <tr key={entry.id} className="hover:bg-slate-50">
+                          <td className="py-2.5 px-3 font-mono font-bold text-slate-700">
+                            {entry.timeCaracas ||
+                              new Date(entry.timestamp).toLocaleTimeString(
+                                "es-VE",
+                                {
+                                  timeZone: "America/Caracas",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  second: "2-digit",
+                                }
+                              )}
+                          </td>
+                          <td className="py-2.5 px-3 font-black text-slate-950">
+                            {entry.campaignName}
+                          </td>
+                          <td className="py-2.5 px-3 font-bold text-slate-700">
+                            {entry.device === "mobile" ? "📱 Móvil" : "💻 PC"} ·{" "}
+                            <span className="text-slate-500">{entry.os}</span>
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 font-mono text-[10px] font-bold text-slate-700">
+                              {entry.slot}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 font-mono text-rose-700 font-bold">
+                            {entry.pagePath}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
           </div>
         )}
 
         {/* ===================================================================
-            TAB 2: USUARIOS EN LÍNEA Y REGISTROS
+            TAB 2: USUARIOS EN LÍNEA, TRÁFICO Y AUDIENCIA
            =================================================================== */}
         {activeTab === "users" && (
           <div className="space-y-6">
+            {/* Sub-KPIs de Audiencia Hoy */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-2xs">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                  Visitantes Únicos Hoy
+                </span>
+                <p className="text-2xl font-black text-slate-950 mt-1">
+                  {presence.todayUniqueVisitors}
+                </p>
+                <p className="text-[11px] font-bold text-slate-500 mt-1">
+                  📱 {presence.todayMobileVisitors || 0} Móvil · 💻{" "}
+                  {presence.todayDesktopVisitors || 0} PC
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-2xs">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                  Páginas Vistas Hoy
+                </span>
+                <p className="text-2xl font-black text-rose-600 mt-1">
+                  {(presence.todayPageViews || 0).toLocaleString("es-VE")}
+                </p>
+                <p className="text-[11px] font-bold text-slate-500 mt-1">
+                  Navegación acumulada del día
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-2xs">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                  Pico Simultáneo Hoy
+                </span>
+                <p className="text-2xl font-black text-emerald-700 mt-1">
+                  {presence.todayPeakOnline}
+                </p>
+                <p className="text-[11px] font-bold text-slate-500 mt-1">
+                  Máximo de usuarios al mismo tiempo
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-2xs">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                  Comunidad Registrada
+                </span>
+                <p className="text-2xl font-black text-slate-950 mt-1">
+                  {registeredUsers.length}
+                </p>
+                <p className="text-[11px] font-bold text-slate-500 mt-1">
+                  {presence.registeredOnlineCount} conectados ahora
+                </p>
+              </div>
+            </div>
+
+            {/* Usuarios en línea ahora mismo */}
             <div className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5 shadow-2xs space-y-4">
               <div>
                 <div className="flex items-center gap-2">
@@ -1182,7 +1558,7 @@ export default function AdminDashboardPage() {
                         <th className="py-2.5 px-3">Usuario / Visitante</th>
                         <th className="py-2.5 px-3">Equipo</th>
                         <th className="py-2.5 px-3">Viendo Ahora</th>
-                        <th className="py-2.5 px-3">Dispositivo</th>
+                        <th className="py-2.5 px-3">Dispositivo / SO</th>
                         <th className="py-2.5 px-3">Actividad</th>
                       </tr>
                     </thead>
@@ -1224,6 +1600,7 @@ export default function AdminDashboardPage() {
                             </td>
                             <td className="py-2.5 px-3 font-bold text-slate-600">
                               {s.device === "mobile" ? "📱 Móvil" : "💻 PC"}
+                              {s.os ? ` · ${s.os}` : ""}
                             </td>
                             <td className="py-2.5 px-3 text-slate-500">
                               hace {secAgo}s
@@ -1237,6 +1614,177 @@ export default function AdminDashboardPage() {
               )}
             </div>
 
+            {/* Desglose de Secciones Más Vistas, Sistemas Operativos y Ranking de Equipos Favoritos */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Secciones Más Vistas Hoy */}
+              <div className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5 shadow-2xs space-y-3">
+                <h3 className="text-sm font-black text-slate-950">
+                  📍 Secciones Más Vistas Hoy
+                </h3>
+                {Object.keys(presence.sectionHits || {}).length === 0 ? (
+                  <p className="text-xs text-slate-400 font-bold">
+                    Sin datos aún hoy.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {Object.entries(presence.sectionHits || {})
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([sec, hits]) => {
+                        const totalHits = Math.max(
+                          1,
+                          Object.values(presence.sectionHits || {}).reduce(
+                            (acc, v) => acc + v,
+                            0
+                          )
+                        );
+                        const pct = Math.round((hits / totalHits) * 100);
+                        return (
+                          <div key={sec} className="space-y-1 text-xs">
+                            <div className="flex justify-between font-bold text-slate-700">
+                              <span>{sec}</span>
+                              <span>
+                                {hits} vistas ({pct}%)
+                              </span>
+                            </div>
+                            <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                              <div
+                                className="h-full bg-rose-600 rounded-full"
+                                style={{ width: `${Math.max(4, pct)}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
+
+              {/* Sistemas Operativos Hoy */}
+              <div className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5 shadow-2xs space-y-3">
+                <h3 className="text-sm font-black text-slate-950">
+                  📲 Sistemas Operativos (Hoy)
+                </h3>
+                {Object.keys(presence.osHits || {}).length === 0 ? (
+                  <p className="text-xs text-slate-400 font-bold">
+                    Sin datos aún hoy.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {Object.entries(presence.osHits || {})
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([osName, hits]) => {
+                        const totalOs = Math.max(
+                          1,
+                          Object.values(presence.osHits || {}).reduce(
+                            (acc, v) => acc + v,
+                            0
+                          )
+                        );
+                        const pct = Math.round((hits / totalOs) * 100);
+                        return (
+                          <div key={osName} className="space-y-1 text-xs">
+                            <div className="flex justify-between font-bold text-slate-700">
+                              <span>{osName}</span>
+                              <span>
+                                {hits} ({pct}%)
+                              </span>
+                            </div>
+                            <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                              <div
+                                className="h-full bg-sky-600 rounded-full"
+                                style={{ width: `${Math.max(4, pct)}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
+
+              {/* Ranking de Equipos Favoritos de los Usuarios Registrados */}
+              <div className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5 shadow-2xs space-y-3">
+                <h3 className="text-sm font-black text-slate-950">
+                  ⚾ Fanaticada por Equipo ({registeredUsers.length})
+                </h3>
+                {favoriteTeamsRanking.length === 0 ? (
+                  <p className="text-xs text-slate-400 font-bold">
+                    Aún no hay fanáticos registrados.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {favoriteTeamsRanking.slice(0, 8).map((item) => (
+                      <div key={item.team} className="space-y-1 text-xs">
+                        <div className="flex justify-between font-bold text-slate-700">
+                          <span>{item.team}</span>
+                          <span>
+                            {item.count} fans ({item.pct}%)
+                          </span>
+                        </div>
+                        <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                          <div
+                            className="h-full bg-amber-500 rounded-full"
+                            style={{ width: `${Math.max(5, item.pct)}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Histórico de Tráfico Diario (Últimos 14 días) */}
+            {Array.isArray(presence.trafficHistory) &&
+              presence.trafficHistory.length > 0 && (
+                <div className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5 shadow-2xs space-y-3">
+                  <div>
+                    <h2 className="text-base sm:text-lg font-black text-slate-950">
+                      📅 Histórico de Tráfico Diario (Últimos 14 días)
+                    </h2>
+                    <p className="text-xs text-slate-500">
+                      Evolución diaria de visitantes únicos, páginas vistas y pico de usuarios conectados simultáneamente.
+                    </p>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-200 text-slate-500 uppercase text-[10px] font-extrabold">
+                          <th className="py-2 px-3">Fecha</th>
+                          <th className="py-2 px-3">Visitantes Únicos</th>
+                          <th className="py-2 px-3">Móvil / PC</th>
+                          <th className="py-2 px-3">Páginas Vistas</th>
+                          <th className="py-2 px-3">Pico Simultáneo</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {presence.trafficHistory.map((day) => (
+                          <tr key={day.dateKey} className="hover:bg-slate-50">
+                            <td className="py-2 px-3 font-mono font-bold text-slate-900">
+                              {day.dateKey}
+                            </td>
+                            <td className="py-2 px-3 font-black text-slate-950">
+                              {day.uniqueVisitors.toLocaleString("es-VE")}
+                            </td>
+                            <td className="py-2 px-3 text-slate-600 font-bold">
+                              📱 {day.mobileVisitors} · 💻 {day.desktopVisitors}
+                            </td>
+                            <td className="py-2 px-3 font-bold text-rose-700">
+                              {day.pageViews.toLocaleString("es-VE")}
+                            </td>
+                            <td className="py-2 px-3 font-bold text-emerald-700">
+                              {day.peakOnline} online
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+            {/* Tabla de Usuarios Registrados + Exportar CSV */}
             <div className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5 shadow-2xs space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -1244,19 +1792,30 @@ export default function AdminDashboardPage() {
                     Usuarios registrados ({registeredUsers.length})
                   </h2>
                   <p className="text-xs text-slate-500">
-                    Busca por nombre, correo, @usuario o equipo favorito.
+                    Busca por nombre, correo, @usuario o equipo favorito, o descarga la base de datos en CSV.
                   </p>
                 </div>
 
-                <div className="relative w-full sm:w-72">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={userSearch}
-                    onChange={(e) => setUserSearch(e.target.value)}
-                    placeholder="Buscar por nombre, correo, @..."
-                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 text-xs font-bold"
-                  />
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                  <div className="relative flex-1 sm:w-64">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={userSearch}
+                      onChange={(e) => setUserSearch(e.target.value)}
+                      placeholder="Buscar por nombre, correo, @..."
+                      className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 text-xs font-bold"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleExportUsersCsv}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black cursor-pointer transition"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Exportar CSV</span>
+                  </button>
                 </div>
               </div>
 

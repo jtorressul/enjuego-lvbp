@@ -1,4 +1,5 @@
 import { LVBP_TEAMS, playerHeadshot, resolveLvbpTeam } from "./lvbp-teams";
+import { MLB_TEAMS, resolveAnyBaseballTeam, resolveMlbTeam } from "./mlb-teams";
 import { getFallbackGameday, getFallbackRoster, getFallbackSchedule } from "./lvbp-fallback-data";
 import {
   getOfficialBroadcastsMap,
@@ -26,6 +27,7 @@ import {
 const MLB_BASE = "https://statsapi.mlb.com/api";
 const LVBP_LEAGUE_ID = 135;
 const WINTER_SPORT_ID = 17;
+const MLB_SPORT_ID = 1;
 
 const EVENT_ES: Record<string, string> = {
   Single: "Sencillo",
@@ -199,8 +201,8 @@ export function formatSpanishDate(iso: string): string {
   }).format(new Date(Date.UTC(y, (m || 1) - 1, d || 1)));
 }
 
-function buildTeamSummary(rawTeam: any, recordObj?: any): TeamSummary {
-  const meta = resolveLvbpTeam(rawTeam?.id || rawTeam?.abbreviation, rawTeam?.name);
+function buildTeamSummary(rawTeam: any, recordObj?: any, preferredLeague: "lvbp" | "mlb" = "lvbp"): TeamSummary {
+  const meta = resolveAnyBaseballTeam(rawTeam?.id || rawTeam?.abbreviation, rawTeam?.name, preferredLeague);
   return {
     id: meta.id,
     code: meta.code,
@@ -255,8 +257,8 @@ export async function fetchLvbpSchedule(season = "2026"): Promise<ScheduleGame[]
       for (const g of dateEntry.games || []) {
         const status = mapStatus(g.status);
         const ls = g.linescore || {};
-        const awayTeam = buildTeamSummary(g.teams?.away?.team, g.teams?.away?.leagueRecord);
-        const homeTeam = buildTeamSummary(g.teams?.home?.team, g.teams?.home?.leagueRecord);
+        const awayTeam = buildTeamSummary(g.teams?.away?.team, g.teams?.away?.leagueRecord, "lvbp");
+        const homeTeam = buildTeamSummary(g.teams?.home?.team, g.teams?.home?.leagueRecord, "lvbp");
         const isTop = Boolean(ls.isTopInning);
         const currentInning = Number(ls.currentInning || 0);
         const inningLabel =
@@ -353,9 +355,10 @@ export function transformMlbLiveFeedToGameday(raw: any): GamedayData {
 
   const awayRaw = gd.teams?.away || {};
   const homeRaw = gd.teams?.home || {};
-  const awayTeam = buildTeamSummary(awayRaw, awayRaw.record?.leagueRecord || awayRaw.record);
-  const homeTeam = buildTeamSummary(homeRaw, homeRaw.record?.leagueRecord || homeRaw.record);
-  const homeMeta = resolveLvbpTeam(homeTeam.id);
+  const isMlb = Number(awayRaw.sport?.id) === 1 || Number(homeRaw.sport?.id) === 1 || (Number(homeRaw.id) >= 108 && Number(homeRaw.id) <= 158);
+  const awayTeam = buildTeamSummary(awayRaw, awayRaw.record?.leagueRecord || awayRaw.record, isMlb ? "mlb" : "lvbp");
+  const homeTeam = buildTeamSummary(homeRaw, homeRaw.record?.leagueRecord || homeRaw.record, isMlb ? "mlb" : "lvbp");
+  const homeMeta = resolveAnyBaseballTeam(homeTeam.id, homeRaw.name, isMlb ? "mlb" : "lvbp");
 
   const inningsCount = Math.max(9, (ls.innings || []).length);
   const inningNums = Array.from({ length: inningsCount }, (_, i) => i + 1);
@@ -931,13 +934,18 @@ export async function fetchLvbpStandingsAndLeaders(season = "2026"): Promise<{
   };
 }
 
-export async function fetchLvbpRoster(teamIdOrCode: string): Promise<{
+export async function fetchLvbpRoster(teamIdOrCode: string, league: "lvbp" | "mlb" = "lvbp"): Promise<{
   team: typeof LVBP_TEAMS[string];
   season: string;
   players: RosterPlayer[];
 }> {
-  const meta = resolveLvbpTeam(Number(teamIdOrCode) || teamIdOrCode);
-  const url = `${MLB_BASE}/v1/teams/${meta.id}/roster?season=2026&hydrate=person`;
+  const upper = String(teamIdOrCode || "").trim().toUpperCase();
+  const isMlbTeam = league === "mlb" || Boolean(MLB_TEAMS[upper]) || (Number(teamIdOrCode) >= 108 && Number(teamIdOrCode) <= 158);
+  const meta = isMlbTeam
+    ? resolveMlbTeam(Number(teamIdOrCode) || teamIdOrCode)
+    : resolveLvbpTeam(Number(teamIdOrCode) || teamIdOrCode);
+  const seasonYear = isMlbTeam ? "2025" : "2026";
+  const url = `${MLB_BASE}/v1/teams/${meta.id}/roster?season=${seasonYear}&hydrate=person`;
   try {
     const res = await fetch(url, { next: { revalidate: 300 } });
     const data = await res.json();
@@ -954,18 +962,421 @@ export async function fetchLvbpRoster(teamIdOrCode: string): Promise<{
         throwSide: p.pitchHand?.code ? `Lanza: ${p.pitchHand.code}` : "",
         height: p.height || "",
         weight: p.weight ? `${p.weight} lb` : "",
-        birthDate: p.birthCity ? `${p.birthCity}, ${p.birthCountry || ""}` : p.birthCountry || "Venezuela",
+        birthDate: p.birthCity ? `${p.birthCity}, ${p.birthCountry || ""}` : p.birthCountry || (isMlbTeam ? "MLB" : "Venezuela"),
         photo: playerHeadshot(p.id),
       };
     });
     return {
       team: meta,
-      season: "2026-2027",
+      season: isMlbTeam ? "MLB 2025-2026" : "2026-2027",
       players: players.length ? players : getFallbackRoster(meta.code),
     };
   } catch {
-    return { team: meta, season: "2026-2027", players: getFallbackRoster(meta.code) };
+    return {
+      team: meta,
+      season: isMlbTeam ? "MLB 2025-2026" : "2026-2027",
+      players: getFallbackRoster(meta.code),
+    };
   }
+}
+
+export async function fetchMlbSchedule(season = "2025"): Promise<ScheduleGame[]> {
+  try {
+    // Query Postseason + Final Regular Season window from MLB StatsAPI (sportId=1)
+    const url = `${MLB_BASE}/v1/schedule?sportId=${MLB_SPORT_ID}&season=${season}&startDate=${season}-09-25&endDate=${season}-11-05&gameType=R,F,D,L,W&hydrate=linescore(runners),team,decisions,probablePitcher,broadcasts`;
+    const res = await fetch(url, { next: { revalidate: 30 } });
+    if (!res.ok) {
+      return getMlbFallbackSchedule();
+    }
+    const data = await res.json();
+    const games: ScheduleGame[] = [];
+
+    for (const dateEntry of data.dates || []) {
+      const officialDate = dateEntry.date;
+      for (const g of dateEntry.games || []) {
+        const status = mapStatus(g.status);
+        const ls = g.linescore || {};
+        const awayTeam = buildTeamSummary(g.teams?.away?.team, g.teams?.away?.leagueRecord, "mlb");
+        const homeTeam = buildTeamSummary(g.teams?.home?.team, g.teams?.home?.leagueRecord, "mlb");
+        const isTop = Boolean(ls.isTopInning);
+        const currentInning = Number(ls.currentInning || 0);
+        const inningLabel =
+          status === "IN_PROGRESS" && currentInning
+            ? `${isTop ? "Alta" : "Baja"} ${currentInning}°`
+            : status === "FINISHED"
+              ? currentInning && currentInning !== 9
+                ? `Final/${currentInning}`
+                : "Final"
+              : formatCaracasTime(g.gameDate);
+
+        const awayMeta = resolveMlbTeam(awayTeam.id);
+        const homeMeta = resolveMlbTeam(homeTeam.id);
+        const apiTv = Array.isArray(g.broadcasts)
+          ? (Array.from(
+              new Set(
+                g.broadcasts
+                  .filter((b: any) => b?.type === "TV")
+                  .map((b: any) => String(b?.name || "").trim())
+                  .filter(Boolean)
+              )
+            ) as string[]).slice(0, 3)
+          : [];
+        const tvChannels = apiTv.length > 0 ? apiTv : ["ESPN", "IVC", "MLB.TV"];
+
+        games.push({
+          id: String(g.gamePk),
+          date: officialDate,
+          startsAt: g.gameDate,
+          time: formatCaracasTime(g.gameDate),
+          status,
+          statusLabel: g.status?.detailedState,
+          inning: inningLabel,
+          isTopInning: isTop,
+          currentInning: currentInning || undefined,
+          balls: ls.balls ?? 0,
+          strikes: ls.strikes ?? 0,
+          outs: ls.outs ?? 0,
+          runners: {
+            first: Boolean(ls.offense?.first),
+            second: Boolean(ls.offense?.second),
+            third: Boolean(ls.offense?.third),
+          },
+          awayTeam,
+          homeTeam,
+          awayScore: Number(g.teams?.away?.score ?? ls.teams?.away?.runs ?? 0),
+          homeScore: Number(g.teams?.home?.score ?? ls.teams?.home?.runs ?? 0),
+          awayHits: Number(ls.teams?.away?.hits ?? 0),
+          homeHits: Number(ls.teams?.home?.hits ?? 0),
+          awayErrors: Number(ls.teams?.away?.errors ?? 0),
+          homeErrors: Number(ls.teams?.home?.errors ?? 0),
+          venue: g.venue?.name || homeMeta.venue,
+          venueCity: homeMeta.venueCity,
+          tv: tvChannels.join(" · "),
+          tvChannels,
+          decisions: g.decisions
+            ? {
+                winner: g.decisions.winner?.fullName,
+                loser: g.decisions.loser?.fullName,
+                save: g.decisions.save?.fullName,
+              }
+            : undefined,
+          probablePitchers: {
+            away: g.teams?.away?.probablePitcher?.fullName || awayMeta.nick,
+            home: g.teams?.home?.probablePitcher?.fullName || homeMeta.nick,
+          },
+        });
+      }
+    }
+
+    return games.length ? games : getMlbFallbackSchedule();
+  } catch {
+    return getMlbFallbackSchedule();
+  }
+}
+
+export async function fetchMlbStandingsAndLeaders(season = "2025"): Promise<{
+  standings: StandingRow[];
+  leaders: { hitting: LeaderCategory[]; pitching: LeaderCategory[] };
+}> {
+  try {
+    const url = `${MLB_BASE}/v1/standings?leagueId=103,104&season=${season}&standingsTypes=regularSeason&hydrate=team,streak`;
+    const res = await fetch(url, { next: { revalidate: 120 } });
+    if (!res.ok) {
+      return {
+        standings: getMlbFallbackStandings(),
+        leaders: getMlbLeadersSnapshot(),
+      };
+    }
+    const data = await res.json();
+    const rows: StandingRow[] = [];
+
+    for (const record of data.records || []) {
+      for (const tr of record.teamRecords || []) {
+        const meta = resolveMlbTeam(tr.team?.id, tr.team?.name);
+        const splitRecs: any[] = tr.records?.splitRecords || [];
+        const homeRec = splitRecs.find((s) => s.type === "home");
+        const awayRec = splitRecs.find((s) => s.type === "away");
+        const l10Rec = splitRecs.find((s) => s.type === "lastTen");
+        const rs = Number(tr.runsScored ?? 0);
+        const ra = Number(tr.runsAllowed ?? 0);
+        const wins = Number(tr.wins ?? 0);
+        const losses = Number(tr.losses ?? 0);
+
+        rows.push({
+          team: {
+            id: meta.id,
+            code: meta.code,
+            shortName: meta.shortName,
+            name: meta.name,
+            nick: meta.nick,
+            logoUrl: meta.logoSvg,
+            color: meta.color,
+            wins,
+            losses,
+          },
+          gamesPlayed: Number(tr.gamesPlayed ?? wins + losses),
+          wins,
+          losses,
+          pct: String(tr.winningPercentage || ".500"),
+          gamesBehind: tr.gamesBack === "-" ? "—" : String(tr.gamesBack || "—"),
+          streak: String(tr.streak?.streakCode || "—").replace(/^W/, "G").replace(/^L/, "P"),
+          homeRecord: homeRec ? `${homeRec.wins}-${homeRec.losses}` : "—",
+          awayRecord: awayRec ? `${awayRec.wins}-${awayRec.losses}` : "—",
+          lastTen: l10Rec ? `${l10Rec.wins}-${l10Rec.losses}` : "—",
+          runsScored: rs,
+          runsAllowed: ra,
+          runDiff: Number(tr.runDifferential ?? rs - ra),
+          league: meta.league,
+          division: meta.division,
+          divisionEs: meta.divisionEs,
+        });
+      }
+    }
+
+    return {
+      standings: rows.length > 0 ? rows : getMlbFallbackStandings(),
+      leaders: getMlbLeadersSnapshot(),
+    };
+  } catch {
+    return {
+      standings: getMlbFallbackStandings(),
+      leaders: getMlbLeadersSnapshot(),
+    };
+  }
+}
+
+function getMlbFallbackStandings(): StandingRow[] {
+  const sampleRecords: Record<string, [number, number, number, number, string]> = {
+    NYY: [94, 68, 815, 668, "G3"],
+    BAL: [91, 71, 786, 699, "G2"],
+    BOS: [81, 81, 751, 747, "P1"],
+    TB: [80, 82, 604, 663, "G1"],
+    TOR: [74, 88, 671, 770, "P2"],
+    CLE: [92, 69, 708, 621, "G2"],
+    KC: [86, 76, 735, 644, "G1"],
+    DET: [86, 76, 682, 642, "G4"],
+    MIN: [82, 80, 742, 735, "P1"],
+    CWS: [41, 121, 507, 813, "P3"],
+    HOU: [88, 73, 740, 649, "G2"],
+    SEA: [85, 77, 676, 607, "G1"],
+    TEX: [78, 84, 683, 738, "P1"],
+    ATH: [69, 93, 643, 764, "P2"],
+    LAA: [63, 99, 635, 797, "P4"],
+    PHI: [95, 67, 784, 671, "G2"],
+    ATL: [89, 73, 704, 607, "G3"],
+    NYM: [89, 73, 768, 697, "G1"],
+    WSH: [71, 91, 660, 764, "P2"],
+    MIA: [62, 100, 637, 841, "P1"],
+    MIL: [93, 69, 777, 641, "G2"],
+    CHC: [83, 79, 736, 669, "G1"],
+    STL: [83, 79, 672, 719, "P1"],
+    CIN: [77, 85, 699, 694, "P2"],
+    PIT: [76, 86, 665, 739, "P1"],
+    LAD: [98, 64, 842, 686, "G4"],
+    SD: [93, 69, 760, 669, "G2"],
+    ARI: [89, 73, 886, 788, "G1"],
+    SF: [80, 82, 693, 699, "P1"],
+    COL: [61, 101, 682, 929, "P3"],
+  };
+
+  return Object.values(MLB_TEAMS).map((meta) => {
+    const [w, l, rs, ra, streak] = sampleRecords[meta.code] || [81, 81, 700, 700, "G1"];
+    const gp = w + l;
+    const pct = (w / gp).toFixed(3).replace(/^0/, "");
+    return {
+      team: {
+        id: meta.id,
+        code: meta.code,
+        shortName: meta.shortName,
+        name: meta.name,
+        nick: meta.nick,
+        logoUrl: meta.logoSvg,
+        color: meta.color,
+        wins: w,
+        losses: l,
+      },
+      gamesPlayed: gp,
+      wins: w,
+      losses: l,
+      pct,
+      gamesBehind: "—",
+      streak,
+      homeRecord: `${Math.round(w * 0.54)}-${Math.round(l * 0.46)}`,
+      awayRecord: `${w - Math.round(w * 0.54)}-${l - Math.round(l * 0.46)}`,
+      lastTen: "6-4",
+      runsScored: rs,
+      runsAllowed: ra,
+      runDiff: rs - ra,
+      league: meta.league,
+      division: meta.division,
+      divisionEs: meta.divisionEs,
+    };
+  });
+}
+
+function getMlbFallbackSchedule(): ScheduleGame[] {
+  const pairs: Array<[string, string, number, number, string, string[]]> = [
+    ["NYY", "LAD", 6, 8, "Final", ["FOX", "ESPN", "IVC"]],
+    ["NYM", "ATL", 7, 5, "Final", ["ESPN", "IVC", "MLB.TV"]],
+    ["HOU", "CLE", 5, 3, "Final", ["TBS", "1Baseball", "MLB.TV"]],
+    ["SD", "MIL", 4, 2, "Final", ["ESPN", "ByM Sport", "MLB.TV"]],
+  ];
+  return pairs.map(([awayCode, homeCode, awayScore, homeScore, inning, tvChannels], idx) => {
+    const away = MLB_TEAMS[awayCode];
+    const home = MLB_TEAMS[homeCode];
+    return {
+      id: String(775300 + idx),
+      date: "2026-10-17",
+      startsAt: "2026-10-17T23:08:00Z",
+      time: "7:08 PM",
+      status: "FINISHED",
+      statusLabel: "Final",
+      inning,
+      awayTeam: {
+        id: away.id,
+        code: away.code,
+        shortName: away.shortName,
+        name: away.name,
+        nick: away.nick,
+        logoUrl: away.logoSvg,
+        color: away.color,
+        wins: 94,
+        losses: 68,
+      },
+      homeTeam: {
+        id: home.id,
+        code: home.code,
+        shortName: home.shortName,
+        name: home.name,
+        nick: home.nick,
+        logoUrl: home.logoSvg,
+        color: home.color,
+        wins: 98,
+        losses: 64,
+      },
+      awayScore,
+      homeScore,
+      awayHits: awayScore + 4,
+      homeHits: homeScore + 3,
+      awayErrors: 0,
+      homeErrors: 0,
+      venue: home.venue,
+      venueCity: home.venueCity,
+      tv: tvChannels.join(" · "),
+      tvChannels,
+    };
+  });
+}
+
+function getMlbLeadersSnapshot(): { hitting: LeaderCategory[]; pitching: LeaderCategory[] } {
+  const entry = (id: number, name: string, code: string, pos: string, value: string) => {
+    const t = MLB_TEAMS[code] || MLB_TEAMS.NYY;
+    return {
+      id,
+      name,
+      team: t.code,
+      teamName: t.nick,
+      teamLogo: t.logoSvg,
+      position: pos,
+      photo: playerHeadshot(id),
+      value,
+    };
+  };
+
+  return {
+    hitting: [
+      {
+        key: "avg",
+        label: "AVE",
+        players: [
+          entry(677951, "Bobby Witt Jr.", "KC", "SS", ".332"),
+          entry(665489, "Vladimir Guerrero Jr.", "TOR", "1B", ".323"),
+          entry(592450, "Aaron Judge", "NYY", "CF", ".322"),
+          entry(650333, "Luis Arráez 🇻🇪", "SD", "1B", ".314"),
+          entry(660271, "Shohei Ohtani", "LAD", "BD", ".310"),
+        ],
+      },
+      {
+        key: "homeRuns",
+        label: "HR",
+        players: [
+          entry(592450, "Aaron Judge", "NYY", "CF", "58"),
+          entry(660271, "Shohei Ohtani", "LAD", "BD", "54"),
+          entry(623993, "Anthony Santander 🇻🇪", "BAL", "RF", "44"),
+          entry(665742, "Juan Soto", "NYY", "RF", "41"),
+          entry(542303, "Marcell Ozuna", "ATL", "BD", "39"),
+        ],
+      },
+      {
+        key: "rbi",
+        label: "CI",
+        players: [
+          entry(592450, "Aaron Judge", "NYY", "CF", "144"),
+          entry(660271, "Shohei Ohtani", "LAD", "BD", "130"),
+          entry(608070, "José Ramírez", "CLE", "3B", "118"),
+          entry(677951, "Bobby Witt Jr.", "KC", "SS", "109"),
+          entry(521692, "Salvador Pérez 🇻🇪", "KC", "C", "104"),
+        ],
+      },
+      {
+        key: "runs",
+        label: "C",
+        players: [
+          entry(660271, "Shohei Ohtani", "LAD", "BD", "134"),
+          entry(665742, "Juan Soto", "NYY", "RF", "128"),
+          entry(677951, "Bobby Witt Jr.", "KC", "SS", "125"),
+          entry(592450, "Aaron Judge", "NYY", "CF", "122"),
+          entry(661388, "William Contreras 🇻🇪", "MIL", "C", "99"),
+        ],
+      },
+    ],
+    pitching: [
+      {
+        key: "era",
+        label: "EFE",
+        players: [
+          entry(519242, "Chris Sale", "ATL", "P", "2.38"),
+          entry(669373, "Tarik Skubal", "DET", "P", "2.39"),
+          entry(554430, "Zack Wheeler", "PHI", "P", "2.57"),
+          entry(669022, "Ronnie Blanco", "HOU", "P", "2.80"),
+          entry(624133, "Ranger Suárez 🇻🇪", "PHI", "P", "3.12"),
+        ],
+      },
+      {
+        key: "strikeOuts",
+        label: "K",
+        players: [
+          entry(669373, "Tarik Skubal", "DET", "P", "228"),
+          entry(519242, "Chris Sale", "ATL", "P", "225"),
+          entry(656302, "Dylan Cease", "SD", "P", "224"),
+          entry(554430, "Zack Wheeler", "PHI", "P", "224"),
+          entry(543037, "Gerrit Cole", "NYY", "P", "210"),
+        ],
+      },
+      {
+        key: "wins",
+        label: "JG",
+        players: [
+          entry(519242, "Chris Sale", "ATL", "P", "18"),
+          entry(669373, "Tarik Skubal", "DET", "P", "18"),
+          entry(554430, "Zack Wheeler", "PHI", "P", "16"),
+          entry(605397, "Seth Lugo", "KC", "P", "16"),
+          entry(624133, "Ranger Suárez 🇻🇪", "PHI", "P", "12"),
+        ],
+      },
+      {
+        key: "saves",
+        label: "JS",
+        players: [
+          entry(661403, "Emmanuel Clase", "CLE", "P", "47"),
+          entry(608371, "Ryan Helsley", "STL", "P", "49"),
+          entry(623352, "Kyle Finnegan", "WSH", "P", "38"),
+          entry(663158, "Robert Suárez 🇻🇪", "SD", "P", "36"),
+          entry(605288, "Raisel Iglesias", "ATL", "P", "34"),
+        ],
+      },
+    ],
+  };
 }
 
 function getLvbpLeadersSnapshot(): { hitting: LeaderCategory[]; pitching: LeaderCategory[] } {

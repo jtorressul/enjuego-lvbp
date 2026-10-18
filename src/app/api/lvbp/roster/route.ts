@@ -7,7 +7,8 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const team = searchParams.get("team") || "CAR";
-    const data = await fetchLvbpRoster(team);
+    const league = searchParams.get("league") === "mlb" ? "mlb" : "lvbp";
+    const data = await fetchLvbpRoster(team, league);
     return NextResponse.json(data, {
       headers: {
         "Cache-Control": "public, s-maxage=300, stale-while-revalidate=60",

@@ -890,7 +890,7 @@ export function EnJuegoPortal({
     return Array.from(map.entries());
   }, [filteredCalendarGames]);
 
-  // Render a broadcast-quality Scoreboard Card for Pizarra del Día & Resultados
+  // Render a clean, modern, broadcast Scoreboard Card (Compact & Focused)
   const renderScoreboardCard = (game: ScheduleGame) => {
     const played = game.status === "IN_PROGRESS" || game.status === "FINISHED";
     const isLive = game.status === "IN_PROGRESS";
@@ -906,230 +906,185 @@ export function EnJuegoPortal({
       <article
         key={game.id}
         onClick={() => openGameGameday(game.id)}
-        className={`rounded-2xl border bg-white hover:border-amber-500/80 transition-all flex flex-col justify-between overflow-hidden shadow-sm hover:shadow-md cursor-pointer group ${
-          isFavGame ? "border-amber-400 ring-2 ring-amber-400/25" : "border-slate-200"
+        className={`rounded-2xl border bg-white hover:border-amber-400 hover:shadow-md transition-all p-3.5 flex flex-col justify-between cursor-pointer group select-none ${
+          isFavGame ? "border-amber-400 ring-2 ring-amber-400/20 shadow-xs" : "border-slate-200 shadow-2xs"
         }`}
       >
-        {/* Top Accent Strip */}
-        <div
-          className={`h-1 w-full ${
-            isLive
-              ? "bg-gradient-to-r from-red-500 via-orange-500 to-red-500"
-              : isFavGame
-                ? "bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-500"
-                : isFinal
-                  ? "bg-gradient-to-r from-amber-500 to-orange-500"
-                  : "bg-gradient-to-r from-sky-500 to-indigo-500"
-          }`}
-        />
-
-        <div className="p-4 flex-1 flex flex-col justify-between">
-          <div>
-            {/* Header: Status + Favorite Badge + C H E */}
-            <div className="flex items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-100">
-              <div className="flex items-center gap-1.5">
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wide ${
-                    isLive
-                      ? "bg-red-50 text-red-600 border border-red-200"
-                      : isFinal
-                        ? "bg-slate-100 text-slate-800 border border-slate-200"
-                        : "bg-amber-50 text-amber-800 border border-amber-200"
-                  }`}
-                >
-                  {isLive && <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />}
-                  {isLive ? (
-                    game.inning && !/^in\s*progress/i.test(game.inning) && !/^en vivo/i.test(game.inning)
-                      ? `EN VIVO · ${game.inning}`
-                      : "EN VIVO"
-                  ) : isFinal ? (
-                    game.inning
-                  ) : (
-                    <span className="inline-flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-amber-700" />
-                      {game.time}
-                    </span>
-                  )}
+        <div className="space-y-2.5">
+          {/* Header Row: Game Status + TV Channel badge */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 min-w-0">
+              {isLive ? (
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide bg-red-50 text-red-700 border border-red-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-ping" />
+                  {game.inning && !/^in\s*progress/i.test(game.inning) && !/^en vivo/i.test(game.inning)
+                    ? game.inning
+                    : "EN VIVO"}
                 </span>
-                {isFavGame && (
-                  <span
-                    className="inline-flex items-center gap-1 rounded-full bg-amber-400/20 text-amber-800 border border-amber-300 px-2 py-0.5 text-[10px] font-black"
-                    title="Partido de tu Equipo Favorito"
-                  >
-                    <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" /> Tu Club
-                  </span>
-                )}
-              </div>
+              ) : isFinal ? (
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
+                  {game.inning || "FINAL"}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-700">
+                  <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  {game.time || "Por definir"}
+                </span>
+              )}
 
-              <div className="flex items-center gap-3 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
-                <span className="w-6 text-center text-slate-700">C</span>
-                <span className="w-5 text-center">H</span>
-                <span className="w-4 text-center">E</span>
-              </div>
+              {isFavGame && (
+                <span
+                  className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.2 text-[9px] font-black"
+                  title="Tu equipo favorito"
+                >
+                  <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" /> Tu Club
+                </span>
+              )}
             </div>
 
-            {/* Away Team Row */}
+            {/* Channels badge */}
+            {tvChannels.length > 0 && (
+              <span className="text-[10px] font-bold text-slate-500 truncate inline-flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100 shrink-0">
+                <Tv className="w-3 h-3 text-amber-600 shrink-0" />
+                <span className="truncate max-w-[100px]">{tvChannels[0]}</span>
+                {tvChannels.length > 1 && (
+                  <span className="text-[9px] text-slate-400 font-semibold">+{tvChannels.length - 1}</span>
+                )}
+              </span>
+            )}
+          </div>
+
+          {/* Teams and Scores (2 Clean Rows) */}
+          <div className="space-y-1.5 pt-0.5">
+            {/* Away Team */}
             <div
-              className={`flex items-center justify-between py-2 px-1.5 rounded-xl transition ${
-                awayWon ? "bg-amber-50/50" : ""
+              className={`flex items-center justify-between py-1 px-1.5 rounded-xl transition ${
+                awayWon ? "bg-amber-50/60 font-black" : ""
               }`}
             >
-              <div className="flex items-center gap-3 min-w-0">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <img
                   src={game.awayTeam.logoUrl}
-                  alt={game.awayTeam.name}
-                  className="w-10 h-10 object-contain shrink-0 drop-shadow-sm"
+                  alt=""
+                  className="w-7 h-7 sm:w-8 sm:h-8 object-contain shrink-0"
                 />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={`text-sm truncate ${
-                        awayWon ? "font-black text-slate-950" : "font-bold text-slate-800"
-                      }`}
-                    >
-                      {game.awayTeam.nick}
-                    </span>
-                    {awayWon && (
-                      <span className="text-[10px] font-black text-amber-600" title="Ganador">
-                        ◀
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-[11px] font-semibold text-slate-500">
-                    {game.awayTeam.shortName} · ({game.awayTeam.wins}-{game.awayTeam.losses})
-                  </div>
+                <div className="min-w-0 flex items-baseline gap-1.5">
+                  <span
+                    className={`text-xs sm:text-sm truncate ${
+                      awayWon ? "font-black text-slate-950" : "font-extrabold text-slate-800"
+                    }`}
+                  >
+                    {game.awayTeam.nick || game.awayTeam.name}
+                  </span>
+                  <span className="text-[10px] font-semibold text-slate-400 shrink-0">
+                    ({game.awayTeam.wins}-{game.awayTeam.losses})
+                  </span>
+                  {awayWon && <span className="text-[10px] font-black text-amber-600">◀</span>}
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 text-sm tabular-nums shrink-0">
-                <b
-                  className={`w-6 text-center text-base ${
-                    awayWon
-                      ? "font-black text-slate-950"
-                      : played
-                        ? "font-bold text-slate-700"
-                        : "font-semibold text-slate-400"
-                  }`}
-                >
-                  {played ? game.awayScore : "–"}
-                </b>
-                <span className="w-5 text-center text-xs font-semibold text-slate-500">
-                  {played ? game.awayHits : "–"}
-                </span>
-                <span className="w-4 text-center text-xs text-slate-400">
-                  {played ? game.awayErrors : "–"}
-                </span>
-              </div>
+              {played ? (
+                <div className="flex items-baseline gap-2 tabular-nums shrink-0">
+                  <span
+                    className={`text-base sm:text-lg ${
+                      awayWon ? "font-black text-slate-950" : "font-extrabold text-slate-800"
+                    }`}
+                  >
+                    {game.awayScore}
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-400">
+                    {game.awayHits} H
+                  </span>
+                </div>
+              ) : (
+                <span className="text-xs font-bold text-slate-300">–</span>
+              )}
             </div>
 
-            {/* Home Team Row */}
+            {/* Home Team */}
             <div
-              className={`flex items-center justify-between py-2 px-1.5 rounded-xl mt-1 transition ${
-                homeWon ? "bg-amber-50/50" : ""
+              className={`flex items-center justify-between py-1 px-1.5 rounded-xl transition ${
+                homeWon ? "bg-amber-50/60 font-black" : ""
               }`}
             >
-              <div className="flex items-center gap-3 min-w-0">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <img
                   src={game.homeTeam.logoUrl}
-                  alt={game.homeTeam.name}
-                  className="w-10 h-10 object-contain shrink-0 drop-shadow-sm"
+                  alt=""
+                  className="w-7 h-7 sm:w-8 sm:h-8 object-contain shrink-0"
                 />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={`text-sm truncate ${
-                        homeWon ? "font-black text-slate-950" : "font-bold text-slate-800"
-                      }`}
-                    >
-                      {game.homeTeam.nick}
-                    </span>
-                    {homeWon && (
-                      <span className="text-[10px] font-black text-amber-600" title="Ganador">
-                        ◀
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-[11px] font-semibold text-slate-500">
-                    {game.homeTeam.shortName} · ({game.homeTeam.wins}-{game.homeTeam.losses})
-                  </div>
+                <div className="min-w-0 flex items-baseline gap-1.5">
+                  <span
+                    className={`text-xs sm:text-sm truncate ${
+                      homeWon ? "font-black text-slate-950" : "font-extrabold text-slate-800"
+                    }`}
+                  >
+                    {game.homeTeam.nick || game.homeTeam.name}
+                  </span>
+                  <span className="text-[10px] font-semibold text-slate-400 shrink-0">
+                    ({game.homeTeam.wins}-{game.homeTeam.losses})
+                  </span>
+                  {homeWon && <span className="text-[10px] font-black text-amber-600">◀</span>}
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 text-sm tabular-nums shrink-0">
-                <b
-                  className={`w-6 text-center text-base ${
-                    homeWon
-                      ? "font-black text-slate-950"
-                      : played
-                        ? "font-bold text-slate-700"
-                        : "font-semibold text-slate-400"
-                  }`}
-                >
-                  {played ? game.homeScore : "–"}
-                </b>
-                <span className="w-5 text-center text-xs font-semibold text-slate-500">
-                  {played ? game.homeHits : "–"}
-                </span>
-                <span className="w-4 text-center text-xs text-slate-400">
-                  {played ? game.homeErrors : "–"}
-                </span>
-              </div>
+              {played ? (
+                <div className="flex items-baseline gap-2 tabular-nums shrink-0">
+                  <span
+                    className={`text-base sm:text-lg ${
+                      homeWon ? "font-black text-slate-950" : "font-extrabold text-slate-800"
+                    }`}
+                  >
+                    {game.homeScore}
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-400">
+                    {game.homeHits} H
+                  </span>
+                </div>
+              ) : (
+                <span className="text-xs font-bold text-slate-300">–</span>
+              )}
             </div>
           </div>
+        </div>
 
-          {/* Broadcast Channels + Venue / Decisions + Share Button Footer */}
-          <div className="mt-3 pt-3 border-t border-slate-100 space-y-2.5">
-            {/* TV Broadcast Channels Row with Official Launcher */}
-            <BroadcastChannelsRow
-              channels={tvChannels}
-              gameTitle={`${game.awayTeam.nick} vs ${game.homeTeam.nick}`}
-            />
-
-            {game.decisions?.winner ? (
-              <p className="text-[11px] text-slate-600 truncate">
-                <b className="text-emerald-700">G:</b> {game.decisions.winner}
-                {game.decisions.loser ? (
-                  <>
-                    {" "}
-                    · <b className="text-rose-700">P:</b> {game.decisions.loser}
-                  </>
-                ) : null}
-                {game.decisions.save ? (
-                  <>
-                    {" "}
-                    · <b className="text-sky-700">S:</b> {game.decisions.save}
-                  </>
-                ) : null}
-              </p>
-            ) : (
-              <p className="text-[11px] text-slate-500 truncate flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-amber-600 shrink-0" /> {game.venue} (
-                {game.venueCity})
-              </p>
-            )}
-
-            <div className="flex items-center gap-1.5">
-              <div className="flex-1 rounded-xl bg-slate-100 group-hover:bg-amber-400 text-slate-800 group-hover:text-slate-950 py-2 px-3 text-xs font-extrabold text-center transition">
-                {isLive
-                  ? "Seguir Gameday ›"
-                  : isFinal
-                    ? "Box Score y Jugadas ›"
-                    : "Previa y Alineación ›"}
-              </div>
-              <button
-                type="button"
-                onClick={(e) => handleShareGame(e, game)}
-                title="Compartir partido por WhatsApp"
-                className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition cursor-pointer shrink-0"
-              >
-                {copiedGameId === game.id ? (
-                  <Check className="w-3.5 h-3.5" />
-                ) : (
-                  <Share2 className="w-3.5 h-3.5" />
+        {/* Footer: Contextual info (No duplicate buttons) */}
+        <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+          <div className="truncate flex-1 min-w-0 pr-2">
+            {isFinal && game.decisions?.winner ? (
+              <span className="truncate block font-semibold text-slate-600">
+                <b className="text-emerald-700 font-bold">G:</b> {game.decisions.winner}
+                {game.decisions.loser && (
+                  <> · <b className="text-rose-700 font-bold">P:</b> {game.decisions.loser}</>
                 )}
-              </button>
-            </div>
+                {game.decisions.save && (
+                  <> · <b className="text-sky-700 font-bold">S:</b> {game.decisions.save}</>
+                )}
+              </span>
+            ) : isLive ? (
+              <span className="font-bold text-amber-700 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                Seguir jugada a jugada ›
+              </span>
+            ) : (
+              <span className="truncate block text-slate-500 font-medium">
+                {game.venueCity ? `Estadio en ${game.venueCity}` : game.venue || "Por iniciar"}
+              </span>
+            )}
           </div>
+
+          <button
+            type="button"
+            onClick={(e) => handleShareGame(e, game)}
+            title="Compartir partido"
+            className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition cursor-pointer shrink-0"
+          >
+            {copiedGameId === game.id ? (
+              <Check className="w-3.5 h-3.5 text-emerald-600" />
+            ) : (
+              <Share2 className="w-3.5 h-3.5" />
+            )}
+          </button>
         </div>
       </article>
     );

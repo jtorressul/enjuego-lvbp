@@ -240,8 +240,6 @@ export function EnJuegoPortal({
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [teamsDropdownOpen, setTeamsDropdownOpen] = useState(false);
   const teamsDropdownRef = useRef<HTMLDivElement>(null);
-  const mobileTeamsButtonRef = useRef<HTMLButtonElement>(null);
-  const mobileTeamsModalRef = useRef<HTMLDivElement>(null);
 
   // User Profile & Authentication State
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
@@ -295,10 +293,8 @@ export function EnJuegoPortal({
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
       const inDesktop = teamsDropdownRef.current?.contains(target);
-      const inMobileBtn = mobileTeamsButtonRef.current?.contains(target);
-      const inMobileModal = mobileTeamsModalRef.current?.contains(target);
       const inNavMenu = navMenuRef.current?.contains(target);
-      if (!inDesktop && !inMobileBtn && !inMobileModal) {
+      if (!inDesktop) {
         setTeamsDropdownOpen(false);
       }
       if (!inNavMenu) {
@@ -1556,42 +1552,8 @@ export function EnJuegoPortal({
             )}
           </div>
 
-          {/* Mobile & Tablet Right Controls (<1024px): Perfectly Fitted Touch Buttons */}
-          <div className="flex lg:hidden items-center gap-1.5 sm:gap-2 shrink-0">
-            <button
-              ref={mobileTeamsButtonRef}
-              type="button"
-              onClick={() => setTeamsDropdownOpen((prev) => !prev)}
-              className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-xs sm:text-sm font-black transition border cursor-pointer ${
-                teamsDropdownOpen
-                  ? "bg-amber-400 text-slate-950 border-amber-400 shadow-2xs"
-                  : "text-slate-100 hover:text-white"
-              }`}
-              style={
-                teamsDropdownOpen
-                  ? undefined
-                  : { backgroundColor: "#0f172a", borderColor: "#1e293b", color: "#f8fafc" }
-              }
-              aria-expanded={teamsDropdownOpen}
-              aria-label="Desplegable de equipos"
-            >
-              <img
-                src={activeTeamsCatalog[selectedTeamCode]?.logoSvg || anyTeamsCatalog[selectedTeamCode]?.logoSvg || LVBP_OFFICIAL_LOGO}
-                alt=""
-                className="w-5 h-5 object-contain shrink-0"
-              />
-              <span className="font-extrabold sm:hidden">
-                {activeTeamsCatalog[selectedTeamCode]?.shortName || activeLeague.toUpperCase()}
-              </span>
-              <span className="font-extrabold hidden sm:inline">
-                {activeTeamsCatalog[selectedTeamCode]?.nick || "Equipos"}
-              </span>
-              <ChevronDown
-                className={`w-3.5 h-3.5 transition-transform duration-200 shrink-0 ${
-                  teamsDropdownOpen ? "rotate-180 text-slate-950" : "text-slate-400"
-                }`}
-              />
-            </button>
+          {/* Mobile & Tablet Right Controls (<1024px): Clean, Uncluttered Touch Controls */}
+          <div className="flex lg:hidden items-center gap-2 shrink-0">
 
             {currentUser && (
               <button
@@ -1627,126 +1589,6 @@ export function EnJuegoPortal({
           </div>
         </div>
       </header>
-
-      {/* MOBILE TEAMS SELECTOR MODAL (CENTERED WITH BACKDROP TO PREVENT SCREEN OVERFLOW) */}
-      {teamsDropdownOpen && (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center p-3.5 pt-18 sm:pt-20 lg:hidden animate-in fade-in duration-150">
-          {/* Backdrop overlay */}
-          <div
-            className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs transition-opacity"
-            onClick={() => setTeamsDropdownOpen(false)}
-          />
-
-          {/* Modal Dialog Card */}
-          <div
-            ref={mobileTeamsModalRef}
-            className="relative w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-2xl p-4 z-10 text-slate-900 animate-in zoom-in-95 duration-150 max-h-[82dvh] overflow-y-auto"
-          >
-            <div className="flex items-center justify-between pb-3 mb-2.5 border-b border-slate-100">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
-                  <Users className="w-4.5 h-4.5" />
-                </div>
-                <div>
-                  <div className="font-black text-slate-950 text-base leading-tight">
-                    {activeLeague === "mlb" ? "Equipos MLB (30)" : "Equipos LVBP (8)"}
-                  </div>
-                  <p className="text-xs text-slate-500 font-medium">Toca para filtrar o ver nómina</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Link
-                  href={`/teams?team=${activeLeague === "mlb" ? "yankees" : "leones"}&liga=${activeLeague}`}
-                  onClick={() => setTeamsDropdownOpen(false)}
-                  className="text-xs font-black text-amber-600 hover:text-amber-700 hover:underline px-1.5 py-0.5"
-                >
-                  Directorio ›
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => setTeamsDropdownOpen(false)}
-                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
-                  aria-label="Cerrar modal de equipos"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Quick League Switcher inside Mobile Teams Modal */}
-            <div className="grid grid-cols-2 gap-1.5 p-1 mb-3 rounded-xl bg-slate-100 border border-slate-200">
-              <button
-                type="button"
-                onClick={() => switchLeague("lvbp")}
-                className={`py-2 px-3 rounded-lg text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                  activeLeague === "lvbp"
-                    ? "bg-amber-400 text-slate-950 shadow-2xs"
-                    : "text-slate-600 hover:text-slate-950"
-                }`}
-              >
-                <span>🇻🇪</span>
-                <span>Equipos LVBP (8)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => switchLeague("mlb")}
-                className={`py-2 px-3 rounded-lg text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                  activeLeague === "mlb"
-                    ? "bg-sky-400 text-slate-950 shadow-2xs"
-                    : "text-slate-600 hover:text-slate-950"
-                }`}
-              >
-                <span>⚾</span>
-                <span>Equipos MLB (30)</span>
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2.5">
-              {Object.values(activeTeamsCatalog).map((team) => {
-                const isSelected = selectedTeamCode === team.code;
-                const isFav = favoriteTeamCode === team.code;
-                return (
-                  <Link
-                    key={team.code}
-                    href={`/teams?team=${team.slug}&liga=${activeLeague}`}
-                    onClick={() => {
-                      setSelectedTeamCode(team.code);
-                      setTeamsDropdownOpen(false);
-                    }}
-                    className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-xs transition cursor-pointer group ${
-                      isSelected
-                        ? "bg-amber-50 border-amber-400 ring-2 ring-amber-400/40 text-slate-950 font-black shadow-xs"
-                        : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800 font-bold"
-                    }`}
-                  >
-                    <div
-                      className="w-9 h-9 rounded-full p-1 bg-white border border-slate-200 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition"
-                      style={{ borderColor: isSelected ? team.color : undefined }}
-                    >
-                      <img
-                        src={team.logoSvg}
-                        alt={team.nick}
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-black leading-tight">
-                        {team.nick}
-                      </div>
-                      <div className="text-[11px] text-slate-500 truncate font-normal">
-                        {team.city}
-                      </div>
-                    </div>
-                    {isFav && (
-                      <Star className="w-4 h-4 text-amber-500 fill-amber-500 shrink-0" />
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* MOBILE SLIDE-OVER DRAWER */}
       {mobileDrawerOpen && (

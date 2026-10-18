@@ -1,5 +1,5 @@
-import type { RadioBroadcastInfo } from "./types";
-export type { RadioBroadcastInfo };
+import type { RadioBroadcastInfo, RadioStationOption } from "./types";
+export type { RadioBroadcastInfo, RadioStationOption };
 import { MLB_TEAMS } from "./mlb-teams";
 
 export interface TeamRadioMeta {
@@ -9,87 +9,149 @@ export interface TeamRadioMeta {
   city: string;
   webPlayerUrl: string;
   streamUrl?: string;
+  embedType?: "audio" | "iframe" | "youtube";
+  embedUrl?: string;
+  stations?: RadioStationOption[];
   narrators: string;
   description: string;
 }
 
 export const LVBP_RADIO_CIRCUITS: Record<string, TeamRadioMeta> = {
-  CAR: {
-    circuitName: "Circuito Unión Radio (Leones)",
-    stationName: "La Mega 107.3 FM · Onda 107.9 FM",
-    dial: "107.9 FM / 107.3 FM Caracas · 1090 AM",
-    city: "Caracas / Red Nacional Unión Radio",
-    webPlayerUrl: "https://mundour.com/envivo/",
-    streamUrl: "https://stream.zeno.fm/f97vcm325v8uv",
-    narrators: "Fernando Arreaza, Efraín Zavarce, Pascual Artiles",
-    description: "Transmisión oficial de los Leones del Caracas a través de la cadena nacional de Unión Radio.",
-  },
-  MAG: {
-    circuitName: "Circuito Radial Magallanes",
-    stationName: "La Mega 95.7 FM · Unión Radio 105.3 FM",
-    dial: "95.7 FM Valencia · 105.3 FM · 1090 AM",
-    city: "Valencia / Red Nacional",
-    webPlayerUrl: "https://mundour.com/lamega-valencia/",
-    streamUrl: "https://stream.zeno.fm/p8e8r9c5rzzuv",
-    narrators: "Giner García, Carlos Feo, Carlos Tovar Ostos",
-    description: "Voz oficial de la Nave Turca con cobertura total para el centro y todo el país.",
-  },
-  LAR: {
-    circuitName: "Circuito Cardenales de Lara",
-    stationName: "Sabrosa 90.1 FM · Líder 94.9 FM",
-    dial: "90.1 FM / 94.9 FM Barquisimeto",
-    city: "Barquisimeto / Centroccidente",
-    webPlayerUrl: "https://sabrosa901fm.com/",
-    streamUrl: "https://stream.zeno.fm/43y2b2sq5v8uv",
-    narrators: "Alfonso Saer 'El Narrador', Alfonso Saer Gómez, Ignacio Serrano",
-    description: "Transmisión histórica de los Cardenales de Lara con la narración de Alfonso Saer.",
-  },
+  // Tiburones de La Guaira: Candela Pura 91.9 FM y RQ 910 AM
   LAG: {
     circuitName: "Circuito Radial Tiburones",
-    stationName: "Unión Radio Deportes 1090 AM · Onda 90.3 FM",
-    dial: "1090 AM Caracas · 90.3 FM La Guaira",
-    city: "La Guaira / Gran Caracas",
-    webPlayerUrl: "https://mundour.com/union-radio-deportes/",
-    streamUrl: "https://stream.zeno.fm/f97vcm325v8uv",
+    stationName: "Candela Pura 91.9 FM · RQ 910 AM",
+    dial: "91.9 FM Caracas · 910 AM",
+    city: "Caracas / La Guaira",
+    webPlayerUrl: "https://acp2.lorini.net:58400/stream",
+    streamUrl: "https://acp2.lorini.net:58400/stream",
+    embedType: "audio",
+    stations: [
+      {
+        id: "candela",
+        name: "Candela Pura 91.9 FM",
+        dial: "91.9 FM Caracas",
+        streamUrl: "https://acp2.lorini.net:58400/stream",
+        webPlayerUrl: "https://acp2.lorini.net:58400/stream",
+        embedType: "audio",
+      },
+      {
+        id: "rq910",
+        name: "RQ 910 AM",
+        dial: "910 AM Caracas",
+        streamUrl: "https://acp2.lorini.net:58500/stream",
+        webPlayerUrl: "https://acp2.lorini.net:58500/stream",
+        embedType: "audio",
+      },
+    ],
     narrators: "Atilano Hidalgo Peña, Carlos Valmore Rodríguez, Gabriel Chávez",
-    description: "La samba y las emociones de los Tiburones de La Guaira en vivo.",
+    description: "Transmisión oficial de los Tiburones de La Guaira con la samba y la emoción en vivo.",
   },
-  ARA: {
-    circuitName: "Circuito Radial Tigres de Aragua",
-    stationName: "Aragüeña 99.5 FM · Fiesta 106.5 FM",
-    dial: "99.5 FM / 106.5 FM Maracay",
-    city: "Maracay / Región Central",
-    webPlayerUrl: "https://araguena995fm.com/",
-    narrators: "Héctor Cordido, Manuel Rodríguez, David Concepción Jr.",
-    description: "Transmisión bengalí desde el José Pérez Colmenares para todo el estado Aragua.",
+
+  // Navegantes del Magallanes: Hot 94 FM (hot94.fm)
+  MAG: {
+    circuitName: "Circuito Radial Magallanes",
+    stationName: "Hot 94 FM (FM Center)",
+    dial: "94.1 FM Caracas · hot94.fm",
+    city: "Caracas / Valencia",
+    webPlayerUrl: "https://hot94.fm/",
+    streamUrl: "https://acp2.lorini.net:58300/stream",
+    embedType: "audio",
+    stations: [
+      {
+        id: "hot94",
+        name: "Hot 94.1 FM",
+        dial: "94.1 FM",
+        streamUrl: "https://acp2.lorini.net:58300/stream",
+        webPlayerUrl: "https://hot94.fm/",
+        embedType: "audio",
+      },
+    ],
+    narrators: "Giner García, Carlos Feo, Carlos Tovar Ostos",
+    description: "Voz oficial de la Nave Turca a través de Hot 94.1 FM y la cadena Magallanes.",
   },
-  ZUL: {
-    circuitName: "Circuito Radial Águilas del Zulia",
-    stationName: "Urbe 96.3 FM · Fe y Alegría 88.1 FM",
-    dial: "96.3 FM / 88.1 FM Maracaibo",
-    city: "Maracaibo / Todo el Zulia",
-    webPlayerUrl: "https://www.urbe.edu/urbefm/",
-    streamUrl: "https://stream.zeno.fm/k2kzvdf2m0hvv",
-    narrators: "Joan Urdaneta, Rafael Petit, Rodolfo Rincón",
-    description: "El nido rapaz en vivo con el béisbol y la gaita zuliana desde el Luis Aparicio El Grande.",
+
+  // Leones del Caracas: Unión Radio (unionradio.net/live-pt/)
+  CAR: {
+    circuitName: "Circuito Unión Radio (Leones)",
+    stationName: "Unión Radio Live · La Mega 107.3 FM",
+    dial: "107.9 FM / 107.3 FM · unionradio.net/live-pt",
+    city: "Caracas / Red Nacional",
+    webPlayerUrl: "https://unionradio.net/live-pt/",
+    embedUrl: "https://unionradio.net/live-pt/",
+    embedType: "iframe",
+    narrators: "Fernando Arreaza, Efraín Zavarce, Pascual Artiles",
+    description: "Transmisión oficial de los Leones del Caracas a través de Unión Radio en vivo.",
   },
-  MAR: {
-    circuitName: "Circuito Radial Bravos de Margarita",
-    stationName: "Reina 96.7 FM · Kys 101.5 FM",
-    dial: "96.7 FM Porlamar · 101.5 FM Caracas",
-    city: "Isla de Margarita / Caracas",
-    webPlayerUrl: "https://reina967fm.com/",
-    narrators: "Guillermo Rodríguez, David Naranjo, Trina Ballesteros",
-    description: "La voz brava insular desde el Estadio Nueva Esparta de Guatamare.",
+
+  // Cardenales de Lara: Cardenales FM (cardenalesfm.net)
+  LAR: {
+    circuitName: "Circuito Cardenales de Lara",
+    stationName: "Cardenales 92.1 FM",
+    dial: "92.1 FM Barquisimeto · cardenalesfm.net",
+    city: "Barquisimeto / Centroccidente",
+    webPlayerUrl: "https://www.cardenalesfm.net/",
+    streamUrl: "https://server6.globalhostla.com:9308/stream",
+    embedUrl:
+      "https://player.globalstreaming.com.ve/?nr=CARDENALES%2092.1%20FM&s=6&p=08&dr=cardenalesfm.net&l=logo.png&bgI=background.png&c1=000000&c2=FFFFFF&c3=C91414&c4=FFFFFF&vt=6&i=cardenales921fm",
+    embedType: "audio",
+    narrators: "Alfonso Saer 'El Narrador', Alfonso Saer Gómez, Ignacio Serrano",
+    description: "Transmisión oficial de los Cardenales de Lara en vivo desde Barquisimeto.",
   },
+
+  // Caribes de Anzoátegui: Radio Anzoátegui (onlineradiobox.com/ve/anzoategui/)
   ANZ: {
     circuitName: "Circuito Radial Caribes",
-    stationName: "Circuito Orbital 103.3 FM · Romántica 98.9 FM",
-    dial: "103.3 FM / 98.9 FM Puerto La Cruz",
+    stationName: "Radio Anzoátegui",
+    dial: "Puerto La Cruz · onlineradiobox.com/ve/anzoategui",
     city: "Puerto La Cruz / Oriente",
-    webPlayerUrl: "https://orbitalfm.com/",
+    webPlayerUrl: "https://onlineradiobox.com/ve/anzoategui/",
+    streamUrl: "https://acp2.lorini.net:44008/stream",
+    embedType: "audio",
     narrators: "Tony Cruz, Carlos Tovar Ostos, Luis Ramos",
-    description: "La tribu oriental en vivo desde el Alfonso 'Chico' Carrasquel.",
+    description: "La tribu oriental en vivo con la señal oficial de Radio Anzoátegui.",
+  },
+
+  // Tigres de Aragua: YouTube Tigresdearaguaradio (youtube.com/@Tigresdearaguaradio/streams)
+  ARA: {
+    circuitName: "Circuito Tigres de Aragua Radio",
+    stationName: "Tigres de Aragua Radio (YouTube Live)",
+    dial: "Canal Oficial YouTube @Tigresdearaguaradio",
+    city: "Maracay / En vivo",
+    webPlayerUrl: "https://www.youtube.com/@Tigresdearaguaradio/streams",
+    streamUrl: "https://acp2.lorini.net:58200/stream",
+    embedType: "youtube",
+    embedUrl: "https://www.youtube-nocookie.com/embed/live_stream?channel=UCBOFzNo5SBak7Hi2F6JTENw",
+    narrators: "Héctor Cordido, Manuel Rodríguez, David Concepción Jr.",
+    description: "Transmisión en vivo oficial de Tigres de Aragua Radio a través de su canal de YouTube.",
+  },
+
+  // Bravos de Margarita: Éxitos FM (mundour.com/live-exitos/)
+  MAR: {
+    circuitName: "Circuito Bravos de Margarita",
+    stationName: "Éxitos FM (MundoUR)",
+    dial: "99.7 FM Margarita · mundour.com/live-exitos",
+    city: "Isla de Margarita / Caracas",
+    webPlayerUrl: "https://mundour.com/live-exitos/",
+    embedUrl: "https://mundour.com/live-exitos/",
+    embedType: "iframe",
+    narrators: "Guillermo Rodríguez, David Naranjo, Trina Ballesteros",
+    description: "La voz brava insular a través del circuito Éxitos FM en vivo.",
+  },
+
+  // Águilas del Zulia: Digital 58 Radio (digital58.com.ve/site/digital58-radio/)
+  ZUL: {
+    circuitName: "Circuito Águilas del Zulia",
+    stationName: "Digital 58 Radio",
+    dial: "Maracaibo / Todo el Zulia · digital58.com.ve",
+    city: "Maracaibo / Todo el Zulia",
+    webPlayerUrl: "https://digital58.com.ve/site/digital58-radio/",
+    streamUrl: "https://stream.zeno.fm/swp0kueen98uv",
+    embedUrl:
+      "https://cp.usastreams.com/pr2g/APPlayerRadioHTML5.aspx?stream=http://stream.zeno.fm/swp0kueen98uv&fondo=05&formato=mp3&color=7&titulo=2&autoStart=20&vol=5&tipo=22&nombre=Digital58+Radio&botonPlay=2&server=http://stream.zeno.fm/status.xslCHUMILLASmount=/swp0kueen98uv",
+    embedType: "audio",
+    narrators: "Joan Urdaneta, Rafael Petit, Rodolfo Rincón",
+    description: "El nido rapaz en vivo con el béisbol de las Águilas del Zulia en Digital 58.",
   },
 };
 
@@ -114,7 +176,7 @@ export function resolveTeamRadio(
 ): RadioBroadcastInfo {
   const normCode = (teamCode || "").toUpperCase().trim();
 
-  // 1. LVBP Teams
+  // 1. LVBP Teams: Exact sources provided by user
   if (LVBP_RADIO_CIRCUITS[normCode]) {
     const meta = LVBP_RADIO_CIRCUITS[normCode];
     return {
@@ -126,6 +188,9 @@ export function resolveTeamRadio(
       city: meta.city,
       webPlayerUrl: meta.webPlayerUrl,
       streamUrl: meta.streamUrl,
+      embedType: meta.embedType,
+      embedUrl: meta.embedUrl,
+      stations: meta.stations,
       narrators: meta.narrators,
       isSpanish: true,
     };
@@ -151,6 +216,8 @@ export function resolveTeamRadio(
         dial: callSign,
         city: "Transmisión Oficial en Español",
         webPlayerUrl: "https://www.mlb.com/live-stream-games",
+        embedType: "iframe",
+        embedUrl: "https://www.mlb.com/live-stream-games",
         narrators: "Transmisión en Español",
         isSpanish: true,
       };
@@ -167,6 +234,8 @@ export function resolveTeamRadio(
         dial: callSign,
         city: "Señal Radial Oficial",
         webPlayerUrl: "https://www.mlb.com/live-stream-games",
+        embedType: "iframe",
+        embedUrl: "https://www.mlb.com/live-stream-games",
         narrators: "MLB Radio Broadcast",
         isSpanish: primaryBc.language === "es",
       };
@@ -184,6 +253,8 @@ export function resolveTeamRadio(
       dial: mlbDef.dial,
       city: mlbDef.spanish ? `Español: ${mlbDef.spanish}` : "Transmisión Oficial MLB",
       webPlayerUrl: "https://www.mlb.com/live-stream-games",
+      embedType: "iframe",
+      embedUrl: "https://www.mlb.com/live-stream-games",
       narrators: "MLB Audio / Gameday",
       isSpanish: false,
     };
@@ -247,4 +318,3 @@ export function openOfficialRadio(radio: RadioBroadcastInfo): boolean {
   }
   return true;
 }
-

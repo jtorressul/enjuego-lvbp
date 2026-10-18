@@ -63,6 +63,16 @@ export interface ScheduleGame {
   };
 }
 
+export interface RadioStationOption {
+  id: string;
+  name: string;
+  dial: string;
+  streamUrl?: string;
+  webPlayerUrl: string;
+  embedType?: "audio" | "iframe" | "youtube";
+  embedUrl?: string;
+}
+
 export interface RadioBroadcastInfo {
   teamCode: string;
   side: "away" | "home";
@@ -72,6 +82,9 @@ export interface RadioBroadcastInfo {
   city: string;
   webPlayerUrl?: string;
   streamUrl?: string;
+  embedType?: "audio" | "iframe" | "youtube";
+  embedUrl?: string;
+  stations?: RadioStationOption[];
   narrators?: string;
   isSpanish?: boolean;
 }

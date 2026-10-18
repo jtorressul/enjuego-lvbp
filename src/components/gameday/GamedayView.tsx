@@ -194,6 +194,8 @@ export function GamedayView({
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const [radioPlaying, setRadioPlaying] = useState(false);
   const [radioTeam, setRadioTeam] = useState<"away" | "home">("home");
+  const [selectedStationId, setSelectedStationId] = useState<string>("");
+  const [showInlineEmbed, setShowInlineEmbed] = useState(false);
   const [audioBuffering, setAudioBuffering] = useState(false);
   const [audioError, setAudioError] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -215,6 +217,21 @@ export function GamedayView({
       radioTeam
     );
   }, [game, radioTeam]);
+
+  const activeStation = React.useMemo(() => {
+    if (activeRadio.stations && activeRadio.stations.length > 0) {
+      return (
+        activeRadio.stations.find((s) => s.id === selectedStationId) ||
+        activeRadio.stations[0]
+      );
+    }
+    return null;
+  }, [activeRadio, selectedStationId]);
+
+  const effectiveStreamUrl = activeStation?.streamUrl || activeRadio.streamUrl;
+  const effectiveWebUrl = activeStation?.webPlayerUrl || activeRadio.webPlayerUrl;
+  const effectiveEmbedUrl = activeStation?.embedUrl || activeRadio.embedUrl;
+  const effectiveEmbedType = activeStation?.embedType || activeRadio.embedType;
 
   useEffect(() => {
     let active = true;
@@ -338,10 +355,10 @@ export function GamedayView({
       return;
     }
 
-    if (activeRadio?.streamUrl) {
+    if (effectiveStreamUrl) {
       setAudioBuffering(true);
       setAudioError(false);
-      audio.src = activeRadio.streamUrl;
+      audio.src = effectiveStreamUrl;
       audio.volume = isMuted ? 0 : radioVolume;
       audio.load();
       audio
@@ -358,7 +375,7 @@ export function GamedayView({
       setAudioBuffering(false);
       setAudioError(false);
     }
-  }, [radioPlaying, activeRadio, isMuted, radioVolume]);
+  }, [radioPlaying, effectiveStreamUrl, isMuted, radioVolume]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -1793,7 +1810,7 @@ export function GamedayView({
                 </div>
                 <div className="min-w-0">
                   <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" /> Circuito Radial Oficial
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" /> Circuito Radial en Vivo
                   </span>
                   <h3 className="text-sm font-black text-slate-900 truncate" title={activeRadio.circuitName}>
                     {activeRadio.circuitName}
@@ -1801,7 +1818,7 @@ export function GamedayView({
                 </div>
               </div>
 
-              {activeRadio.streamUrl ? (
+              {effectiveStreamUrl ? (
                 <button
                   type="button"
                   onClick={() => setRadioPlaying((p) => !p)}
@@ -1819,6 +1836,15 @@ export function GamedayView({
                   ) : (
                     <Play className="w-4 h-4 ml-0.5 fill-slate-700" />
                   )}
+                </button>
+              ) : effectiveEmbedUrl ? (
+                <button
+                  type="button"
+                  onClick={() => setShowInlineEmbed((s) => !s)}
+                  className="px-2.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition cursor-pointer flex items-center gap-1.5 shadow-2xs shrink-0 active:scale-95"
+                >
+                  <Play className="w-3 h-3 fill-slate-950" />
+                  <span>{showInlineEmbed ? "Ocultar" : "Escuchar"}</span>
                 </button>
               ) : (
                 <button
@@ -1845,6 +1871,7 @@ export function GamedayView({
                     onClick={() => {
                       if (radioTeam !== side) {
                         setRadioTeam(side);
+                        setSelectedStationId("");
                         setAudioError(false);
                       }
                     }}
@@ -1861,15 +1888,42 @@ export function GamedayView({
               })}
             </div>
 
+            {/* Sub-selector de Emisoras cuando el equipo tiene varias (ej: Tiburones Candela Pura + RQ910) */}
+            {activeRadio.stations && activeRadio.stations.length > 1 && (
+              <div className="flex flex-wrap items-center gap-1.5 p-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                <span className="text-[10px] font-black uppercase text-slate-500 pl-1">Señal:</span>
+                {activeRadio.stations.map((st) => {
+                  const isCur = (activeStation?.id || activeRadio.stations![0].id) === st.id;
+                  return (
+                    <button
+                      key={st.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedStationId(st.id);
+                        setAudioError(false);
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-black transition cursor-pointer flex items-center gap-1 ${
+                        isCur
+                          ? "bg-amber-400 text-slate-950 shadow-2xs"
+                          : "bg-white hover:bg-slate-100 text-slate-700 border border-slate-200"
+                      }`}
+                    >
+                      <span>{st.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             {/* Ficha Informativa del Circuito Radial */}
             <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 text-xs space-y-2">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="font-black text-slate-900 flex items-center gap-1.5">
-                    <span>{activeRadio.stationName}</span>
+                    <span>{activeStation?.name || activeRadio.stationName}</span>
                   </div>
                   <div className="text-[11px] font-bold text-amber-700 mt-0.5">
-                    {activeRadio.dial}
+                    {activeStation?.dial || activeRadio.dial}
                   </div>
                 </div>
                 <span className="shrink-0 text-[10px] font-bold text-slate-500 bg-slate-200/60 px-2 py-0.5 rounded">
@@ -1884,12 +1938,25 @@ export function GamedayView({
                 </div>
               )}
 
-              {/* Barra de Estado y Botón Sintonizar PiP */}
+              {/* Reproductor embebido en la web (si es YouTube o Iframe y el usuario lo activa) */}
+              {showInlineEmbed && effectiveEmbedUrl && (
+                <div className="mt-2 rounded-xl overflow-hidden border border-slate-300 bg-black aspect-video relative shadow-inner">
+                  <iframe
+                    src={effectiveEmbedUrl}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    title={activeRadio.circuitName}
+                  />
+                </div>
+              )}
+
+              {/* Barra de Estado y Controles de Audio */}
               <div className="pt-2 border-t border-slate-200/60 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5">
                   {audioBuffering ? (
                     <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700">
-                      <Loader2 className="w-3 h-3 animate-spin" /> Conectando señal…
+                      <Loader2 className="w-3 h-3 animate-spin" /> Conectando señal en vivo…
                     </span>
                   ) : radioPlaying && !audioError ? (
                     <span className="inline-flex items-center gap-1 text-[11px] font-black text-emerald-700">
@@ -1897,13 +1964,13 @@ export function GamedayView({
                     </span>
                   ) : (
                     <span className="text-[11px] font-medium text-slate-500">
-                      Señal radial verificada
+                      Audio directo dentro de la web
                     </span>
                   )}
                 </div>
 
                 <div className="flex items-center gap-1.5">
-                  {activeRadio.streamUrl && radioPlaying && (
+                  {effectiveStreamUrl && radioPlaying && (
                     <button
                       type="button"
                       onClick={() => setIsMuted((m) => !m)}
@@ -1914,14 +1981,24 @@ export function GamedayView({
                     </button>
                   )}
 
-                  {activeRadio.webPlayerUrl && (
+                  {effectiveEmbedUrl && effectiveEmbedType === "youtube" && (
+                    <button
+                      type="button"
+                      onClick={() => setShowInlineEmbed((s) => !s)}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 text-[10px] font-black text-red-800 transition cursor-pointer"
+                    >
+                      <span>{showInlineEmbed ? "Ocultar Video" : "Ver YouTube"}</span>
+                    </button>
+                  )}
+
+                  {effectiveWebUrl && (
                     <button
                       type="button"
                       onClick={() => openOfficialRadio(activeRadio)}
                       className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 border border-amber-300 text-[11px] font-black text-amber-950 transition cursor-pointer"
-                      title="Abrir reproductor oficial de la emisora en ventana flotante"
+                      title="Abrir en ventana flotante"
                     >
-                      <span>Sintonizar en PiP</span>
+                      <span>PiP</span>
                       <ExternalLink className="w-3 h-3" />
                     </button>
                   )}
@@ -1930,7 +2007,7 @@ export function GamedayView({
 
               {audioError && (
                 <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-900 leading-snug">
-                  La señal directa de esta emisora requiere su reproductor web oficial. Toca <strong>"Sintonizar en PiP"</strong> arriba para escucharla en una ventanita flotante sin cerrar el juego.
+                  La señal directa de esta emisora requiere su reproductor web oficial. Toca <strong>"PiP"</strong> para escucharla en una ventanita flotante sin cerrar el juego.
                 </div>
               )}
             </div>

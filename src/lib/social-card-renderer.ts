@@ -870,8 +870,17 @@ export async function renderSocialCard(
           ctx.fill();
           ctx.font = '700 32px "Barlow Condensed", sans-serif';
           ctx.fillStyle = "#ffffff";
+          let previewPill = (statusPillText || "7:00 PM").trim().toUpperCase();
+          if (
+            previewPill === "IN PROGRESS" ||
+            previewPill === "IN_PROGRESS" ||
+            previewPill === "LIVE" ||
+            /^IN\s*PROGRESS/i.test(previewPill)
+          ) {
+            previewPill = "EN VIVO";
+          }
           ctx.fillText(
-            (statusPillText || "7:00 PM").toUpperCase(),
+            previewPill,
             W / 2,
             centerY + 40 + pillH / 2 + 1
           );
@@ -890,7 +899,15 @@ export async function renderSocialCard(
           ctx.fillText(String(homeScore), W - 430, centerY + 14);
           ctx.restore();
 
-          const label = (statusPillText || "FINAL").toUpperCase();
+          let label = (statusPillText || "FINAL").trim().toUpperCase();
+          if (
+            label === "IN PROGRESS" ||
+            label === "IN_PROGRESS" ||
+            label === "LIVE" ||
+            /^IN\s*PROGRESS/i.test(label)
+          ) {
+            label = "EN VIVO";
+          }
           ctx.save();
           ctx.font = '400 34px "Bebas Neue", sans-serif';
           const pillW = Math.max(120, ctx.measureText(label).width + 44);
@@ -1038,9 +1055,16 @@ export async function renderSocialCard(
             ctx.font = '600 54px "Teko", "Bebas Neue", sans-serif';
             ctx.fillStyle = theme.isDark ? "#ffffff" : "#b3161a";
             ctx.fillText(`${g.awayScore}  -  ${g.homeScore}`, W / 2, cy - 4);
-            ctx.font = '700 18px "Barlow Condensed", sans-serif';
-            ctx.fillStyle = theme.footerMuted;
-            ctx.fillText((g.inning || "FINAL").toUpperCase(), W / 2, cy + 28);
+            let slateInning = (g.inning || (g.status === "IN_PROGRESS" ? "EN VIVO" : "FINAL")).trim().toUpperCase();
+            if (
+              slateInning === "IN PROGRESS" ||
+              slateInning === "IN_PROGRESS" ||
+              slateInning === "LIVE" ||
+              /^IN\s*PROGRESS/i.test(slateInning)
+            ) {
+              slateInning = "EN VIVO";
+            }
+            ctx.fillText(slateInning, W / 2, cy + 28);
           } else {
             ctx.fillStyle = "#b3161a";
             drawRoundedRect(ctx, W / 2 - 78, cy - 22, 156, 44, 22);

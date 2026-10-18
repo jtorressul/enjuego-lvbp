@@ -168,7 +168,11 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
       } else if (activeMode === "live_single") {
         setHeadlineWord1("EN");
         setHeadlineWord2("VIVO");
-        setStatusPillText((game.inning || "EN JUEGO").toUpperCase());
+        let pill = (game.inning || "EN JUEGO").trim().toUpperCase();
+        if (/^IN\s*PROGRESS/i.test(pill) || pill === "IN_PROGRESS" || pill === "LIVE") {
+          pill = "EN JUEGO";
+        }
+        setStatusPillText(pill);
       } else {
         setHeadlineWord1("RESULTADO");
         setHeadlineWord2("FINAL");

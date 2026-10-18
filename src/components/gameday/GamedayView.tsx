@@ -599,18 +599,21 @@ export function GamedayView({
         {onShareGame && game && (
           <button
             type="button"
-            onClick={() =>
+            onClick={() => {
+              const liveInning =
+                game.inningState && game.inningState.inning
+                  ? `${game.inningState.top ? "Alta" : "Baja"} ${game.inningState.inning}°`
+                  : "En Vivo";
               onShareGame({
                 ...game,
                 inning:
-                  game.statusLabel ||
-                  (game.inningState
-                    ? `${game.inningState.top ? "Alta" : "Baja"} ${game.inningState.inning}°`
+                  game.status === "IN_PROGRESS"
+                    ? liveInning
                     : game.status === "FINISHED"
                       ? "Final"
-                      : game.time),
-              })
-            }
+                      : game.time,
+              });
+            }}
             className="inline-flex items-center gap-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 px-3 py-1.5 text-xs font-black transition cursor-pointer shadow-2xs"
           >
             <Share2 className="w-3.5 h-3.5" />

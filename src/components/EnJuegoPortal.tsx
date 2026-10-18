@@ -643,7 +643,13 @@ export function EnJuegoPortal({
 
   const handleShareGame = (e: React.MouseEvent, game: ScheduleGame) => {
     e.stopPropagation();
-    setShareModalGame(game);
+    const resolvedInning =
+      game.status === "IN_PROGRESS"
+        ? game.inning && !/^in\s*progress/i.test(game.inning)
+          ? game.inning
+          : "En Vivo"
+        : game.inning;
+    setShareModalGame({ ...game, inning: resolvedInning });
   };
 
   // Generate real game recaps / crónicas directly from LVBP games
@@ -900,7 +906,9 @@ export function EnJuegoPortal({
                 >
                   {isLive && <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />}
                   {isLive ? (
-                    `EN VIVO · ${game.inning}`
+                    game.inning && !/^in\s*progress/i.test(game.inning) && !/^en vivo/i.test(game.inning)
+                      ? `EN VIVO · ${game.inning}`
+                      : "EN VIVO"
                   ) : isFinal ? (
                     game.inning
                   ) : (

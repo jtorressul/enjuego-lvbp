@@ -61,12 +61,26 @@ export function ShareGameBannerModal({ game, onClose }: ShareGameBannerModalProp
         ? "VIVO"
         : "FINAL";
 
+  const resolveInningPill = (inning?: string) => {
+    if (!inning || !inning.trim()) return "EN VIVO";
+    const clean = inning.trim();
+    if (
+      /^in\s*progress/i.test(clean) ||
+      /^in_progress/i.test(clean) ||
+      /^live/i.test(clean)
+    ) {
+      return "EN VIVO";
+    }
+    if (/^final/i.test(clean)) return "FINAL";
+    return clean.toUpperCase();
+  };
+
   const statusPillText = !game
     ? "HOY"
     : templateMode === "preview_single"
       ? game.time || "7:00 PM"
       : templateMode === "live_single"
-        ? (game.inning || "EN VIVO").toUpperCase()
+        ? resolveInningPill(game.inning)
         : "FINAL";
 
   const renderBanner = useCallback(async () => {

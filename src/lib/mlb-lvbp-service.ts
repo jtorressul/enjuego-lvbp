@@ -200,6 +200,27 @@ function mapStatus(statusObj: any): GameStatus {
   return "SCHEDULED";
 }
 
+export function translateDetailedState(detailedState?: string, status?: GameStatus): string {
+  if (!detailedState) {
+    if (status === "IN_PROGRESS") return "En Juego";
+    if (status === "FINISHED") return "Final";
+    if (status === "WARMUP") return "Calentamiento";
+    if (status === "POSTPONED") return "Pospuesto";
+    if (status === "DELAYED") return "Demorado";
+    return "Programado";
+  }
+  const s = detailedState.trim();
+  if (/^in\s*progress/i.test(s)) return "En Juego";
+  if (/^live/i.test(s)) return "En Vivo";
+  if (/^final/i.test(s) || /^game over/i.test(s)) return "Final";
+  if (/^pre-game/i.test(s) || /^warmup/i.test(s)) return "Calentamiento";
+  if (/^postponed/i.test(s)) return "Pospuesto";
+  if (/^delayed/i.test(s)) return "Demorado";
+  if (/^suspended/i.test(s)) return "Suspendido";
+  if (/^scheduled/i.test(s)) return "Programado";
+  return s;
+}
+
 function formatCaracasTime(isoDate: string): string {
   if (!isoDate) return "7:00 PM";
   try {
@@ -295,8 +316,10 @@ export async function fetchLvbpSchedule(season = "2026"): Promise<ScheduleGame[]
         const isTop = Boolean(ls.isTopInning);
         const currentInning = Number(ls.currentInning || 0);
         const inningLabel =
-          status === "IN_PROGRESS" && currentInning
-            ? `${isTop ? "Alta" : "Baja"} ${currentInning}°`
+          status === "IN_PROGRESS"
+            ? currentInning
+              ? `${isTop ? "Alta" : "Baja"} ${currentInning}°`
+              : "En Vivo"
             : status === "FINISHED"
               ? currentInning && currentInning !== 9
                 ? `Final/${currentInning}`
@@ -320,7 +343,7 @@ export async function fetchLvbpSchedule(season = "2026"): Promise<ScheduleGame[]
           startsAt: g.gameDate,
           time: formatCaracasTime(g.gameDate),
           status,
-          statusLabel: g.status?.detailedState,
+          statusLabel: translateDetailedState(g.status?.detailedState, status),
           inning: inningLabel,
           isTopInning: isTop,
           currentInning: currentInning || undefined,
@@ -611,7 +634,7 @@ export function transformMlbLiveFeedToGameday(raw: any): GamedayData {
     startsAt: gd.datetime?.dateTime || "",
     time: formatCaracasTime(gd.datetime?.dateTime),
     status,
-    statusLabel: gd.status?.detailedState,
+    statusLabel: translateDetailedState(gd.status?.detailedState, status),
     venue: gd.venue?.name || homeMeta.venue,
     venueCity: homeMeta.venueCity,
     venueLines: homeMeta.dimensions,
@@ -1074,8 +1097,10 @@ export async function fetchMlbSchedule(season = "2026"): Promise<ScheduleGame[]>
         const isTop = Boolean(ls.isTopInning);
         const currentInning = Number(ls.currentInning || 0);
         const inningLabel =
-          status === "IN_PROGRESS" && currentInning
-            ? `${isTop ? "Alta" : "Baja"} ${currentInning}°`
+          status === "IN_PROGRESS"
+            ? currentInning
+              ? `${isTop ? "Alta" : "Baja"} ${currentInning}°`
+              : "En Vivo"
             : status === "FINISHED"
               ? currentInning && currentInning !== 9
                 ? `Final/${currentInning}`
@@ -1104,7 +1129,7 @@ export async function fetchMlbSchedule(season = "2026"): Promise<ScheduleGame[]>
           startsAt: g.gameDate,
           time: formatCaracasTime(g.gameDate),
           status,
-          statusLabel: g.status?.detailedState,
+          statusLabel: translateDetailedState(g.status?.detailedState, status),
           inning: inningLabel,
           isTopInning: isTop,
           currentInning: currentInning || undefined,

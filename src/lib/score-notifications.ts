@@ -8,7 +8,9 @@ interface SavedGameState {
   awayScore: number;
   homeScore: number;
   status: string;
+  statusLabel?: string;
   inning?: string;
+  notifiedEvents?: string[];
   lastNotifiedAt?: number;
 }
 
@@ -32,12 +34,27 @@ export async function checkAndDispatchGameAlerts(games: ScheduleGame[]): Promise
         awayScore: Number(game.awayScore ?? 0),
         homeScore: Number(game.homeScore ?? 0),
         status: String(game.status || "SCHEDULED"),
+        statusLabel: (game as any).statusLabel || "",
         inning: typeof game.inning === "string" ? game.inning : ((game as any).statusLabel || ""),
+        notifiedEvents: prev?.notifiedEvents || [],
         lastNotifiedAt: prev?.lastNotifiedAt || Date.now(),
       };
 
       if (!prev) {
-        // First time seeing this game, record initial state without false notification
+        // First time seeing this game: record initial state and existing ejections/events to avoid retro-alerts
+        const initialEvents = new Set<string>();
+        const feed = (game as any).feed;
+        if (Array.isArray(feed)) {
+          for (const play of feed) {
+            const candidates = [play.text, ...(Array.isArray(play.actions) ? play.actions : [])].filter(Boolean);
+            for (const item of candidates) {
+              if (/expulsad[oa]|ejected\b|atenci[oó]n m[eé]dica|lesionad[oa]|injury delay/i.test(item)) {
+                initialEvents.add(`${game.id}_${play.i ?? play.inning}_${item.slice(0, 30)}`);
+              }
+            }
+          }
+        }
+        currentScore.notifiedEvents = Array.from(initialEvents);
         await kv.put(key, JSON.stringify(currentScore), { expirationTtl: 86400 * 2 });
         continue;
       }
@@ -56,31 +73,49 @@ export async function checkAndDispatchGameAlerts(games: ScheduleGame[]): Promise
         if (currentScore.awayScore > prev.awayScore) {
           const diff = currentScore.awayScore - prev.awayScore;
           alertTitle = `⚾ ¡CARRERA de ${awayNick}! (${currentScore.awayScore} - ${currentScore.homeScore})`;
-          alertBody = `${awayNick} anotó ${diff > 1 ? `${diff} carreras` : "carrera"} (${game.inning || "En vivo"}). Marcador: ${awayNick} ${currentScore.awayScore} - ${homeNick} ${currentScore.homeScore}.`;
+          alertBody = `${awayNick} anotó ${diff > 1 ? `${diff} carreras` : "carrera"} (${currentScore.inning || "En vivo"}). Marcador: ${awayNick} ${currentScore.awayScore} - ${homeNick} ${currentScore.homeScore}.`;
         } else if (currentScore.homeScore > prev.homeScore) {
           const diff = currentScore.homeScore - prev.homeScore;
           alertTitle = `⚾ ¡CARRERA de ${homeNick}! (${currentScore.homeScore} - ${currentScore.awayScore})`;
-          alertBody = `${homeNick} anotó ${diff > 1 ? `${diff} carreras` : "carrera"} (${game.inning || "En vivo"}). Marcador: ${homeNick} ${currentScore.homeScore} - ${awayNick} ${currentScore.awayScore}.`;
+          alertBody = `${homeNick} anotó ${diff > 1 ? `${diff} carreras` : "carrera"} (${currentScore.inning || "En vivo"}). Marcador: ${homeNick} ${currentScore.homeScore} - ${awayNick} ${currentScore.awayScore}.`;
         }
       }
 
-      // 2. Game just started
-      else if (currentScore.status === "IN_PROGRESS" && prev.status !== "IN_PROGRESS") {
+      // 2. Game just started (Playball)
+      else if (currentScore.status === "IN_PROGRESS" && prev.status !== "IN_PROGRESS" && prev.status !== "DELAYED") {
         alertTitle = `⚾ ¡Comenzó el juego en vivo!`;
         alertBody = `Voz de playball: ${awayNick} vs ${homeNick} ya está en acción. Sigue el marcador jugada a jugada.`;
       }
 
-      // 3. Game just finished
+      // 3. Game finished
       else if (currentScore.status === "FINISHED" && prev.status !== "FINISHED") {
         const winner = currentScore.awayScore > currentScore.homeScore ? awayNick : homeNick;
         alertTitle = `🏆 ¡FINAL: Ganó ${winner}! (${currentScore.awayScore} - ${currentScore.homeScore})`;
         alertBody = `Pizarra final: ${awayNick} ${currentScore.awayScore} - ${homeNick} ${currentScore.homeScore}. Revisa el Box Score completo.`;
       }
 
-      // Save updated state in KV
-      await kv.put(key, JSON.stringify(currentScore), { expirationTtl: 86400 * 2 });
+      // 4. Game delayed by rain or technical issues
+      else if (currentScore.status === "DELAYED" && prev.status !== "DELAYED") {
+        alertTitle = `🌧️ Juego demorado: ${awayNick} vs ${homeNick}`;
+        alertBody = `El juego se encuentra en pausa (${currentScore.statusLabel || "Demorado por lluvia"}). Pizarra: ${awayNick} ${currentScore.awayScore} - ${homeNick} ${currentScore.homeScore} (${currentScore.inning || "En pausa"}). Te avisaremos cuando se reanude.`;
+      }
 
-      // Dispatch alert if score changed or game concluded
+      // 5. Game resumed after delay
+      else if (currentScore.status === "IN_PROGRESS" && prev.status === "DELAYED") {
+        alertTitle = `⚾ ¡Se reanuda el juego! ${awayNick} vs ${homeNick}`;
+        alertBody = `Vuelven las acciones al terreno (${currentScore.inning || "En vivo"}). Marcador: ${awayNick} ${currentScore.awayScore} - ${homeNick} ${currentScore.homeScore}.`;
+      }
+
+      // 6. Game suspended or postponed officially
+      else if (
+        (currentScore.status === "POSTPONED" && prev.status !== "POSTPONED") ||
+        (currentScore.statusLabel?.toLowerCase().includes("suspendid") && !prev.statusLabel?.toLowerCase().includes("suspendid"))
+      ) {
+        alertTitle = `⚠️ Juego suspendido: ${awayNick} vs ${homeNick}`;
+        alertBody = `El encuentro ha sido suspendido oficialmente (${currentScore.statusLabel || "Condiciones climáticas"}). Marcador: ${awayNick} ${currentScore.awayScore} - ${homeNick} ${currentScore.homeScore}.`;
+      }
+
+      // Dispatch primary score/status alert if triggered
       if (alertTitle && alertBody) {
         await dispatchPushAlert({
           title: alertTitle,
@@ -91,6 +126,49 @@ export async function checkAndDispatchGameAlerts(games: ScheduleGame[]): Promise
           console.warn("[ScoreAlerts] Error sending push:", err);
         });
       }
+
+      // 7. Check for Player Ejection or Medical Injury in Gameday Play-by-Play Feed
+      const feed = (game as any).feed;
+      const notifiedEvents = new Set(prev.notifiedEvents || []);
+
+      if (Array.isArray(feed)) {
+        for (const play of feed) {
+          const candidates: string[] = [play.text, ...(Array.isArray(play.actions) ? play.actions : [])].filter(Boolean);
+
+          for (const item of candidates) {
+            const isEjection = /expulsad[oa]|ejected\b/i.test(item);
+            const isInjury = /atenci[oó]n m[eé]dica|lesionad[oa]|injury delay/i.test(item);
+
+            if (isEjection || isInjury) {
+              const eventId = `${game.id}_${play.i ?? play.inning}_${item.slice(0, 30)}`;
+              if (!notifiedEvents.has(eventId)) {
+                notifiedEvents.add(eventId);
+
+                const playInning = play.inning ? `${play.top ? "Alta" : "Baja"} ${play.inning}°` : (currentScore.inning || "En juego");
+                const eventTitle = isEjection
+                  ? `🟥 ¡EXPULSIÓN: ${awayNick} vs ${homeNick}!`
+                  : `🚑 Pausa médica: ${awayNick} vs ${homeNick}`;
+                const eventBody = `${item} (${playInning}). Marcador: ${awayNick} ${currentScore.awayScore} - ${homeNick} ${currentScore.homeScore}.`;
+
+                await dispatchPushAlert({
+                  title: eventTitle,
+                  body: eventBody,
+                  url: `/juego/${game.id}`,
+                  targetTeams,
+                }).catch((err) => {
+                  console.warn("[ScoreAlerts] Error sending ejection push:", err);
+                });
+              }
+            }
+          }
+        }
+      }
+
+      // Keep recent notified events to prevent memory bloat in KV
+      currentScore.notifiedEvents = Array.from(notifiedEvents).slice(-50);
+
+      // Save updated state in KV
+      await kv.put(key, JSON.stringify(currentScore), { expirationTtl: 86400 * 2 });
     }
   } catch (err) {
     console.warn("[ScoreAlerts] Error in checkAndDispatchGameAlerts:", err);

@@ -4,6 +4,7 @@ import { getFallbackGameday, getFallbackRoster, getFallbackSchedule } from "./lv
 import {
   getOfficialBroadcastsMap,
   resolveRealGameBroadcast,
+  resolveGameYouTubeVideo,
   OfficialBroadcastEntry,
 } from "./lvbp-broadcasts";
 import { resolveTeamRadio } from "./radio-circuits";
@@ -339,6 +340,13 @@ export async function fetchLvbpSchedule(season = "2026"): Promise<ScheduleGame[]
           officialDate,
           broadcastMap
         );
+        const ytVideo = resolveGameYouTubeVideo(
+          g.gamePk,
+          officialDate,
+          awayTeam.code,
+          homeTeam.code,
+          broadcastMap
+        );
 
         games.push({
           id: String(g.gamePk),
@@ -370,6 +378,8 @@ export async function fetchLvbpSchedule(season = "2026"): Promise<ScheduleGame[]
           venueCity: homeMeta.venueCity,
           tv: tvChannels.join(" · "),
           tvChannels,
+          youtubeVideoId: ytVideo?.videoId,
+          youtubeUrl: ytVideo?.url,
           radio: {
             away: resolveTeamRadio(awayTeam.code, "away", g.broadcasts),
             home: resolveTeamRadio(homeTeam.code, "home", g.broadcasts),
@@ -628,6 +638,12 @@ export function transformMlbLiveFeedToGameday(raw: any): GamedayData {
     raw.broadcasts || gd.broadcasts,
     officialDate
   );
+  const ytVideo = resolveGameYouTubeVideo(
+    raw.gamePk || gd.game?.pk,
+    officialDate,
+    awayTeam.code,
+    homeTeam.code
+  );
 
   return {
     id: String(raw.gamePk || gd.game?.pk),
@@ -643,6 +659,8 @@ export function transformMlbLiveFeedToGameday(raw: any): GamedayData {
     venueLines: homeMeta.dimensions,
     tv: tvChannels.join(" · "),
     tvChannels,
+    youtubeVideoId: ytVideo?.videoId,
+    youtubeUrl: ytVideo?.url,
     radio: {
       away: resolveTeamRadio(awayTeam.code, "away", raw.broadcasts || gd.broadcasts),
       home: resolveTeamRadio(homeTeam.code, "home", raw.broadcasts || gd.broadcasts),

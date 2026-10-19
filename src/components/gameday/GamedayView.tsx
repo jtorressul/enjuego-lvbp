@@ -583,6 +583,15 @@ export function GamedayView({
     }
   };
 
+  const effectiveYtId =
+    game.youtubeVideoId ||
+    (game.id === "870075" ||
+    (game.date === "2026-10-19" &&
+      ((game.awayTeam.code === "MAG" && game.homeTeam.code === "LAR") ||
+        (game.awayTeam.code === "LAR" && game.homeTeam.code === "MAG")))
+      ? "vKzJd5maIJ8"
+      : null);
+
   const totalVotes = votes.away + votes.home;
   const awayVotePct = totalVotes > 0 ? Math.round((votes.away / totalVotes) * 100) : 50;
   const homeVotePct = totalVotes > 0 ? 100 - awayVotePct : 50;
@@ -608,83 +617,124 @@ export function GamedayView({
 
             if (hasOpenTv && primaryOpenChannel) {
               const primaryInfo = getChannelInfo(primaryOpenChannel);
+              const isYouTube =
+                primaryOpenChannel.toLowerCase().includes("youtube") || Boolean(effectiveYtId);
+
               return (
                 <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shadow-2xs">
-                        <Tv className="w-5 h-5" />
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-2xs ${
+                        isYouTube ? "bg-red-50 border border-red-200 text-red-600" : "bg-emerald-50 border border-emerald-200 text-emerald-600"
+                      }`}>
+                        {isYouTube ? <Play className="w-4 h-4 fill-current" /> : <Tv className="w-5 h-5" />}
                       </div>
                       <div>
-                        <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> TV Abierta Nacional
+                        <span className={`text-[10px] font-black uppercase tracking-wider flex items-center gap-1 ${
+                          isYouTube ? "text-red-600" : "text-emerald-600"
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${
+                            isYouTube ? "bg-red-500" : "bg-emerald-500"
+                          }`} /> {isYouTube ? "YouTube LVBP Oficial" : "TV Abierta Nacional"}
                         </span>
                         <h3 className="text-sm font-black text-slate-900">
-                          Señal en Vivo Gratuita
+                          {isYouTube ? "Transmisión en Vivo" : "Señal en Vivo Gratuita"}
                         </h3>
                       </div>
                     </div>
 
-                    <span className="px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-[10px] font-black text-emerald-800">
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-black border ${
+                      isYouTube ? "bg-red-50 border-red-200 text-red-800" : "bg-emerald-50 border-emerald-200 text-emerald-800"
+                    }`}>
                       {primaryOpenChannel}
                     </span>
                   </div>
 
-                  {/* TV Screen Preview Box (Desktop PiP launcher) */}
-                  <div
-                    className="keep-dark rounded-xl p-4 text-white relative overflow-hidden shadow-sm flex flex-col justify-between min-h-[140px] border"
-                    style={{
-                      background: "linear-gradient(135deg, #0b1324 0%, #13203c 100%)",
-                      borderColor: "#1e293b",
-                      color: "#ffffff",
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span
-                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-black tracking-wider uppercase"
-                        style={{ backgroundColor: "#e11d48", color: "#ffffff" }}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" /> SEÑAL EN VIVO
-                      </span>
-                      <span className="text-[11px] font-bold" style={{ color: "#94a3b8" }}>
-                        {game.awayTeam.shortName} vs {game.homeTeam.shortName}
-                      </span>
-                    </div>
-
-                    <div className="my-2.5">
-                      <div className="text-xs font-black flex items-center gap-1.5" style={{ color: "#ffffff" }}>
-                        Canal: {openTvList.join(" · ")}
+                  {isYouTube ? (
+                    /* Inline YouTube Player (Sin PiP, embebido directo en la web) */
+                    <div className="space-y-2">
+                      <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-800 shadow-md">
+                        <iframe
+                          src={`https://www.youtube-nocookie.com/embed/${effectiveYtId || "vKzJd5maIJ8"}?autoplay=0&rel=0&modestbranding=1`}
+                          title="Transmisión Oficial en Vivo"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          allowFullScreen
+                          className="w-full h-full border-0"
+                        />
                       </div>
-                      <p className="text-[11px] font-medium mt-0.5 leading-snug" style={{ color: "#cbd5e1" }}>
-                        {primaryInfo.description} Sintoniza en una ventanita flotante para seguir las jugadas al instante sin salir de la web.
-                      </p>
+                      <div className="flex items-center justify-between text-[11px] px-1 text-slate-500">
+                        <span className="flex items-center gap-1.5 font-bold text-red-600">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
+                          Directo en la web (sin PiP)
+                        </span>
+                        <a
+                          href={game.youtubeUrl || `https://www.youtube.com/watch?v=${effectiveYtId || "vKzJd5maIJ8"}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 font-bold text-slate-600 hover:text-red-600 transition"
+                        >
+                          <span>Abrir en YouTube</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
                     </div>
+                  ) : (
+                    /* TV Screen Preview Box (Desktop PiP launcher for other open channels) */
+                    <div
+                      className="keep-dark rounded-xl p-4 text-white relative overflow-hidden shadow-sm flex flex-col justify-between min-h-[140px] border"
+                      style={{
+                        background: "linear-gradient(135deg, #0b1324 0%, #13203c 100%)",
+                        borderColor: "#1e293b",
+                        color: "#ffffff",
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span
+                          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-black tracking-wider uppercase"
+                          style={{ backgroundColor: "#e11d48", color: "#ffffff" }}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" /> SEÑAL EN VIVO
+                        </span>
+                        <span className="text-[11px] font-bold" style={{ color: "#94a3b8" }}>
+                          {game.awayTeam.shortName} vs {game.homeTeam.shortName}
+                        </span>
+                      </div>
 
-                    <div className="flex items-center gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => openOfficialBroadcast(primaryOpenChannel, gameTitle, "pip")}
-                        className="flex-1 inline-flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition cursor-pointer shadow-sm active:scale-98"
-                      >
-                        <Play className="w-3.5 h-3.5 fill-slate-950" />
-                        <span>Ver {primaryOpenChannel} en PiP</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openOfficialBroadcast(primaryOpenChannel, gameTitle, "popout")}
-                        title="Abrir en ventana grande"
-                        className="p-2 rounded-xl transition cursor-pointer"
-                        style={{
-                          backgroundColor: "#1e293b",
-                          borderColor: "#334155",
-                          border: "1px solid #334155",
-                          color: "#e2e8f0",
-                        }}
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </button>
+                      <div className="my-2.5">
+                        <div className="text-xs font-black flex items-center gap-1.5" style={{ color: "#ffffff" }}>
+                          Canal: {openTvList.join(" · ")}
+                        </div>
+                        <p className="text-[11px] font-medium mt-0.5 leading-snug" style={{ color: "#cbd5e1" }}>
+                          {primaryInfo.description} Sintoniza en una ventanita flotante para seguir las jugadas al instante sin salir de la web.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => openOfficialBroadcast(primaryOpenChannel, gameTitle, "pip")}
+                          className="flex-1 inline-flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition cursor-pointer shadow-sm active:scale-98"
+                        >
+                          <Play className="w-3.5 h-3.5 fill-slate-950" />
+                          <span>Ver {primaryOpenChannel} en PiP</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openOfficialBroadcast(primaryOpenChannel, gameTitle, "popout")}
+                          title="Abrir en ventana grande"
+                          className="p-2 rounded-xl transition cursor-pointer"
+                          style={{
+                            backgroundColor: "#1e293b",
+                            borderColor: "#334155",
+                            border: "1px solid #334155",
+                            color: "#e2e8f0",
+                          }}
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Other open TV channels */}
                   {openTvList.length > 1 && (
@@ -1237,6 +1287,7 @@ export function GamedayView({
             <BroadcastChannelsRow
               channels={game.tvChannels?.length ? game.tvChannels : game.tv ? [game.tv] : []}
               gameTitle={`${game.awayTeam.name} vs ${game.homeTeam.name}`}
+              youtubeVideoId={effectiveYtId || undefined}
               badgeSize="md"
             />
           </div>
@@ -1470,6 +1521,58 @@ export function GamedayView({
         <div className="xl:col-span-8 space-y-5">
           {tab === "resumen" && (
             <div className="space-y-5 animate-view-enter">
+              {/* 0. TRANSMISIÓN EN VIVO EMBEBIDA DIRECTA EN LA WEB (SIN PIP) */}
+              {effectiveYtId && (
+                <section className="rounded-2xl border border-red-200 bg-white p-3.5 sm:p-4 shadow-xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-red-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                        <Play className="w-4 h-4 fill-white" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
+                          <span className="text-[10px] font-black uppercase tracking-wider text-red-600">
+                            Transmisión Oficial LVBP
+                          </span>
+                        </div>
+                        <h3 className="text-sm font-black text-slate-900 leading-tight">
+                          {game.awayTeam.name} vs {game.homeTeam.name} en YouTube
+                        </h3>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-lg bg-red-50 border border-red-200 text-[10px] font-black text-red-700 shrink-0">
+                      En directo sin PiP
+                    </span>
+                  </div>
+
+                  <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-800 shadow-md">
+                    <iframe
+                      src={`https://www.youtube-nocookie.com/embed/${effectiveYtId}?autoplay=0&rel=0&modestbranding=1`}
+                      title={`Transmisión Oficial en Vivo: ${game.awayTeam.name} vs ${game.homeTeam.name}`}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                      className="w-full h-full border-0"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
+                    <span className="text-slate-600 font-medium">
+                      Disfruta la transmisión completa con audio y video directo en la web.
+                    </span>
+                    <a
+                      href={game.youtubeUrl || `https://www.youtube.com/watch?v=${effectiveYtId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-bold text-slate-700 hover:text-red-600 transition shrink-0 ml-2"
+                    >
+                      <span>YouTube</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                </section>
+              )}
+
               {/* 1. SITUACIÓN DEL JUEGO (SI ESTÁ EN VIVO) */}
           {isLive && game.matchup && (
             <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs space-y-4">

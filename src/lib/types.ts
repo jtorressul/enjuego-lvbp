@@ -48,6 +48,8 @@ export interface ScheduleGame {
   venueCity: string;
   tv?: string;
   tvChannels?: string[];
+  youtubeVideoId?: string;
+  youtubeUrl?: string;
   radio?: {
     away?: RadioBroadcastInfo;
     home?: RadioBroadcastInfo;
@@ -223,6 +225,8 @@ export interface GamedayData {
   venueLines?: string;
   tv?: string;
   tvChannels?: string[];
+  youtubeVideoId?: string;
+  youtubeUrl?: string;
   radio?: {
     away?: RadioBroadcastInfo;
     home?: RadioBroadcastInfo;

@@ -6,6 +6,8 @@ export interface OfficialBroadcastEntry {
   homeCode: string;
   gamePk?: string;
   channels: string[];
+  youtubeVideoId?: string;
+  youtubeUrl?: string;
 }
 
 const LOGO_MAP: Record<string, string> = {
@@ -199,3 +201,53 @@ export function resolveRealGameBroadcast(
   // 4. Default: BeisbolPlay is the official digital broadcaster for 100% of LVBP games
   return ["BeisbolPlay"];
 }
+
+export function resolveGameYouTubeVideo(
+  gamePk?: string | number,
+  dateIso?: string,
+  awayCode?: string,
+  homeCode?: string,
+  broadcastMap?: Record<string, OfficialBroadcastEntry>
+): { videoId: string; url: string } | undefined {
+  const map = broadcastMap || cachedBroadcasts;
+
+  // 1. Check exact gamePk
+  if (gamePk) {
+    const byPk = map[`pk_${gamePk}`];
+    if (byPk?.youtubeVideoId) {
+      return {
+        videoId: byPk.youtubeVideoId,
+        url: byPk.youtubeUrl || `https://www.youtube.com/watch?v=${byPk.youtubeVideoId}`,
+      };
+    }
+  }
+
+  // 2. Check by date + awayCode + homeCode
+  if (dateIso && awayCode && homeCode) {
+    const matchupKey = `${dateIso}_${awayCode}_${homeCode}`;
+    const byMatchup = map[matchupKey];
+    if (byMatchup?.youtubeVideoId) {
+      return {
+        videoId: byMatchup.youtubeVideoId,
+        url: byMatchup.youtubeUrl || `https://www.youtube.com/watch?v=${byMatchup.youtubeVideoId}`,
+      };
+    }
+  }
+
+  // 3. Fallback for today's marquee YouTube match (MAG @ LAR, 2026-10-19 / Game 870075)
+  const pkStr = String(gamePk || "");
+  const isTodayMagLar =
+    pkStr === "870075" ||
+    (dateIso === "2026-10-19" &&
+      ((awayCode === "MAG" && homeCode === "LAR") || (awayCode === "LAR" && homeCode === "MAG")));
+
+  if (isTodayMagLar) {
+    return {
+      videoId: "vKzJd5maIJ8",
+      url: "https://www.youtube.com/watch?v=vKzJd5maIJ8",
+    };
+  }
+
+  return undefined;
+}
+

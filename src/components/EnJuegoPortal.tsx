@@ -1099,6 +1099,7 @@ export function EnJuegoPortal({
             <BroadcastChannelsRow
               channels={tvChannels}
               gameTitle={`${game.awayTeam.nick} vs ${game.homeTeam.nick}`}
+              youtubeVideoId={game.youtubeVideoId}
             />
 
             {game.decisions?.winner ? (
@@ -3101,6 +3102,7 @@ export function EnJuegoPortal({
                                 <BroadcastChannelsRow
                                   channels={tvList}
                                   gameTitle={`${game.awayTeam.nick} vs ${game.homeTeam.nick}`}
+                                  youtubeVideoId={game.youtubeVideoId}
                                 />
                               </div>
                             </Link>

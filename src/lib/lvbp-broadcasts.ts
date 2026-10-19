@@ -243,8 +243,8 @@ export function resolveGameYouTubeVideo(
 
   if (isTodayMagLar) {
     return {
-      videoId: "vKzJd5maIJ8",
-      url: "https://www.youtube.com/watch?v=vKzJd5maIJ8",
+      videoId: "JpQMLHvmpB4",
+      url: "https://www.youtube.com/watch?v=JpQMLHvmpB4",
     };
   }
 

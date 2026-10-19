@@ -589,7 +589,7 @@ export function GamedayView({
     (game.date === "2026-10-19" &&
       ((game.awayTeam.code === "MAG" && game.homeTeam.code === "LAR") ||
         (game.awayTeam.code === "LAR" && game.homeTeam.code === "MAG")))
-      ? "vKzJd5maIJ8"
+      ? "JpQMLHvmpB4"
       : null);
 
   const totalVotes = votes.away + votes.home;
@@ -655,7 +655,7 @@ export function GamedayView({
                     <div className="space-y-2">
                       <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-800 shadow-md">
                         <iframe
-                          src={`https://www.youtube-nocookie.com/embed/${effectiveYtId || "vKzJd5maIJ8"}?autoplay=0&rel=0&modestbranding=1`}
+                          src={`https://www.youtube-nocookie.com/embed/${effectiveYtId || "JpQMLHvmpB4"}?autoplay=0&rel=0&modestbranding=1`}
                           title="Transmisión Oficial en Vivo"
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                           allowFullScreen
@@ -668,7 +668,7 @@ export function GamedayView({
                           Directo en la web (sin PiP)
                         </span>
                         <a
-                          href={game.youtubeUrl || `https://www.youtube.com/watch?v=${effectiveYtId || "vKzJd5maIJ8"}`}
+                          href={game.youtubeUrl || `https://www.youtube.com/watch?v=${effectiveYtId || "JpQMLHvmpB4"}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 font-bold text-slate-600 hover:text-red-600 transition"

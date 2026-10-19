@@ -45,8 +45,8 @@ export function BroadcastChannelsRow({
       const vId =
         youtubeVideoId ||
         (gameTitle?.toLowerCase().includes("magallanes") || gameTitle?.toLowerCase().includes("cardenales")
-          ? "vKzJd5maIJ8"
-          : "vKzJd5maIJ8");
+          ? "JpQMLHvmpB4"
+          : "JpQMLHvmpB4");
       if (vId) {
         setSelectedVideoId(vId);
         return;

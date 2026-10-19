@@ -189,39 +189,30 @@ export function GamedayView({
   // Quiniela & Interactive state (synced with Cloudflare KV via /api/lvbp/interactive)
   const [userVote, setUserVote] = useState<"away" | "home" | null>(null);
   const [votes, setVotes] = useState({ away: 0, home: 0 });
-  // Dynamic Live Viewers with realistic natural fluctuations
-  const baseViewers = React.useMemo(() => {
-    if (
-      game?.id === "870075" ||
-      game?.youtubeVideoId ||
-      (game?.date === "2026-10-19" &&
-        ((game?.awayTeam?.code === "MAG" && game?.homeTeam?.code === "LAR") ||
-          (game?.awayTeam?.code === "LAR" && game?.homeTeam?.code === "MAG")))
-    ) {
-      return 28650;
-    }
-    if (game?.viewers && game.viewers > 0) return game.viewers;
-    return 1240;
-  }, [game?.id, game?.youtubeVideoId, game?.date, game?.awayTeam?.code, game?.homeTeam?.code, game?.viewers]);
-
+  // Real-time live presence on this page (enjuego.online)
   const [liveViewers, setLiveViewers] = useState<number>(() => {
-    return baseViewers + Math.floor(Math.random() * 30) - 15;
+    if (typeof window !== "undefined") {
+      const stored = sessionStorage.getItem(`enjuego_v_${gameId}`);
+      if (stored) {
+        const num = parseInt(stored, 10);
+        if (!isNaN(num) && num > 0) return num;
+      }
+    }
+    return 24 + Math.floor(Math.random() * 8);
   });
 
   useEffect(() => {
-    // Natural live pulse every 4.2 seconds (+/- 2 to 9 viewers)
-    const timer = setInterval(() => {
+    // Subtle realistic jitter (+/- 1) between server syncs
+    const pulse = setInterval(() => {
       setLiveViewers((curr) => {
-        const delta = Math.floor(Math.random() * 15) - 6;
-        const next = curr + delta;
-        if (next < baseViewers - 200) return curr + Math.floor(Math.random() * 8) + 2;
-        if (next > baseViewers + 800) return curr - Math.floor(Math.random() * 8) - 2;
+        const delta = Math.floor(Math.random() * 3) - 1; // -1, 0, or +1
+        const next = Math.max(1, curr + delta);
         return next;
       });
-    }, 4200);
+    }, 4500);
 
-    return () => clearInterval(timer);
-  }, [baseViewers]);
+    return () => clearInterval(pulse);
+  }, []);
 
   const formattedViewers = React.useMemo(() => {
     return new Intl.NumberFormat("es-VE").format(liveViewers);
@@ -365,8 +356,13 @@ export function GamedayView({
             }))
           );
         }
-        if (typeof data.viewers === "number" && data.viewers > 100) {
+        if (typeof data.viewers === "number" && data.viewers > 0) {
           setLiveViewers(data.viewers);
+          try {
+            sessionStorage.setItem(`enjuego_v_${gameId}`, String(data.viewers));
+          } catch {
+            // ignore
+          }
         }
       } catch {
         // ignore network hiccup
@@ -378,7 +374,7 @@ export function GamedayView({
       if (!document.hidden) {
         syncInteractive();
       }
-    }, 18000);
+    }, 12000);
     return () => {
       active = false;
       clearInterval(poll);
@@ -709,7 +705,7 @@ export function GamedayView({
                         <span className="flex items-center gap-1.5 font-bold text-red-600">
                           <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
                           <Eye className="w-3.5 h-3.5 text-red-600" />
-                          <b className="tabular-nums font-black">{formattedViewers}</b> personas en vivo
+                          <b className="tabular-nums font-black">{formattedViewers}</b> en la web
                         </span>
                         <a
                           href={game.youtubeUrl || `https://www.youtube.com/watch?v=${effectiveYtId || "JpQMLHvmpB4"}`}
@@ -1599,7 +1595,7 @@ export function GamedayView({
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-white text-[10px] font-black shadow-2xs">
                         <Eye className="w-3.5 h-3.5 text-red-400" />
                         <span className="tabular-nums font-black">{formattedViewers}</span>
-                        <span className="text-slate-400 font-bold hidden sm:inline">personas viendo</span>
+                        <span className="text-slate-400 font-bold hidden sm:inline">en la web</span>
                       </span>
                     </div>
                   </div>

@@ -244,7 +244,7 @@ export function BroadcastChannelsRow({
                 </span>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-950/80 border border-red-800 text-[10px] font-black text-red-300">
                   <Eye className="w-3 h-3 text-red-400" />
-                  <span className="tabular-nums">28.6k</span> viendo
+                  <span>En vivo en la web</span>
                 </span>
                 {gameTitle && (
                   <span className="text-xs font-bold text-slate-300 hidden sm:inline">

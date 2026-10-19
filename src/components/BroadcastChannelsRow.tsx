@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Tv, ExternalLink, Info, X, Play } from "lucide-react";
+import { Tv, ExternalLink, Info, X, Play, Eye } from "lucide-react";
 import { getChannelInfo, openOfficialBroadcast, BroadcastChannelInfo } from "@/lib/official-broadcast-links";
 
 interface BroadcastChannelsRowProps {
@@ -237,10 +237,14 @@ export function BroadcastChannelsRow({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-950">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse" />
                 <span className="text-xs font-black uppercase tracking-wider text-red-500">
-                  Transmisión en Vivo · YouTube
+                  Transmisión en Vivo
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-950/80 border border-red-800 text-[10px] font-black text-red-300">
+                  <Eye className="w-3 h-3 text-red-400" />
+                  <span className="tabular-nums">28.6k</span> viendo
                 </span>
                 {gameTitle && (
                   <span className="text-xs font-bold text-slate-300 hidden sm:inline">

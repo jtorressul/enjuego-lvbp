@@ -16,6 +16,7 @@ import { PwaOnboardingModal } from "@/components/pwa/PwaOnboardingModal";
 import { AdBanner } from "@/components/AdBanner";
 import MlbPlayoffBracket from "@/components/MlbPlayoffBracket";
 import { ShareGameBannerModal } from "@/components/ShareGameBannerModal";
+import { ShareStandingsModal } from "@/components/ShareStandingsModal";
 import { UserProfile } from "@/lib/user-auth";
 import { getFallbackSchedule } from "@/lib/lvbp-fallback-data";
 import {
@@ -237,6 +238,7 @@ export function EnJuegoPortal({
   const [favoriteTeamCode, setFavoriteTeamCode] = useState<string>("");
   const [copiedGameId, setCopiedGameId] = useState<string>("");
   const [shareModalGame, setShareModalGame] = useState<ScheduleGame | null>(null);
+  const [shareStandingsOpen, setShareStandingsOpen] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [teamsDropdownOpen, setTeamsDropdownOpen] = useState(false);
   const teamsDropdownRef = useRef<HTMLDivElement>(null);
@@ -2238,6 +2240,13 @@ export function EnJuegoPortal({
                     </button>
                   )}
                   <Link
+                    href={`/posiciones?liga=${jornadaLeague}`}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 px-3.5 py-2 text-xs font-black transition cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                  >
+                    <Trophy className="w-3.5 h-3.5 text-slate-950" />
+                    <span>Tabla de Posiciones ›</span>
+                  </Link>
+                  <Link
                     href={`/calendario?liga=${jornadaLeague}`}
                     className="inline-flex items-center gap-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 px-3.5 py-2 text-xs font-extrabold transition cursor-pointer shadow-2xs"
                   >
@@ -2309,9 +2318,23 @@ export function EnJuegoPortal({
                       <h3 className="text-sm font-black text-slate-950">
                         Tabla de posiciones {activeLeague === "mlb" ? "(MLB)" : "(LVBP)"}
                       </h3>
-                      <span className="text-[11px] font-bold text-amber-600">
-                        {activeLeague === "mlb" ? "Top MLB" : "Temporada regular"}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setShareStandingsOpen(true)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 px-2 py-1 text-[10px] font-black text-slate-700 transition cursor-pointer shadow-2xs hover:border-amber-400"
+                          title="Compartir arte oficial de la tabla de posiciones"
+                        >
+                          <Share2 className="w-3 h-3 text-amber-600" />
+                          <span>Compartir</span>
+                        </button>
+                        <Link
+                          href={`/posiciones?liga=${activeLeague}`}
+                          className="text-[11px] font-bold text-amber-600 hover:underline"
+                        >
+                          Ver completa ›
+                        </Link>
+                      </div>
                     </header>
 
                     <table className="w-full text-xs mt-2 border-collapse">
@@ -3107,8 +3130,19 @@ export function EnJuegoPortal({
                 </h1>
               </div>
 
-              {activeLeague === "mlb" ? (
-                <div className="inline-flex flex-wrap rounded-xl bg-white p-1 border border-slate-200 shadow-2xs gap-0.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShareStandingsOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 px-3.5 py-2 text-xs font-black transition cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                  title="Compartir o descargar arte oficial de la tabla de posiciones"
+                >
+                  <Share2 className="w-3.5 h-3.5 text-slate-950" />
+                  <span>Compartir Tabla / Banner</span>
+                </button>
+
+                {activeLeague === "mlb" ? (
+                  <div className="inline-flex flex-wrap rounded-xl bg-white p-1 border border-slate-200 shadow-2xs gap-0.5">
                   {(
                     [
                       ["PLAYOFFS", "🏆 Postemporada"],
@@ -3156,6 +3190,7 @@ export function EnJuegoPortal({
                 </div>
               )}
             </div>
+          </div>
 
             {loading && standings.length === 0 ? (
               <div className="space-y-4">
@@ -3648,6 +3683,14 @@ export function EnJuegoPortal({
       <ShareGameBannerModal
         game={shareModalGame}
         onClose={() => setShareModalGame(null)}
+      />
+
+      {/* Share Standings Official Banner Modal (Post 4:5, Story 9:16) */}
+      <ShareStandingsModal
+        isOpen={shareStandingsOpen}
+        onClose={() => setShareStandingsOpen(false)}
+        standings={standings}
+        league={activeLeague}
       />
     </div>
   );

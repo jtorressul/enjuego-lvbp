@@ -2,13 +2,14 @@
 // Used by the admin "Generador de Artes" and by the public "Compartir" button.
 import { LVBP_TEAMS } from "@/lib/lvbp-teams";
 import { MLB_TEAMS } from "@/lib/mlb-teams";
-import type { ScheduleGame } from "@/lib/types";
+import type { ScheduleGame, StandingRow } from "@/lib/types";
 
 export type CardTemplateMode =
   | "final_single"
   | "preview_single"
   | "live_single"
-  | "slate_all";
+  | "slate_all"
+  | "standings";
 
 export type CardSizeFormat = "post_4_5" | "story_9_16" | "square_1_1";
 
@@ -411,6 +412,7 @@ export interface SocialCardOptions {
   activeSponsorLabel: string;
   league?: "lvbp" | "mlb";
   showLeagueLogo?: boolean;
+  standingsData?: StandingRow[];
 }
 
 /** Renders a social card to an offscreen 1080px-wide canvas. Returns null if stale/unavailable. */
@@ -451,7 +453,45 @@ export async function renderSocialCard(
 
       const slateGames = gamesForDate.slice(0, 4);
 
-      const [awayLogo, homeLogo, rawSponsor, brandImg, leagueImg, slateLogos] = await Promise.all([
+      const defaultStandingsList: StandingRow[] = Object.values(LVBP_TEAMS).map((t, idx) => {
+        const w = Math.max(1, 10 - idx);
+        const l = idx + 1;
+        const gp = w + l;
+        const pct = (w / gp).toFixed(3).replace(/^0/, "");
+        const gb = idx === 0 ? "-" : `${(idx * 0.5).toFixed(1)}`;
+        return {
+          team: {
+            id: t.id,
+            code: t.code,
+            name: t.name,
+            nick: t.nick,
+            shortName: t.shortName,
+            logoUrl: t.logoSvg,
+            color: t.color,
+            wins: w,
+            losses: l,
+          },
+          gamesPlayed: gp,
+          wins: w,
+          losses: l,
+          pct,
+          gamesBehind: gb,
+          streak: idx % 2 === 0 ? "G2" : "P1",
+          homeRecord: "4-2",
+          awayRecord: "4-3",
+          lastTen: "6-4",
+          runsScored: 45,
+          runsAllowed: 38,
+          runDiff: 7,
+        };
+      });
+
+      const standingsList: StandingRow[] =
+        opts.standingsData && opts.standingsData.length > 0
+          ? opts.standingsData.slice(0, 8)
+          : defaultStandingsList;
+
+      const [awayLogo, homeLogo, rawSponsor, brandImg, leagueImg, slateLogos, standingsLogos] = await Promise.all([
         loadImageElement(logoSrcFor(awayTeam.code)),
         loadImageElement(logoSrcFor(homeTeam.code)),
         loadImageElement(activeSponsorImageUrl),
@@ -467,6 +507,9 @@ export async function renderSocialCard(
               )
             )
           : Promise.resolve([] as Array<[HTMLImageElement | null, HTMLImageElement | null]>),
+        templateMode === "standings"
+          ? Promise.all(standingsList.map((r) => loadImageElement(logoSrcFor(r.team.code))))
+          : Promise.resolve([] as Array<HTMLImageElement | null>),
       ]);
 
       if (isStale()) return null;
@@ -692,8 +735,10 @@ export async function renderSocialCard(
       const headlineCenterY = isStory ? 465 : isSquare ? 258 : 368;
       {
         ctx.save();
-        const w1 = (headlineWord1 || "RESULTADO").trim().toUpperCase();
-        const w2 = (headlineWord2 || "FINAL").trim().toUpperCase();
+        const defaultW1 = templateMode === "standings" ? "TABLA DE" : "RESULTADO";
+        const defaultW2 = templateMode === "standings" ? "POSICIONES" : "FINAL";
+        const w1 = (headlineWord1 || defaultW1).trim().toUpperCase();
+        const w2 = (headlineWord2 || defaultW2).trim().toUpperCase();
         let fontPx = 176;
         const spacePx = 26;
         ctx.font = `400 ${fontPx}px "Bebas Neue", "Impact", sans-serif`;
@@ -842,9 +887,179 @@ export async function renderSocialCard(
       };
 
       // ----------------------------------------------------------------------
-      // 5. MATCHUP / SLATE
+      // 5. MATCHUP / SLATE / STANDINGS
       // ----------------------------------------------------------------------
-      if (templateMode !== "slate_all") {
+      if (templateMode === "standings") {
+        // STANDINGS TABLE (LVBP / MLB)
+        const startY = isStory ? 570 : isSquare ? 320 : 435;
+        const rx = 64;
+        const rw = W - 128; // 952px wide
+        const numRows = Math.min(8, standingsList.length || 8);
+        const headerH = isSquare ? 42 : 48;
+        const rowH = isStory ? 92 : isSquare ? 56 : 66;
+        const tableH = headerH + numRows * rowH + (isSquare ? 12 : 18);
+
+        // 1. Table Card Background
+        ctx.save();
+        ctx.shadowColor = theme.isDark ? "rgba(0,0,0,0.45)" : "rgba(18,23,52,0.08)";
+        ctx.shadowBlur = 20;
+        ctx.shadowOffsetY = 6;
+        ctx.fillStyle = theme.isDark ? "rgba(15, 23, 42, 0.72)" : "#ffffff";
+        drawRoundedRect(ctx, rx, startY, rw, tableH, 24);
+        ctx.fill();
+
+        ctx.strokeStyle = theme.isDark ? "rgba(255, 255, 255, 0.12)" : "rgba(18, 23, 52, 0.08)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
+
+        // 2. Table Header Bar
+        ctx.save();
+        ctx.fillStyle = theme.isDark ? "rgba(255, 255, 255, 0.07)" : "#f8fafc";
+        drawRoundedRect(ctx, rx, startY, rw, headerH, 24);
+        ctx.fill();
+
+        ctx.font = isSquare ? '700 16px "Barlow Condensed", sans-serif' : '700 19px "Barlow Condensed", sans-serif';
+        ctx.fillStyle = theme.isDark ? "#94a3b8" : "#64748b";
+        ctx.textBaseline = "middle";
+
+        const colY = startY + headerH / 2;
+        ctx.textAlign = "left";
+        ctx.fillText("POS", rx + 24, colY);
+        ctx.fillText("EQUIPO", rx + 110, colY);
+
+        ctx.textAlign = "center";
+        ctx.fillText("JJ", rx + 490, colY);
+        ctx.fillText("JG", rx + 565, colY);
+        ctx.fillText("JP", rx + 640, colY);
+        ctx.fillStyle = "#d97706";
+        ctx.fillText("PCT", rx + 725, colY);
+        ctx.fillStyle = theme.isDark ? "#94a3b8" : "#64748b";
+        ctx.fillText("DIF", rx + 805, colY);
+        ctx.fillText("RACHA", rx + 880, colY);
+        ctx.restore();
+
+        // 3. Render Each Team Row
+        standingsList.forEach((r, idx) => {
+          const rowY = startY + headerH + idx * rowH;
+          const cy = rowY + rowH / 2;
+          const logo = standingsLogos[idx] || null;
+
+          // Row divider
+          if (idx > 0) {
+            ctx.save();
+            ctx.strokeStyle = theme.isDark ? "rgba(255, 255, 255, 0.07)" : "rgba(18, 23, 52, 0.06)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(rx + 20, rowY);
+            ctx.lineTo(rx + rw - 20, rowY);
+            ctx.stroke();
+            ctx.restore();
+          }
+
+          // Zone Color Indicator (1°-4° Round Robin, 5°-6° Comodín)
+          const zoneColor = detectedLeague === "mlb"
+            ? (idx < 3 ? "#38bdf8" : "#94a3b8")
+            : (idx < 4 ? "#10b981" : idx < 6 ? "#f59e0b" : "#64748b");
+
+          ctx.save();
+          // Zone Dot
+          ctx.fillStyle = zoneColor;
+          ctx.beginPath();
+          ctx.arc(rx + 28, cy, isSquare ? 4 : 5, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Pos Number
+          ctx.font = isSquare ? '700 20px "Barlow Condensed", sans-serif' : '700 24px "Barlow Condensed", sans-serif';
+          ctx.fillStyle = theme.isDark ? "#ffffff" : "#0f172a";
+          ctx.textAlign = "left";
+          ctx.textBaseline = "middle";
+          ctx.fillText(`${idx + 1}°`, rx + 44, cy);
+
+          // Team Logo
+          if (logo) {
+            const logoSize = isSquare ? 34 : isStory ? 48 : 40;
+            const { w: lw, h: lh } = fitInside(logo, logoSize, logoSize);
+            ctx.drawImage(logo, rx + 104 - lw / 2, cy - lh / 2, lw, lh);
+          }
+
+          // Team Nick/Name
+          const teamName = (r.team.nick || r.team.shortName || r.team.name || "Equipo").toUpperCase();
+          ctx.font = isSquare ? '400 26px "Bebas Neue", sans-serif' : isStory ? '400 36px "Bebas Neue", sans-serif' : '400 30px "Bebas Neue", sans-serif';
+          ctx.fillStyle = theme.isDark ? "#ffffff" : "#0f172a";
+          ctx.textAlign = "left";
+          ctx.fillText(teamName, rx + 138, cy + 1);
+
+          // Tabular stats
+          ctx.font = isSquare ? '700 19px "Barlow Condensed", sans-serif' : '700 24px "Barlow Condensed", sans-serif';
+          ctx.textAlign = "center";
+
+          // JJ
+          ctx.fillStyle = theme.isDark ? "#cbd5e1" : "#475569";
+          ctx.fillText(String(r.gamesPlayed ?? (r.wins + r.losses)), rx + 490, cy);
+
+          // JG
+          ctx.fillStyle = theme.isDark ? "#ffffff" : "#0f172a";
+          ctx.fillText(String(r.wins), rx + 565, cy);
+
+          // JP
+          ctx.fillStyle = theme.isDark ? "#cbd5e1" : "#475569";
+          ctx.fillText(String(r.losses), rx + 640, cy);
+
+          // PCT (Golden highlight)
+          ctx.fillStyle = "#d97706";
+          ctx.fillText(String(r.pct || ".000"), rx + 725, cy);
+
+          // DIF
+          ctx.fillStyle = theme.isDark ? "#94a3b8" : "#64748b";
+          ctx.fillText(String(r.gamesBehind || "-"), rx + 805, cy);
+
+          // RACHA
+          const streak = String(r.streak || "-").toUpperCase();
+          ctx.fillStyle = streak.startsWith("G") ? "#10b981" : streak.startsWith("P") ? "#f43f5e" : (theme.isDark ? "#94a3b8" : "#64748b");
+          ctx.fillText(streak, rx + 880, cy);
+
+          ctx.restore();
+        });
+
+        // 4. Standings Legend Pill below table
+        const legendY = startY + tableH + (isSquare ? 20 : 28);
+        ctx.save();
+        ctx.font = isSquare ? '700 15px "Barlow Condensed", sans-serif' : '700 18px "Barlow Condensed", sans-serif';
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        if (detectedLeague === "lvbp") {
+          const pillText = "🟢 1°-4° CLASIFICAN AL ROUND ROBIN    🟡 5°-6° SERIE DE COMODÍN";
+          const tw = ctx.measureText(pillText).width;
+          const pw = tw + 36;
+          const ph = isSquare ? 28 : 34;
+
+          ctx.fillStyle = theme.isDark ? "rgba(255, 255, 255, 0.08)" : "#f1f5f9";
+          drawRoundedRect(ctx, W / 2 - pw / 2, legendY - ph / 2, pw, ph, ph / 2);
+          ctx.fill();
+
+          ctx.strokeStyle = theme.isDark ? "rgba(255, 255, 255, 0.14)" : "rgba(18, 23, 52, 0.08)";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          ctx.fillStyle = theme.isDark ? "#e2e8f0" : "#334155";
+          ctx.fillText(pillText, W / 2, legendY);
+        } else {
+          const pillText = "⚾ CLASIFICACIÓN A POSTEMPORADA · GRANDES LIGAS MLB";
+          const tw = ctx.measureText(pillText).width;
+          const pw = tw + 36;
+          const ph = isSquare ? 28 : 34;
+
+          ctx.fillStyle = theme.isDark ? "rgba(255, 255, 255, 0.08)" : "#f1f5f9";
+          drawRoundedRect(ctx, W / 2 - pw / 2, legendY - ph / 2, pw, ph, ph / 2);
+          ctx.fill();
+
+          ctx.fillStyle = theme.isDark ? "#e2e8f0" : "#334155";
+          ctx.fillText(pillText, W / 2, legendY);
+        }
+        ctx.restore();
+      } else if (templateMode !== "slate_all") {
         const centerY = isStory ? 950 : isSquare ? 535 : 720;
         const r = isSquare ? 102 : 118;
         const awayCx = 240;

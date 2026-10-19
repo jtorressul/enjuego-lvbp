@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { LVBP_TEAMS } from "@/lib/lvbp-teams";
 import { MLB_TEAMS } from "@/lib/mlb-teams";
-import type { ScheduleGame } from "@/lib/types";
+import type { ScheduleGame, StandingRow } from "@/lib/types";
 import type { AdCampaign } from "@/lib/admin-store";
 
 import {
@@ -54,6 +54,18 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
     () => Object.values(cardLeague === "mlb" ? MLB_TEAMS : LVBP_TEAMS),
     [cardLeague]
   );
+
+  // Standings data
+  const [standingsData, setStandingsData] = useState<StandingRow[]>([]);
+
+  useEffect(() => {
+    fetch(`/api/lvbp/standings?liga=${cardLeague}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data?.standings)) setStandingsData(data.standings);
+      })
+      .catch(() => {});
+  }, [cardLeague]);
 
   // Schedule state
   const [allGames, setAllGames] = useState<ScheduleGame[]>([]);
@@ -263,7 +275,11 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
   const handleModeChange = (nextMode: CardTemplateMode) => {
     setTemplateMode(nextMode);
     const currentGame = gamesForDate.find((g) => g.id === selectedGameId);
-    if (nextMode === "slate_all") {
+    if (nextMode === "standings") {
+      setHeadlineWord1("TABLA DE");
+      setHeadlineWord2("POSICIONES");
+      setStatusPillText(cardLeague === "mlb" ? "MLB 2026" : "TEMPORADA REGULAR");
+    } else if (nextMode === "slate_all") {
       const allFinished =
         gamesForDate.length > 0 && gamesForDate.every((g) => g.status === "FINISHED");
       setHeadlineWord1(allFinished ? "RESULTADOS" : "JUEGOS");
@@ -355,6 +371,7 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
           activeSponsorLabel,
           league: cardLeague,
           showLeagueLogo,
+          standingsData,
         },
         () => version !== renderVersionRef.current
       );
@@ -614,12 +631,13 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
           <span className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2">
             Tipo de Publicación
           </span>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
             {[
               { id: "final_single", label: "Resultado Final", desc: "Pizarra de 1 juego" },
               { id: "preview_single", label: "Juego de Hoy", desc: "Previa, estadio y TV" },
               { id: "live_single", label: "En Vivo", desc: "Marcador en curso" },
               { id: "slate_all", label: "Jornada Completa", desc: "Todos los juegos del día" },
+              { id: "standings", label: "Tabla Posiciones", desc: "Clasificación oficial" },
             ].map((item) => {
               const active = templateMode === item.id;
               return (

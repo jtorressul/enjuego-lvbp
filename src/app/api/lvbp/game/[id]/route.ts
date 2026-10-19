@@ -26,9 +26,17 @@ export async function GET(
       });
     }
 
+    const isFinal = gameday?.status === "FINISHED";
+    const isLive = gameday?.status === "IN_PROGRESS";
+    const cacheHeader = isFinal
+      ? "public, s-maxage=3600, stale-while-revalidate=7200"
+      : isLive
+        ? "public, s-maxage=10, stale-while-revalidate=20"
+        : "public, s-maxage=60, stale-while-revalidate=120";
+
     return NextResponse.json(gameday, {
       headers: {
-        "Cache-Control": "no-store, max-age=0",
+        "Cache-Control": cacheHeader,
       },
     });
   } catch (error: any) {

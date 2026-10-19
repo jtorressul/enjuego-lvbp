@@ -9,11 +9,16 @@ export async function GET(request: Request) {
     const league = searchParams.get("league") === "mlb" ? "mlb" : "lvbp";
     const season = searchParams.get("season") || "2026";
     const games = league === "mlb" ? await fetchMlbSchedule(season) : await fetchLvbpSchedule(season);
+    const hasLive = Array.isArray(games) && games.some((g: any) => g.status === "IN_PROGRESS");
+    const cacheHeader = hasLive
+      ? "public, s-maxage=15, stale-while-revalidate=30"
+      : "public, s-maxage=60, stale-while-revalidate=120";
+
     return NextResponse.json(
       { games, league },
       {
         headers: {
-          "Cache-Control": "no-store, max-age=0",
+          "Cache-Control": cacheHeader,
         },
       }
     );

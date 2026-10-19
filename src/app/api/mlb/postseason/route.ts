@@ -286,11 +286,18 @@ export async function GET(request: Request) {
       };
     }
 
-    return NextResponse.json({
-      season: Number(season),
-      seriesById: byId,
-      updatedAt: new Date().toISOString(),
-    });
+    return NextResponse.json(
+      {
+        season: Number(season),
+        seriesById: byId,
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300",
+        },
+      }
+    );
   } catch (err: any) {
     return NextResponse.json(
       { error: err?.message || "Error consultando postemporada MLB", seriesById: {} },

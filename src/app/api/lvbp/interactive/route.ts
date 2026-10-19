@@ -21,7 +21,7 @@ export async function GET(request: Request) {
         { posts },
         {
           headers: {
-            "Cache-Control": "no-store",
+            "Cache-Control": "public, s-maxage=15, stale-while-revalidate=30",
           },
         }
       );
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     const state = await getGameInteractiveState(gameId, awayAbbr, homeAbbr, sessionId);
     return NextResponse.json(state, {
       headers: {
-        "Cache-Control": "no-store",
+        "Cache-Control": "public, s-maxage=5, stale-while-revalidate=10",
       },
     });
   } catch (error: any) {

@@ -260,10 +260,10 @@ export function GamedayView({
     loadGame();
 
     const timer = setInterval(() => {
-      if (latestStatus !== "FINISHED") {
+      if (!document.hidden && latestStatus !== "FINISHED") {
         loadGame();
       }
-    }, 5000);
+    }, 15000);
 
     const handleVisibilityOrFocus = () => {
       if (document.visibilityState === "visible" && latestStatus !== "FINISHED") {
@@ -310,8 +310,7 @@ export function GamedayView({
         const res = await fetch(
           `/api/lvbp/interactive?mode=game&gameId=${encodeURIComponent(gameId)}&away=${encodeURIComponent(
             game.awayTeam.code
-          )}&home=${encodeURIComponent(game.homeTeam.code)}&sid=${encodeURIComponent(sid)}`,
-          { cache: "no-store" }
+          )}&home=${encodeURIComponent(game.homeTeam.code)}&sid=${encodeURIComponent(sid)}`
         );
         const data = await res.json();
         if (!active || data.error) return;
@@ -338,7 +337,11 @@ export function GamedayView({
     };
 
     syncInteractive();
-    const poll = setInterval(syncInteractive, 6000);
+    const poll = setInterval(() => {
+      if (!document.hidden) {
+        syncInteractive();
+      }
+    }, 18000);
     return () => {
       active = false;
       clearInterval(poll);

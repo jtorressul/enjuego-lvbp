@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchLvbpSchedule, fetchMlbSchedule } from "@/lib/mlb-lvbp-service";
+import { checkAndDispatchGameAlerts } from "@/lib/score-notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,9 @@ export async function GET(request: Request) {
     const league = searchParams.get("league") === "mlb" ? "mlb" : "lvbp";
     const season = searchParams.get("season") || "2026";
     const games = league === "mlb" ? await fetchMlbSchedule(season) : await fetchLvbpSchedule(season);
+    if (league === "lvbp" && Array.isArray(games)) {
+      checkAndDispatchGameAlerts(games).catch(() => {});
+    }
     const hasLive = Array.isArray(games) && games.some((g: any) => g.status === "IN_PROGRESS");
     const cacheHeader = hasLive
       ? "public, s-maxage=15, stale-while-revalidate=30"

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { fetchLvbpGameday } from "@/lib/mlb-lvbp-service";
 import { simulateGamedayStep } from "@/lib/live-simulator";
+import { checkAndDispatchGameAlerts } from "@/lib/score-notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,10 @@ export async function GET(
 
     const realId = id === "sim-live" ? "870098" : id;
     const gameday = await fetchLvbpGameday(realId);
+
+    if (!simulate && id !== "sim-live" && gameday) {
+      checkAndDispatchGameAlerts([gameday as any]).catch(() => {});
+    }
 
     if (simulate || id === "sim-live") {
       return NextResponse.json(simulateGamedayStep(gameday, step), {

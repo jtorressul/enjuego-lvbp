@@ -46,6 +46,9 @@ export const metadata: Metadata = {
       "Marcadores, jugada a jugada, canales de TV y posiciones del béisbol venezolano.",
     images: ["/logo.png"],
   },
+  other: {
+    monetag: "5703e71c4d0b4eaa3106c98ca66a3cd8",
+  },
 };
 
 export default function RootLayout({

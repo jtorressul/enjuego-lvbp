@@ -14,7 +14,7 @@ import { BroadcastChannelsRow } from "@/components/BroadcastChannelsRow";
 import { AuthModal } from "@/components/AuthModal";
 import { PwaInstallModal } from "@/components/pwa/PwaInstallModal";
 import { PwaOnboardingModal } from "@/components/pwa/PwaOnboardingModal";
-import { AdBanner } from "@/components/AdBanner";
+import { AdBanner, AadsSkyscraperBanner } from "@/components/AdBanner";
 import MlbPlayoffBracket from "@/components/MlbPlayoffBracket";
 import { ShareGameBannerModal } from "@/components/ShareGameBannerModal";
 import { ShareStandingsModal } from "@/components/ShareStandingsModal";
@@ -2569,6 +2569,8 @@ export function EnJuegoPortal({
                   {jornadaGamesOfDay.map((game) => renderScoreboardCard(game))}
                 </div>
               )}
+
+              <AadsSkyscraperBanner />
 
               {latestRecaps.length > 0 && (
                 <div>

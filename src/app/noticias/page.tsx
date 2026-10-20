@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { InfoPage } from "@/components/InfoPage";
 import { FeaturedRecap, RecapCard } from "@/components/news/RecapCards";
-import { AadsStickyBanner, AdBanner } from "@/components/AdBanner";
+import { AadsStickyBanner, AadsSkyscraperBanner, AdBanner } from "@/components/AdBanner";
 import { buildGameRecaps, formatRecapDate } from "@/lib/game-recaps";
 import { fetchLvbpSchedule, fetchLvbpStandingsAndLeaders } from "@/lib/mlb-lvbp-service";
 import { findGameHighlight } from "@/lib/youtube-highlight";
@@ -54,6 +54,7 @@ export default async function NoticiasPage() {
   return (
     <InfoPage wide bare>
       <AadsStickyBanner />
+      <AadsSkyscraperBanner />
       <div className="space-y-8">
         <div>
           <p className="text-xs font-extrabold uppercase tracking-wider text-amber-600">LVBP</p>

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { InfoPage } from "@/components/InfoPage";
 import { RecapArticle } from "@/components/news/RecapCards";
-import { AadsStickyBanner } from "@/components/AdBanner";
+import { AadsStickyBanner, AadsSkyscraperBanner } from "@/components/AdBanner";
 import { buildGameRecaps } from "@/lib/game-recaps";
 import { fetchLvbpSchedule, fetchLvbpStandingsAndLeaders } from "@/lib/mlb-lvbp-service";
 import { findGameHighlight } from "@/lib/youtube-highlight";
@@ -71,6 +71,7 @@ export default async function NoticiaPage({ params }: { params: Promise<{ id: st
   return (
     <InfoPage wide bare>
       <AadsStickyBanner />
+      <AadsSkyscraperBanner />
       <RecapArticle recap={recap} more={more} highlight={highlight} />
     </InfoPage>
   );

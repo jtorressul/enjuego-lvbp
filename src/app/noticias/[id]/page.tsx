@@ -27,9 +27,30 @@ export async function generateMetadata({
   const { id } = await params;
   const { recap } = await loadRecap(id);
   if (!recap) return { title: "Noticia · En Juego" };
+  const shareTitle = `🎥 Highlights: ${recap.headline} · En Juego`;
+  const shareDesc = `Revive en video las mejores jugadas de ${recap.away.nick} vs ${recap.home.nick}. ${recap.paragraphs[0]}`;
+  const teamLogo = recap.winnerSide === "away" ? recap.away.logo : recap.home.logo;
+
   return {
-    title: `${recap.headline} · En Juego`,
-    description: recap.paragraphs[0],
+    title: shareTitle,
+    description: shareDesc,
+    openGraph: {
+      title: shareTitle,
+      description: shareDesc,
+      images: [
+        {
+          url: teamLogo,
+          width: 512,
+          height: 512,
+          alt: recap.headline,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: shareTitle,
+      description: shareDesc,
+    },
   };
 }
 

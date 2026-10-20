@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { GamedayData, PlayByPlayItem, ScheduleGame } from "@/lib/types";
 import { playerHeadshot, LVBP_TEAMS } from "@/lib/lvbp-teams";
 import { BroadcastChannelsRow } from "@/components/BroadcastChannelsRow";
@@ -1351,6 +1352,35 @@ export function GamedayView({
           </button>
         )}
       </div>
+
+      {/* FINAL GAME HIGHLIGHTS BANNER */}
+      {isFinal && (
+        <div className="rounded-2xl bg-gradient-to-r from-rose-950 via-slate-950 to-slate-900 border border-rose-500/30 p-3.5 sm:p-4 text-white flex flex-wrap items-center justify-between gap-3 shadow-md">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-600/25 border border-rose-500/40 flex items-center justify-center text-rose-400 shrink-0">
+              <Play className="w-5 h-5 fill-rose-400" />
+            </div>
+            <div>
+              <p className="text-sm font-black text-white flex items-center gap-2">
+                <span>Resumen y Highlights en Video</span>
+                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                  BeisbolPlay
+                </span>
+              </p>
+              <p className="text-xs text-slate-300">
+                Revive las mejores jugadas, carreras y momentos decisivos del partido.
+              </p>
+            </div>
+          </div>
+          <Link
+            href={`/noticias/${game.id}`}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black transition cursor-pointer shadow-sm"
+          >
+            <Play className="w-3.5 h-3.5 fill-white" />
+            <span>Ver Highlights</span>
+          </Link>
+        </div>
+      )}
 
       {/* HERO SCOREBOARD + LINESCORE */}
       <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-xs">

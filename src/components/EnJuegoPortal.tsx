@@ -17,6 +17,7 @@ import { AdBanner } from "@/components/AdBanner";
 import MlbPlayoffBracket from "@/components/MlbPlayoffBracket";
 import { ShareGameBannerModal } from "@/components/ShareGameBannerModal";
 import { ShareStandingsModal } from "@/components/ShareStandingsModal";
+import { CalendarMonthPicker } from "@/components/CalendarMonthPicker";
 import { UserProfile } from "@/lib/user-auth";
 import { getFallbackSchedule } from "@/lib/lvbp-fallback-data";
 import {
@@ -230,6 +231,8 @@ export function EnJuegoPortal({
   const [calendarStateFilter, setCalendarStateFilter] = useState<"ALL" | "UPCOMING" | "FINISHED">(
     "ALL"
   );
+  const [calendarPickDate, setCalendarPickDate] = useState("");
+  const [userPickedCalendarDate, setUserPickedCalendarDate] = useState(false);
   const [standingsPhase, setStandingsPhase] = useState<"REGULAR" | "ROUND_ROBIN" | "FINAL">(
     "REGULAR"
   );
@@ -983,16 +986,93 @@ export function EnJuegoPortal({
     });
   }, [schedule, teamFilter, calendarStateFilter]);
 
-  // Group calendar games by date when viewing all teams
-  const calendarGamesByDate = useMemo(() => {
-    const map = new Map<string, ScheduleGame[]>();
+  const calendarAvailableDates = useMemo(
+    () => [...new Set(filteredCalendarGames.map((g) => g.date))].sort(),
+    [filteredCalendarGames]
+  );
+
+  const calendarMonthKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const d of calendarAvailableDates) keys.add(d.slice(0, 7));
+    return Array.from(keys).sort();
+  }, [calendarAvailableDates]);
+
+  const calendarMonthKey =
+    (calendarPickDate ? calendarPickDate.slice(0, 7) : "") ||
+    calendarMonthKeys[0] ||
+    "";
+
+  const calendarDayGames = useMemo(
+    () => filteredCalendarGames.filter((g) => g.date === calendarPickDate),
+    [filteredCalendarGames, calendarPickDate]
+  );
+
+  const calendarGamesPerDay = useMemo(() => {
+    const map: Record<string, number> = {};
     for (const g of filteredCalendarGames) {
-      const list = map.get(g.date) || [];
-      list.push(g);
-      map.set(g.date, list);
+      map[g.date] = (map[g.date] || 0) + 1;
     }
-    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+    return map;
   }, [filteredCalendarGames]);
+
+  const calendarPickIndex = calendarAvailableDates.indexOf(calendarPickDate);
+
+  useEffect(() => {
+    if (section !== "calendario") return;
+    const available = calendarAvailableDates;
+    if (!available.length) {
+      setCalendarPickDate("");
+      return;
+    }
+    const param = searchParams?.get("fecha") || searchParams?.get("date");
+    if (param && available.includes(param)) {
+      setCalendarPickDate(param);
+      return;
+    }
+    if (userPickedCalendarDate && calendarPickDate && available.includes(calendarPickDate)) {
+      return;
+    }
+    const today = getTodayCaracasIso();
+    const live = filteredCalendarGames.find((g) => g.status === "IN_PROGRESS");
+    const target = live?.date || today;
+    let idx = available.indexOf(target);
+    if (idx === -1) idx = available.findIndex((d) => d >= target);
+    if (idx === -1) idx = available.length - 1;
+    setCalendarPickDate(available[idx]);
+  }, [
+    section,
+    calendarAvailableDates,
+    filteredCalendarGames,
+    searchParams,
+    teamFilter,
+    calendarStateFilter,
+    activeLeague,
+    userPickedCalendarDate,
+    calendarPickDate,
+  ]);
+
+  const selectCalendarDate = (iso: string) => {
+    setUserPickedCalendarDate(true);
+    setCalendarPickDate(iso);
+    const club = teamFilter ? anyTeamsCatalog[teamFilter] : null;
+    const q = new URLSearchParams({ liga: activeLeague, fecha: iso });
+    if (club?.slug) q.set("equipo", club.slug);
+    router.replace(`/calendario?${q.toString()}`, { scroll: false });
+  };
+
+  const shiftCalendarDay = (delta: -1 | 1) => {
+    const idx = calendarAvailableDates.indexOf(calendarPickDate);
+    const next = calendarAvailableDates[idx + delta];
+    if (next) selectCalendarDate(next);
+  };
+
+  const shiftCalendarMonth = (delta: -1 | 1) => {
+    const mkIdx = calendarMonthKeys.indexOf(calendarMonthKey);
+    const targetMonth = calendarMonthKeys[mkIdx + delta];
+    if (!targetMonth) return;
+    const firstInMonth = calendarAvailableDates.find((d) => d.startsWith(targetMonth));
+    if (firstInMonth) selectCalendarDate(firstInMonth);
+  };
 
   // Render a broadcast-quality Scoreboard Card for Pizarra del Día & Resultados
   const renderScoreboardCard = (game: ScheduleGame) => {
@@ -2877,7 +2957,10 @@ export function EnJuegoPortal({
                   <button
                     key={stKey}
                     type="button"
-                    onClick={() => setCalendarStateFilter(stKey)}
+                    onClick={() => {
+                      setUserPickedCalendarDate(false);
+                      setCalendarStateFilter(stKey);
+                    }}
                     className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer ${
                       calendarStateFilter === stKey
                         ? "bg-amber-400 text-slate-950"
@@ -2899,6 +2982,7 @@ export function EnJuegoPortal({
                 <button
                   type="button"
                   onClick={() => {
+                    setUserPickedCalendarDate(false);
                     setTeamFilter("");
                     router.replace(`/calendario?liga=${activeLeague}`, { scroll: false });
                   }}
@@ -2919,6 +3003,7 @@ export function EnJuegoPortal({
                       key={t.code}
                       type="button"
                       onClick={() => {
+                        setUserPickedCalendarDate(false);
                         const next = active ? "" : t.code;
                         setTeamFilter(next);
                         router.replace(
@@ -2941,6 +3026,47 @@ export function EnJuegoPortal({
                 })}
               </div>
             </div>
+
+            {calendarAvailableDates.length > 0 && (
+              <div className="sticky top-[4.25rem] z-20">
+                <CalendarMonthPicker
+                  monthKey={calendarMonthKey}
+                  monthKeys={calendarMonthKeys}
+                  selectedDate={calendarPickDate}
+                  gameDates={calendarAvailableDates}
+                  gamesPerDay={calendarGamesPerDay}
+                  todayIso={getTodayCaracasIso()}
+                  gamesOnSelectedDay={calendarDayGames.length}
+                  onSelectDate={selectCalendarDate}
+                  onShiftMonth={shiftCalendarMonth}
+                />
+                <div className="flex items-center justify-center gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => shiftCalendarDay(-1)}
+                    disabled={calendarPickIndex <= 0}
+                    className="text-xs font-bold text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-amber-400 disabled:opacity-40 cursor-pointer"
+                  >
+                    ← Día anterior
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => shiftCalendarDay(1)}
+                    disabled={calendarPickIndex >= calendarAvailableDates.length - 1}
+                    className="text-xs font-bold text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-amber-400 disabled:opacity-40 cursor-pointer"
+                  >
+                    Día siguiente →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {calendarAvailableDates.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">
+                No hay juegos con los filtros actuales. Prueba otro equipo o estado (próximos /
+                finalizados).
+              </div>
+            ) : null}
 
             {/* CASE A: SINGLE TEAM SELECTED — CLEAR TEAM-CENTRIC SCHEDULE */}
             {teamFilter && anyTeamsCatalog[teamFilter] ? (
@@ -2996,7 +3122,12 @@ export function EnJuegoPortal({
 
                 {/* Team-Centric Game Rows */}
                 <div className="space-y-2.5">
-                  {filteredCalendarGames.map((game) => {
+                  {calendarDayGames.length === 0 ? (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-center text-xs text-slate-500">
+                      Sin juegos de {anyTeamsCatalog[teamFilter].nick} en esta fecha.
+                    </div>
+                  ) : null}
+                  {calendarDayGames.map((game) => {
                     const isHome = game.homeTeam.code === teamFilter;
                     const myTeam = isHome ? game.homeTeam : game.awayTeam;
                     const opponent = isHome ? game.awayTeam : game.homeTeam;
@@ -3104,25 +3235,29 @@ export function EnJuegoPortal({
                   })}
                 </div>
               </div>
-            ) : (
-              /* CASE B: ALL TEAMS SELECTED — GROUPED BY DAY IN SPANISH */
-              <div className="space-y-6">
-                {calendarGamesByDate.map(([dateIso, dayGames]) => {
-                  const dInfo = formatCompactDay(dateIso);
-                  return (
-                    <div key={dateIso} className="space-y-3">
-                      <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                        <h3 className="text-sm sm:text-base font-black text-slate-950 capitalize flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-amber-600" />
-                          {dInfo.fullLabel}
-                        </h3>
-                        <span className="text-xs font-bold text-slate-500">
-                          {dayGames.length} {dayGames.length === 1 ? "juego" : "juegos"}
-                        </span>
-                      </div>
+            ) : calendarAvailableDates.length > 0 ? (
+              /* CASE B: ALL TEAMS — ONE DAY AT A TIME */
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <h3 className="text-sm sm:text-base font-black text-slate-950 capitalize flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-amber-600" />
+                    {calendarPickDate
+                      ? formatCompactDay(calendarPickDate).fullLabel
+                      : "Jornada"}
+                  </h3>
+                  <span className="text-xs font-bold text-slate-500">
+                    {calendarDayGames.length}{" "}
+                    {calendarDayGames.length === 1 ? "juego" : "juegos"}
+                  </span>
+                </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {dayGames.map((game) => {
+                {calendarDayGames.length === 0 ? (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-center text-xs text-slate-500">
+                    No hay partidos programados para este día.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {calendarDayGames.map((game) => {
                           const isFinished = game.status === "FINISHED";
                           const tvList = getGameTvChannels(game);
                           return (
@@ -3195,13 +3330,11 @@ export function EnJuegoPortal({
                               </div>
                             </Link>
                           );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
+                    })}
+                  </div>
+                )}
               </div>
-            )}
+            ) : null}
           </div>
         )}
 

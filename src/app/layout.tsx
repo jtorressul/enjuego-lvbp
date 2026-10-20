@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { PwaManager } from "@/components/pwa/PwaManager";
 
@@ -46,9 +47,6 @@ export const metadata: Metadata = {
       "Marcadores, jugada a jugada, canales de TV y posiciones del béisbol venezolano.",
     images: ["/logo.png"],
   },
-  other: {
-    monetag: "5703e71c4d0b4eaa3106c98ca66a3cd8",
-  },
 };
 
 export default function RootLayout({
@@ -58,6 +56,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" data-theme="light">
+      <head>
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8181027493659485"
+          crossOrigin="anonymous"
+          strategy="beforeInteractive"
+        />
+      </head>
       <body className="min-h-screen antialiased selection:bg-amber-400 selection:text-slate-950 transition-colors duration-300">
         {children}
         <PwaManager />

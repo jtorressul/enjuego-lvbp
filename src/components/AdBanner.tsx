@@ -124,7 +124,7 @@ export function AdBanner({
 
   // Fallback to AADS Ad Unit when no direct sponsor banner is assigned
   if (!finalImageUrl || imageError) {
-    if (slot === "recap-large") {
+    if (slot === "recap-large" || slot === "in-feed" || slot === "home-bottom") {
       return <AadsAdaptiveBanner className={className} />;
     }
 
@@ -191,7 +191,7 @@ export function AdBanner({
           style={{ backgroundColor: "#ffffff", borderColor: "#e4e8ee" }}
         >
           <div
-            id="frame"
+            id="frame-2459241"
             style={{
               width: "320px",
               margin: "auto",
@@ -202,7 +202,7 @@ export function AdBanner({
           >
             <iframe
               data-aa="2459241"
-              src="//ad.a-ads.com/2459241/?size=320x50"
+              src="//acceptable.a-ads.com/2459241/?size=320x50"
               title="Publicidad"
               style={{
                 border: 0,

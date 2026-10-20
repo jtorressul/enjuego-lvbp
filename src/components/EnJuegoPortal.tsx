@@ -2465,26 +2465,34 @@ export function EnJuegoPortal({
               )}
 
               {latestRecaps.length > 0 && (
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
-                  <div className="flex items-center justify-between gap-3">
-                    <h2 className="text-sm font-black text-slate-950">Noticias del marcador</h2>
+                <div>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <h2 className="text-lg font-black text-slate-950">
+                      Noticias del <em className="text-amber-600 not-italic">marcador</em>
+                    </h2>
                     <Link href="/noticias" className="text-xs font-extrabold text-amber-800">
                       Ver todas ›
                     </Link>
                   </div>
-                  <div className="mt-3 grid gap-3 md:grid-cols-3">
+                  <div className="grid gap-3 md:grid-cols-3">
                     {latestRecaps.map((recap) => (
                       <Link
                         key={recap.id}
                         href={`/noticias/${recap.id}`}
-                        className="rounded-xl border border-slate-100 bg-slate-50 p-3 hover:border-amber-300"
+                        className="rounded-2xl border border-slate-200 bg-white p-3 shadow-xs hover:border-amber-300"
                       >
-                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700">
-                          {recap.dateLabel}
-                        </p>
-                        <p className="mt-1 text-sm font-black text-slate-950 leading-snug">
-                          {recap.headline}
-                        </p>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="flex items-center gap-1.5 min-w-0">
+                            <img src={recap.away.logo} alt="" className="w-6 h-6 object-contain" />
+                            <b className="text-sm tabular-nums">{recap.away.score}</b>
+                          </span>
+                          <span className="text-[10px] font-black uppercase text-slate-400">Final</span>
+                          <span className="flex items-center gap-1.5 min-w-0">
+                            <b className="text-sm tabular-nums">{recap.home.score}</b>
+                            <img src={recap.home.logo} alt="" className="w-6 h-6 object-contain" />
+                          </span>
+                        </div>
+                        <p className="mt-2 text-sm font-black text-slate-950 leading-snug">{recap.headline}</p>
                       </Link>
                     ))}
                   </div>

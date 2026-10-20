@@ -1,5 +1,24 @@
 import type { ScheduleGame, StandingRow } from "@/lib/types";
 
+export type RecapSide = {
+  code: string;
+  name: string;
+  nick: string;
+  logo: string;
+  score: number;
+  hits: number;
+  errors: number;
+};
+
+export type RecapStanding = {
+  name: string;
+  place: number;
+  wins: number;
+  losses: number;
+  behind: string;
+  leading: boolean;
+};
+
 export type GameRecap = {
   id: string;
   date: string;
@@ -10,6 +29,15 @@ export type GameRecap = {
   winnerName: string;
   loserName: string;
   venue: string;
+  away: RecapSide;
+  home: RecapSide;
+  winnerSide: "away" | "home";
+  marginLabel: string;
+  winnerPitcher?: string;
+  loserPitcher?: string;
+  savePitcher?: string;
+  winnerStanding: RecapStanding | null;
+  loserStanding: RecapStanding | null;
 };
 
 function ordinal(place: number): string {
@@ -30,14 +58,27 @@ function placeOf(rows: StandingRow[], code: string): { row: StandingRow; place: 
   return { row: rows[index], place: index + 1 };
 }
 
-function standingSentence(teamName: string, found: { row: StandingRow; place: number } | null): string {
+function isLeading(place: number, behind: string): boolean {
+  return place === 1 || behind === "0" || behind === "0.0" || behind === "-" || behind === "—";
+}
+
+function toStanding(found: { row: StandingRow; place: number } | null): RecapStanding | null {
+  if (!found) return null;
+  const behind = found.row.gamesBehind || "—";
+  return {
+    name: found.row.team.nick || found.row.team.name,
+    place: found.place,
+    wins: found.row.wins,
+    losses: found.row.losses,
+    behind,
+    leading: isLeading(found.place, behind),
+  };
+}
+
+function standingSentence(found: RecapStanding | null): string {
   if (!found) return "";
-  const behind = found.row.gamesBehind;
-  const leader =
-    found.place === 1 || behind === "0" || behind === "0.0" || behind === "-" || behind === "—"
-      ? "y lideran la tabla"
-      : `a ${behind} juegos del primero`;
-  return `${teamName} queda ${found.row.wins}-${found.row.losses}, en el ${ordinal(found.place)} lugar, ${leader}.`;
+  const leader = found.leading ? "y lideran la tabla" : `a ${found.behind} juegos del primero`;
+  return `${found.name} queda ${found.wins}-${found.losses}, en el ${ordinal(found.place)} lugar, ${leader}.`;
 }
 
 export function formatRecapDate(iso: string): string {
@@ -88,11 +129,22 @@ export function buildGameRecaps(games: ScheduleGame[], standings: StandingRow[])
         lines.push(`${sentence.charAt(0).toUpperCase()}${sentence.slice(1)}.`);
       }
 
-      const winnerStanding = standingSentence(winner.name, placeOf(table, winner.code));
-      const loserStanding = standingSentence(loser.name, placeOf(table, loser.code));
-      if (winnerStanding || loserStanding) {
-        lines.push([winnerStanding, loserStanding].filter(Boolean).join(" "));
-      }
+      const winnerStanding = toStanding(placeOf(table, winner.code));
+      const loserStanding = toStanding(placeOf(table, loser.code));
+      const standingLine = [standingSentence(winnerStanding), standingSentence(loserStanding)]
+        .filter(Boolean)
+        .join(" ");
+      if (standingLine) lines.push(standingLine);
+
+      const side = (team: ScheduleGame["awayTeam"], score: number, hits: number, errors: number): RecapSide => ({
+        code: team.code,
+        name: team.name,
+        nick: team.nick,
+        logo: team.logoUrl,
+        score,
+        hits,
+        errors,
+      });
 
       return {
         id: game.id,
@@ -104,6 +156,15 @@ export function buildGameRecaps(games: ScheduleGame[], standings: StandingRow[])
         winnerName: winner.name,
         loserName: loser.name,
         venue: place,
+        away: side(game.awayTeam, game.awayScore, game.awayHits, game.awayErrors),
+        home: side(game.homeTeam, game.homeScore, game.homeHits, game.homeErrors),
+        winnerSide: awayWon ? "away" : "home",
+        marginLabel: marginText,
+        winnerPitcher: game.decisions?.winner,
+        loserPitcher: game.decisions?.loser,
+        savePitcher: game.decisions?.save,
+        winnerStanding,
+        loserStanding,
       };
     });
 }

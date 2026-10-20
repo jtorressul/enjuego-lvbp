@@ -21,6 +21,7 @@ import { ShareStandingsModal } from "@/components/ShareStandingsModal";
 import { CalendarMonthPicker } from "@/components/CalendarMonthPicker";
 import { UserProfile } from "@/lib/user-auth";
 import { getFallbackSchedule } from "@/lib/lvbp-fallback-data";
+import { buildGameRecaps } from "@/lib/game-recaps";
 import {
   ChevronLeft,
   ChevronRight,
@@ -683,6 +684,10 @@ export function EnJuegoPortal({
   const dates = useMemo(
     () => [...new Set(schedule.map((g) => g.date))].sort(),
     [schedule]
+  );
+  const latestRecaps = useMemo(
+    () => (activeLeague === "lvbp" ? buildGameRecaps(schedule, standings).slice(0, 3) : []),
+    [activeLeague, schedule, standings]
   );
 
   const activeDate = dates[selectedDateIndex] || getTodayCaracasIso();
@@ -2459,6 +2464,33 @@ export function EnJuegoPortal({
                 </div>
               )}
 
+              {latestRecaps.length > 0 && (
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 className="text-sm font-black text-slate-950">Noticias del marcador</h2>
+                    <Link href="/noticias" className="text-xs font-extrabold text-amber-800">
+                      Ver todas ›
+                    </Link>
+                  </div>
+                  <div className="mt-3 grid gap-3 md:grid-cols-3">
+                    {latestRecaps.map((recap) => (
+                      <Link
+                        key={recap.id}
+                        href={`/noticias/${recap.id}`}
+                        className="rounded-xl border border-slate-100 bg-slate-50 p-3 hover:border-amber-300"
+                      >
+                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700">
+                          {recap.dateLabel}
+                        </p>
+                        <p className="mt-1 text-sm font-black text-slate-950 leading-snug">
+                          {recap.headline}
+                        </p>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {jornadaLeague === "mlb" && showHomeMlbBracket && (
                 <div className="pt-2 space-y-2">
                   <div className="flex items-center justify-between">
@@ -3840,6 +3872,9 @@ export function EnJuegoPortal({
               </Link>
               <Link href="/lideres" className="hover:text-slate-900">
                 Líderes
+              </Link>
+              <Link href="/noticias" className="hover:text-slate-900">
+                Noticias
               </Link>
               <Link href="/teams?team=leones" className="hover:text-slate-900">
                 Equipos y Roster

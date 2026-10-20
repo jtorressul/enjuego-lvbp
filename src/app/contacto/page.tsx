@@ -4,15 +4,15 @@ import { InfoPage } from "@/components/InfoPage";
 
 export const metadata: Metadata = {
   title: "Contacto · En Juego",
-  description: "Escribe al equipo de En Juego por correo para correcciones, publicidad o privacidad.",
+  description: "Escribe a En Juego por correo para correcciones, publicidad o privacidad.",
 };
 
 export default function ContactoPage() {
   return (
     <InfoPage eyebrow="En Juego" title="Contacto">
       <p>
-        Detrás de enjuego.online hay un equipo editorial. Respondemos correcciones de marcador,
-        consultas de publicidad y solicitudes sobre datos personales.
+        Detrás de enjuego.online hay una persona. Responde correcciones de marcador, consultas de
+        publicidad y solicitudes sobre datos personales.
       </p>
       <p>
         Correo:{" "}

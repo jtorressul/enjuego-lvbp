@@ -12,9 +12,9 @@ export default function QuienesSomosPage() {
   return (
     <InfoPage eyebrow="El proyecto" title="Quiénes somos">
       <p>
-        En Juego lo hace un equipo editorial en Venezuela para los aficionados de la Liga
-        Venezolana de Béisbol Profesional. Publicamos el marcador, la jornada del día, el
-        calendario de la temporada, la tabla de posiciones y los líderes de bateo y pitcheo.
+        En Juego lo mantiene un aficionado en Venezuela. El sitio muestra el marcador, la jornada
+        del día, el calendario de la temporada, la tabla de posiciones y los líderes de bateo y
+        pitcheo de la Liga Venezolana de Béisbol Profesional.
       </p>
       <p>
         El sitio es independiente. No está afiliado, autorizado ni patrocinado por la LVBP, por
@@ -47,7 +47,7 @@ export default function QuienesSomosPage() {
         </li>
       </ul>
       <p>
-        Si quieres escribirle al equipo, usa la página de{" "}
+        Si quieres escribir, usa la página de{" "}
         <Link href="/contacto" className="font-semibold text-amber-800 underline">
           contacto
         </Link>

@@ -7,6 +7,7 @@ const LINKS = [
   { href: "/calendario", label: "Calendario" },
   { href: "/posiciones", label: "Posiciones" },
   { href: "/lideres", label: "Líderes" },
+  { href: "/noticias", label: "Noticias" },
   { href: "/quienes-somos", label: "Quiénes somos" },
   { href: "/contacto", label: "Contacto" },
   { href: "/privacidad", label: "Privacidad" },

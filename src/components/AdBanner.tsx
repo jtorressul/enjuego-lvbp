@@ -440,210 +440,55 @@ export function AadsAdaptiveBanner({
 }
 
 /**
- * A-Ads Vertical Skyscraper Sidebar Unit (ID: 2459266, Adaptive)
- * Takes advantage of wide-screen side margins next to scores and recaps.
- * On desktop (xl+), renders as a floating right skyscraper.
- * On mobile/tablet (<xl), renders as an in-flow banner below scores/recaps.
+ * A-Ads Adaptive Banner Unit (ID: 2459266)
+ * Clean, 100% visible in-page adaptive container without hidden duplicates.
  */
 export function AadsSkyscraperBanner({
-  mode = "all",
   className = "",
 }: {
-  mode?: "all" | "floating-only" | "in-flow-only";
   className?: string;
+  mode?: string;
 }) {
-  const [closed, setClosed] = useState(false);
-
-  const handleClose = () => {
-    setClosed(true);
-  };
-
-  if (closed) return null;
-
   return (
-    <>
-      {/* 1. Desktop Widescreen Floating Right Skyscraper (xl+) */}
-      {mode !== "in-flow-only" && (
-        <aside
-          aria-label="Publicidad lateral"
-          className="hidden xl:block aads-skyscraper-floating"
-          style={{ position: "relative", zIndex: 40 }}
+    <div
+      className={`w-full my-4 flex flex-col items-center justify-center ${className}`}
+      data-ad-slot="aads-2459266"
+    >
+      <div
+        className="w-full max-w-4xl flex flex-col items-center gap-1.5 pt-2 px-3 pb-2 rounded-2xl border border-slate-200 bg-white shadow-2xs"
+        style={{ backgroundColor: "#ffffff" }}
+      >
+        <div
+          id="frame-2459266"
+          style={{
+            width: "100%",
+            margin: "auto",
+            position: "relative",
+            zIndex: 1,
+            display: "block",
+            textAlign: "center",
+          }}
         >
-          <input
-            autoComplete="off"
-            type="checkbox"
-            id="aadsstickymvh6sa4q"
-            hidden
-            checked={closed}
-            onChange={handleClose}
+          <iframe
+            data-aa="2459266"
+            src="//acceptable.a-ads.com/2459266/?size=Adaptive"
+            title="Publicidad"
+            style={{
+              border: 0,
+              padding: 0,
+              width: "min(70%, 970px)",
+              minHeight: "90px",
+              height: "auto",
+              overflow: "hidden",
+              display: "block",
+              margin: "auto",
+            }}
           />
-          <div style={{ paddingTop: 0, paddingBottom: 0 }}>
-            <div
-              style={{
-                width: "min(15%, 160px)",
-                minWidth: "120px",
-                height: "100%",
-                position: "fixed",
-                textAlign: "center",
-                fontSize: 0,
-                top: "50%",
-                transform: "translateY(-50%)",
-                right: "4px",
-                zIndex: 40,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-                alignItems: "center",
-                pointerEvents: "auto",
-              }}
-            >
-              <div
-                id="frame"
-                style={{
-                  width: "100%",
-                  margin: "auto",
-                  position: "relative",
-                  zIndex: 1,
-                  height: "75%",
-                  maxHeight: "650px",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  backgroundColor: "rgba(255, 255, 255, 0.95)",
-                  border: "1px solid rgba(226, 232, 240, 0.85)",
-                  borderRadius: "14px",
-                  padding: "8px 4px",
-                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
-                }}
-              >
-                <div style={{ width: "100%", textAlign: "center", marginBottom: "6px" }}>
-                  <a
-                    style={{
-                      display: "inline-block",
-                      fontSize: "11px",
-                      color: "#263238",
-                      padding: "3px 8px",
-                      background: "#F8F8F9",
-                      textDecoration: "none",
-                      borderRadius: "4px",
-                      border: "1px solid #e2e8f0",
-                      fontWeight: 700,
-                    }}
-                    id="frame-link"
-                    target="_blank"
-                    rel="noopener"
-                    href="https://aads.com/campaigns/new?source_id=2459266&source_type=ad_unit&partner=2459266"
-                  >
-                    Advertise here
-                  </a>
-                </div>
-                <iframe
-                  data-aa="2459266"
-                  src="//acceptable.a-ads.com/2459266/?size=Adaptive"
-                  title="Publicidad"
-                  style={{
-                    border: 0,
-                    padding: 0,
-                    width: "100%",
-                    height: "100%",
-                    minHeight: "250px",
-                    overflow: "hidden",
-                    margin: "0 auto",
-                    display: "block",
-                  }}
-                />
-              </div>
-
-              <label
-                htmlFor="aadsstickymvh6sa4q"
-                onClick={handleClose}
-                style={{
-                  bottom: "16px",
-                  margin: "0 auto",
-                  right: 0,
-                  left: 0,
-                  width: "28px",
-                  height: "28px",
-                  position: "absolute",
-                  borderRadius: "6px",
-                  background: "rgba(248, 248, 249, 0.95)",
-                  border: "1px solid rgba(203, 213, 225, 0.8)",
-                  padding: "6px",
-                  zIndex: 41,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                }}
-                title="Cerrar publicidad"
-                aria-label="Cerrar publicidad"
-              >
-                <svg
-                  fill="#000000"
-                  height="14px"
-                  width="14px"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 490 490"
-                >
-                  <polygon points="456.851,0 245,212.564 33.149,0 0.708,32.337 212.669,245.004 0.708,457.678 33.149,490 245,277.443 456.851,490 489.292,457.678 277.331,245.004 489.292,32.337 " />
-                </svg>
-              </label>
-            </div>
-            <style>{`
-              #aadsstickymvh6sa4q:checked + div {
-                display: none;
-              }
-            `}</style>
-          </div>
-        </aside>
-      )}
-
-      {/* 2. In-flow Companion Banner for Mobile / Scores (under xl) */}
-      {mode !== "floating-only" && (
-        <div className={`xl:hidden w-full my-4 flex flex-col items-center justify-center ${className}`}>
-          <div className="w-full max-w-md flex flex-col items-center gap-1.5 pt-2 px-3 pb-2 rounded-2xl border border-slate-200 bg-white shadow-2xs">
-            <div style={{ width: "100%", textAlign: "center", marginBottom: "2px" }}>
-              <a
-                style={{
-                  display: "inline-block",
-                  fontSize: "10px",
-                  color: "#64748b",
-                  padding: "2px 8px",
-                  background: "#F8F8F9",
-                  textDecoration: "none",
-                  borderRadius: "4px",
-                  fontWeight: 600,
-                }}
-                target="_blank"
-                rel="noopener"
-                href="https://aads.com/campaigns/new?source_id=2459266&source_type=ad_unit&partner=2459266"
-              >
-                Advertise here
-              </a>
-            </div>
-            <iframe
-              data-aa="2459266"
-              src="//acceptable.a-ads.com/2459266/?size=Adaptive"
-              title="Publicidad"
-              style={{
-                border: 0,
-                padding: 0,
-                width: "100%",
-                minHeight: "90px",
-                height: "auto",
-                overflow: "hidden",
-                margin: "0 auto",
-                display: "block",
-              }}
-            />
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Publicidad
-            </span>
-          </div>
         </div>
-      )}
-    </>
+        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+          Publicidad
+        </span>
+      </div>
+    </div>
   );
 }

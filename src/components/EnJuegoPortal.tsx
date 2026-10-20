@@ -2932,7 +2932,7 @@ export function EnJuegoPortal({
 
         {/* SECTION: CALENDARIO (/calendario) */}
         {section === "calendario" && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
               <div>
                 <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
@@ -3027,40 +3027,6 @@ export function EnJuegoPortal({
               </div>
             </div>
 
-            {calendarAvailableDates.length > 0 && (
-              <div className="sticky top-[4.25rem] z-20">
-                <CalendarMonthPicker
-                  monthKey={calendarMonthKey}
-                  monthKeys={calendarMonthKeys}
-                  selectedDate={calendarPickDate}
-                  gameDates={calendarAvailableDates}
-                  gamesPerDay={calendarGamesPerDay}
-                  todayIso={getTodayCaracasIso()}
-                  gamesOnSelectedDay={calendarDayGames.length}
-                  onSelectDate={selectCalendarDate}
-                  onShiftMonth={shiftCalendarMonth}
-                />
-                <div className="flex items-center justify-center gap-2 mt-2">
-                  <button
-                    type="button"
-                    onClick={() => shiftCalendarDay(-1)}
-                    disabled={calendarPickIndex <= 0}
-                    className="text-xs font-bold text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-amber-400 disabled:opacity-40 cursor-pointer"
-                  >
-                    ← Día anterior
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => shiftCalendarDay(1)}
-                    disabled={calendarPickIndex >= calendarAvailableDates.length - 1}
-                    className="text-xs font-bold text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-amber-400 disabled:opacity-40 cursor-pointer"
-                  >
-                    Día siguiente →
-                  </button>
-                </div>
-              </div>
-            )}
-
             {calendarAvailableDates.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">
                 No hay juegos con los filtros actuales. Prueba otro equipo o estado (próximos /
@@ -3068,9 +3034,26 @@ export function EnJuegoPortal({
               </div>
             ) : null}
 
+            {calendarAvailableDates.length > 0 && (
+              <CalendarMonthPicker
+                monthKey={calendarMonthKey}
+                monthKeys={calendarMonthKeys}
+                selectedDate={calendarPickDate}
+                gameDates={calendarAvailableDates}
+                gamesPerDay={calendarGamesPerDay}
+                todayIso={getTodayCaracasIso()}
+                gamesOnSelectedDay={calendarDayGames.length}
+                onSelectDate={selectCalendarDate}
+                onShiftMonth={shiftCalendarMonth}
+                onShiftDay={shiftCalendarDay}
+                canShiftDayPrev={calendarPickIndex > 0}
+                canShiftDayNext={calendarPickIndex < calendarAvailableDates.length - 1}
+              />
+            )}
+
             {/* CASE A: SINGLE TEAM SELECTED — CLEAR TEAM-CENTRIC SCHEDULE */}
             {teamFilter && anyTeamsCatalog[teamFilter] ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {(() => {
                   const club = anyTeamsCatalog[teamFilter];
                   const homeCount = filteredCalendarGames.filter(
@@ -3237,20 +3220,7 @@ export function EnJuegoPortal({
               </div>
             ) : calendarAvailableDates.length > 0 ? (
               /* CASE B: ALL TEAMS — ONE DAY AT A TIME */
-              <div className="space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                  <h3 className="text-sm sm:text-base font-black text-slate-950 capitalize flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-amber-600" />
-                    {calendarPickDate
-                      ? formatCompactDay(calendarPickDate).fullLabel
-                      : "Jornada"}
-                  </h3>
-                  <span className="text-xs font-bold text-slate-500">
-                    {calendarDayGames.length}{" "}
-                    {calendarDayGames.length === 1 ? "juego" : "juegos"}
-                  </span>
-                </div>
-
+              <div className="space-y-3">
                 {calendarDayGames.length === 0 ? (
                   <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-center text-xs text-slate-500">
                     No hay partidos programados para este día.

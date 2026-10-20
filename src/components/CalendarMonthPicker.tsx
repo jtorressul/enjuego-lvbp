@@ -161,9 +161,9 @@ export function CalendarMonthPicker({
                 type="button"
                 data-cal-date={d}
                 onClick={() => onSelectDate(d)}
-                className={`snap-center min-w-[4.25rem] px-2 py-2 rounded-2xl border text-center shrink-0 cursor-pointer transition-transform duration-200 active:scale-95 ${
+                className={`snap-center min-w-[4.25rem] px-2 py-2 rounded-2xl border text-center shrink-0 cursor-pointer transition-colors duration-150 ${
                   active
-                    ? "bg-amber-400 text-slate-950 border-amber-500 shadow-sm scale-105"
+                    ? "bg-amber-400 text-slate-950 border-amber-500 shadow-sm"
                     : "bg-white text-slate-800 border-slate-200 hover:border-amber-300"
                 }`}
               >

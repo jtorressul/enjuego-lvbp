@@ -154,7 +154,7 @@ export function EnJuegoPortal({
   const [mlbJornadaGames, setMlbJornadaGames] = useState<ScheduleGame[]>([]);
   const [jornadaLeague, setJornadaLeague] = useState<"lvbp" | "mlb">("lvbp");
   const [mlbDateIndex, setMlbDateIndex] = useState(0);
-  const [userSelectedMlbDate, setUserSelectedMlbDate] = useState(false);
+  const manualMlbDateRef = useRef(false);
   const [standings, setStandings] = useState<StandingRow[]>([]);
   const [leaders, setLeaders] = useState<{ hitting: LeaderCategory[]; pitching: LeaderCategory[] }>({
     hitting: [],
@@ -162,7 +162,7 @@ export function EnJuegoPortal({
   });
   const [loading, setLoading] = useState(true);
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
-  const [userSelectedDateManually, setUserSelectedDateManually] = useState(false);
+  const manualDateRef = useRef(false);
   const [selectedGameId, setSelectedGameId] = useState<string>(
     initialGameId || searchParams?.get("id") || searchParams?.get("game") || "870098"
   );
@@ -264,7 +264,7 @@ export function EnJuegoPortal({
       return nextLeague;
     });
     setTeamFilter("");
-    setUserSelectedDateManually(false);
+    manualDateRef.current = false;
     setSelectedTeamCode((prev) => {
       if (nextLeague === "mlb") return MLB_TEAMS[prev] ? prev : "NYY";
       return LVBP_TEAMS[prev] ? prev : "CAR";
@@ -567,7 +567,7 @@ export function EnJuegoPortal({
             let mIdx = uniqueMlbDates.indexOf(targetMlbIso);
             if (mIdx === -1) mIdx = uniqueMlbDates.findIndex((d) => d >= targetMlbIso);
             if (mIdx === -1) mIdx = Math.max(0, uniqueMlbDates.length - 1);
-            setMlbDateIndex((prev) => (userSelectedMlbDate ? prev : mIdx));
+            setMlbDateIndex((prev) => (manualMlbDateRef.current ? prev : mIdx));
           }
         }
 
@@ -585,7 +585,7 @@ export function EnJuegoPortal({
           if (idx === -1) {
             idx = Math.max(0, uniqueDates.length - 1);
           }
-          setSelectedDateIndex((prev) => (userSelectedDateManually ? prev : idx));
+          setSelectedDateIndex((prev) => (manualDateRef.current ? prev : idx));
         }
 
         const hasLiveGame = loadedGames.some((g) => g.status === "IN_PROGRESS");
@@ -621,7 +621,7 @@ export function EnJuegoPortal({
       document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
       window.removeEventListener("focus", handleVisibilityOrFocus);
     };
-  }, [userSelectedDateManually, userSelectedMlbDate, activeLeague, section]);
+  }, [activeLeague, section]);
 
   // Dedicated poll for community comments every 60s (only when in /inicio home view)
   useEffect(() => {
@@ -687,12 +687,12 @@ export function EnJuegoPortal({
 
   const stepJornadaDate = (delta: number) => {
     if (section === "home" && jornadaLeague === "mlb") {
-      setUserSelectedMlbDate(true);
+      manualMlbDateRef.current = true;
       setMlbDateIndex((i) =>
         Math.min(jornadaDates.length - 1, Math.max(0, i + delta))
       );
     } else {
-      setUserSelectedDateManually(true);
+      manualDateRef.current = true;
       setSelectedDateIndex((i) =>
         Math.min(jornadaDates.length - 1, Math.max(0, i + delta))
       );
@@ -704,10 +704,10 @@ export function EnJuegoPortal({
     if (todayIdx === -1) return;
     if (section === "home" && jornadaLeague === "mlb") {
       setMlbDateIndex(todayIdx);
-      setUserSelectedMlbDate(false);
+      manualMlbDateRef.current = false;
     } else {
       setSelectedDateIndex(todayIdx);
-      setUserSelectedDateManually(false);
+      manualDateRef.current = false;
     }
   };
 
@@ -1016,6 +1016,7 @@ export function EnJuegoPortal({
   }, [filteredCalendarGames]);
 
   const calendarPickIndex = calendarAvailableDates.indexOf(calendarPickDate);
+  const calendarIntentRef = useRef("");
 
   useEffect(() => {
     if (section !== "calendario") return;
@@ -1024,12 +1025,14 @@ export function EnJuegoPortal({
       setCalendarPickDate("");
       return;
     }
-    const param = searchParams?.get("fecha") || searchParams?.get("date");
-    if (param && available.includes(param)) {
-      setCalendarPickDate(param);
+    if (calendarIntentRef.current && available.includes(calendarIntentRef.current)) {
+      setCalendarPickDate(calendarIntentRef.current);
       return;
     }
-    if (userPickedCalendarDate && calendarPickDate && available.includes(calendarPickDate)) {
+    const param = searchParams?.get("fecha") || searchParams?.get("date");
+    if (param && available.includes(param)) {
+      calendarIntentRef.current = param;
+      setCalendarPickDate(param);
       return;
     }
     const today = getTodayCaracasIso();
@@ -1038,26 +1041,21 @@ export function EnJuegoPortal({
     let idx = available.indexOf(target);
     if (idx === -1) idx = available.findIndex((d) => d >= target);
     if (idx === -1) idx = available.length - 1;
+    calendarIntentRef.current = available[idx];
     setCalendarPickDate(available[idx]);
-  }, [
-    section,
-    calendarAvailableDates,
-    filteredCalendarGames,
-    searchParams,
-    teamFilter,
-    calendarStateFilter,
-    activeLeague,
-    userPickedCalendarDate,
-    calendarPickDate,
-  ]);
+  }, [section, calendarAvailableDates, filteredCalendarGames, searchParams, teamFilter, calendarStateFilter, activeLeague]);
 
   const selectCalendarDate = (iso: string) => {
+    calendarIntentRef.current = iso;
     setUserPickedCalendarDate(true);
     setCalendarPickDate(iso);
     const club = teamFilter ? anyTeamsCatalog[teamFilter] : null;
     const q = new URLSearchParams({ liga: activeLeague, fecha: iso });
     if (club?.slug) q.set("equipo", club.slug);
-    router.replace(`/calendario?${q.toString()}`, { scroll: false });
+    const nextUrl = `/calendario?${q.toString()}`;
+    if (typeof window !== "undefined" && window.location.pathname + window.location.search !== nextUrl) {
+      window.history.replaceState(window.history.state, "", nextUrl);
+    }
   };
 
   const shiftCalendarDay = (delta: -1 | 1) => {
@@ -2878,11 +2876,10 @@ export function EnJuegoPortal({
                         key={d}
                         type="button"
                         onClick={() => {
-                          setUserSelectedDateManually(true);
+                          manualDateRef.current = true;
                           setSelectedDateIndex(realIdx);
-                          router.replace(`/resultados?liga=${activeLeague}&fecha=${d}`, {
-                            scroll: false,
-                          });
+                          const nextUrl = `/resultados?liga=${activeLeague}&fecha=${d}`;
+                          window.history.replaceState(window.history.state, "", nextUrl);
                         }}
                         className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition cursor-pointer shrink-0 ${
                           realIdx === selectedDateIndex
@@ -2958,6 +2955,7 @@ export function EnJuegoPortal({
                     key={stKey}
                     type="button"
                     onClick={() => {
+                      calendarIntentRef.current = "";
                       setUserPickedCalendarDate(false);
                       setCalendarStateFilter(stKey);
                     }}
@@ -2982,6 +2980,7 @@ export function EnJuegoPortal({
                 <button
                   type="button"
                   onClick={() => {
+                    calendarIntentRef.current = "";
                     setUserPickedCalendarDate(false);
                     setTeamFilter("");
                     router.replace(`/calendario?liga=${activeLeague}`, { scroll: false });
@@ -3004,6 +3003,7 @@ export function EnJuegoPortal({
                       type="button"
                       onClick={() => {
                         setUserPickedCalendarDate(false);
+                        calendarIntentRef.current = "";
                         const next = active ? "" : t.code;
                         setTeamFilter(next);
                         router.replace(

@@ -105,7 +105,8 @@ function formatCompactDay(iso: string): {
   };
 }
 
-function getGameTvChannels(game: ScheduleGame): string[] {
+function getGameTvChannels(game?: ScheduleGame | null): string[] {
+  if (!game) return ["IVC", "ByM Sport", "BeisbolPlay"];
   let list: string[] = [];
   if (Array.isArray(game.tvChannels) && game.tvChannels.length > 0) {
     list = [...game.tvChannels];
@@ -123,7 +124,7 @@ function getGameTvChannels(game: ScheduleGame): string[] {
     ((game.awayTeam?.code === "CAR" && game.homeTeam?.code === "LAG") ||
      (game.awayTeam?.code === "LAG" && game.homeTeam?.code === "CAR"));
 
-  if (isCarVsLag && !list.some((c) => c.toLowerCase().includes("ok"))) {
+  if (isCarVsLag && !list.some((c) => c && c.toLowerCase().includes("ok"))) {
     return ["OK.ru", ...list];
   }
 

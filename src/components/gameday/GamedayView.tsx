@@ -654,47 +654,43 @@ export function GamedayView({
     }
   };
 
-  const effectiveLiveStream = useMemo(() => {
-    // 1. Caracas vs La Guaira (ID 870072 or CAR vs LAG on 2026-10-20)
-    const isCarVsLag =
-      game.id === "870072" ||
-      ((game.awayTeam?.code === "CAR" && game.homeTeam?.code === "LAG") ||
-       (game.awayTeam?.code === "LAG" && game.homeTeam?.code === "CAR"));
+  const isCarVsLag =
+    game.id === "870072" ||
+    ((game.awayTeam?.code === "CAR" && game.homeTeam?.code === "LAG") ||
+     (game.awayTeam?.code === "LAG" && game.homeTeam?.code === "CAR"));
 
-    if (isCarVsLag) {
-      return {
+  const effectiveLiveStream = isCarVsLag
+    ? {
         type: "okru" as const,
         embedUrl: "https://ok.ru/videoembed/14909080673812",
         externalUrl: "https://ok.ru/video/14909080673812",
         title: `Transmisión en Vivo: ${game.awayTeam.name} vs ${game.homeTeam.name}`,
         badge: "Señal en Vivo",
         channelLabel: "OK.ru",
-      };
-    }
+      }
+    : (() => {
+        const ytId =
+          game.youtubeVideoId ||
+          (game.id === "870075" ||
+          (game.date === "2026-10-19" &&
+            ((game.awayTeam.code === "MAG" && game.homeTeam.code === "LAR") ||
+              (game.awayTeam.code === "LAR" && game.homeTeam.code === "MAG")))
+            ? "JpQMLHvmpB4"
+            : null);
 
-    // 2. YouTube Streams
-    const ytId =
-      game.youtubeVideoId ||
-      (game.id === "870075" ||
-      (game.date === "2026-10-19" &&
-        ((game.awayTeam.code === "MAG" && game.homeTeam.code === "LAR") ||
-          (game.awayTeam.code === "LAR" && game.homeTeam.code === "MAG")))
-        ? "JpQMLHvmpB4"
-        : null);
+        if (ytId) {
+          return {
+            type: "youtube" as const,
+            embedUrl: `https://www.youtube-nocookie.com/embed/${ytId}?autoplay=0&rel=0&modestbranding=1`,
+            externalUrl: game.youtubeUrl || `https://www.youtube.com/watch?v=${ytId}`,
+            title: `Transmisión Oficial en Vivo: ${game.awayTeam.name} vs ${game.homeTeam.name}`,
+            badge: "Transmisión Oficial",
+            channelLabel: "YouTube",
+          };
+        }
 
-    if (ytId) {
-      return {
-        type: "youtube" as const,
-        embedUrl: `https://www.youtube-nocookie.com/embed/${ytId}?autoplay=0&rel=0&modestbranding=1`,
-        externalUrl: game.youtubeUrl || `https://www.youtube.com/watch?v=${ytId}`,
-        title: `Transmisión Oficial en Vivo: ${game.awayTeam.name} vs ${game.homeTeam.name}`,
-        badge: "Transmisión Oficial",
-        channelLabel: "YouTube",
-      };
-    }
-
-    return null;
-  }, [game]);
+        return null;
+      })();
 
   const effectiveYtId = effectiveLiveStream?.type === "youtube" ? "JpQMLHvmpB4" : null;
 

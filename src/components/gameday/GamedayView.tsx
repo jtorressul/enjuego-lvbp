@@ -2076,7 +2076,8 @@ export function GamedayView({
           )}
 
               {!isLive && !isFinal && (
-                <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs space-y-4">
+                <>
+                  <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs space-y-4">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <div>
                       <span className="text-[11px] font-black uppercase tracking-wider text-amber-600 block">
@@ -2119,7 +2120,11 @@ export function GamedayView({
                     </button>
                   </div>
                 </section>
-              )}
+
+                {/* Banner grande en el espacio en blanco de la previa */}
+                <AdBanner slot="recap-large" />
+              </>
+            )}
 
               {isLive && (
                 <div className="xl:hidden flex items-center justify-between p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs shadow-2xs">

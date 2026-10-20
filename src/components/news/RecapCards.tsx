@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { GameRecap, RecapSide, RecapStanding } from "@/lib/game-recaps";
 import type { YoutubeHighlight } from "@/lib/youtube-highlight";
 import { RecapHighlightPlayer } from "@/components/news/RecapHighlightPlayer";
+import { AdBanner } from "@/components/AdBanner";
 
 function TeamMark({ side, won, align = "start" }: { side: RecapSide; won: boolean; align?: "start" | "end" }) {
   return (
@@ -206,6 +207,8 @@ export function RecapArticle({
           homeNick: recap.home.nick,
         }}
       />
+
+      <AdBanner slot="recap-large" />
 
       <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-7 space-y-4 text-sm sm:text-base leading-relaxed text-slate-700">
         {recap.paragraphs.map((paragraph) => (

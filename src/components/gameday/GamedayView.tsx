@@ -2070,6 +2070,8 @@ export function GamedayView({
                   </ol>
                 </div>
               )}
+
+              <AdBanner slot="recap-large" />
             </section>
           )}
 

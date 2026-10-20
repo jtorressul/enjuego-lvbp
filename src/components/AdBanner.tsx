@@ -49,7 +49,10 @@ function getSlotsForRoute(routeKey: string): string {
     return "top-leaderboard,in-feed,home-bottom";
   }
   if (routeKey.startsWith("/juego")) {
-    return "top-leaderboard,gameday-sidebar,home-bottom";
+    return "top-leaderboard,gameday-sidebar,recap-large,home-bottom";
+  }
+  if (routeKey.startsWith("/noticias")) {
+    return "top-leaderboard,recap-large,home-bottom";
   }
   return "top-leaderboard,home-bottom";
 }
@@ -119,8 +122,12 @@ export function AdBanner({
   const finalHref = propLinkUrl || ad?.href || "";
   const finalAlt = ad?.alt || alt || "Publicidad";
 
-  // Fallback to AADS Ad Unit (320x50) when no direct sponsor banner is assigned
+  // Fallback to AADS Ad Unit when no direct sponsor banner is assigned
   if (!finalImageUrl || imageError) {
+    if (slot === "recap-large") {
+      return <AadsAdaptiveBanner className={className} />;
+    }
+
     // Only render A-Ads unit in top-leaderboard so there are no duplicate IDs
     // or overlaps with mobile navigation bars at the bottom
     if (slot !== "top-leaderboard") {
@@ -213,6 +220,184 @@ export function AdBanner({
           style={{ color: "#667085" }}
         >
           Publicidad
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A-Ads Sticky Floating Header Unit (ID: 2459265, Adaptive)
+ * Renders at the top with a dismiss button.
+ */
+export function AadsStickyBanner() {
+  const [closed, setClosed] = useState(false);
+
+  useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      sessionStorage.getItem("aads_sticky_2459265_closed") === "1"
+    ) {
+      setClosed(true);
+    }
+  }, []);
+
+  const handleClose = () => {
+    setClosed(true);
+    try {
+      sessionStorage.setItem("aads_sticky_2459265_closed", "1");
+    } catch {}
+  };
+
+  if (closed) return null;
+
+  return (
+    <div
+      className="aads-sticky-container"
+      style={{ position: "relative", zIndex: 99999 }}
+    >
+      <input
+        autoComplete="off"
+        type="checkbox"
+        id="aadsstickymvh66k9g"
+        hidden
+        checked={closed}
+        onChange={handleClose}
+      />
+      <div style={{ paddingTop: "auto", paddingBottom: 0 }}>
+        <div
+          style={{
+            width: "100%",
+            height: "auto",
+            position: "fixed",
+            textAlign: "center",
+            fontSize: 0,
+            top: 0,
+            left: 0,
+            right: 0,
+            margin: "auto",
+            zIndex: 99999,
+            backgroundColor: "rgba(255, 255, 255, 0.96)",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+            borderBottom: "1px solid rgba(226, 232, 240, 0.9)",
+            boxShadow: "0 4px 14px rgba(0, 0, 0, 0.08)",
+          }}
+        >
+          <label
+            htmlFor="aadsstickymvh66k9g"
+            onClick={handleClose}
+            style={{
+              top: "50%",
+              transform: "translateY(-50%)",
+              right: "16px",
+              position: "absolute",
+              borderRadius: "6px",
+              background: "rgba(241, 245, 249, 0.95)",
+              padding: "6px",
+              zIndex: 99999,
+              cursor: "pointer",
+              border: "1px solid rgba(203, 213, 225, 0.8)",
+              boxShadow: "0 1px 3px rgba(0, 0, 0, 0.06)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            title="Cerrar anuncio"
+            aria-label="Cerrar anuncio"
+          >
+            <svg
+              fill="#000000"
+              height="14px"
+              width="14px"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 490 490"
+            >
+              <polygon points="456.851,0 245,212.564 33.149,0 0.708,32.337 212.669,245.004 0.708,457.678 33.149,490 245,277.443 456.851,490 489.292,457.678 277.331,245.004 489.292,32.337 " />
+            </svg>
+          </label>
+          <div
+            id="frame"
+            style={{
+              width: "100%",
+              margin: "auto",
+              position: "relative",
+              zIndex: 99998,
+            }}
+          >
+            <iframe
+              data-aa="2459265"
+              src="//acceptable.a-ads.com/2459265/?size=Adaptive"
+              title="Publicidad"
+              style={{
+                border: 0,
+                padding: 0,
+                width: "min(70%, 970px)",
+                minHeight: "90px",
+                height: "auto",
+                overflow: "hidden",
+                margin: "auto",
+                display: "block",
+              }}
+            />
+          </div>
+        </div>
+        <style>{`
+          #aadsstickymvh66k9g:checked + div {
+            display: none;
+          }
+        `}</style>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A-Ads Large Adaptive Banner Unit (ID: 2459265)
+ * In-content responsive banner container for recaps and news articles.
+ */
+export function AadsAdaptiveBanner({
+  className = "",
+  label = "Publicidad",
+}: {
+  className?: string;
+  label?: string;
+}) {
+  return (
+    <div
+      className={`w-full my-5 flex flex-col items-center justify-center ${className}`}
+      data-ad-slot="recap-large"
+    >
+      <div className="w-full max-w-4xl flex flex-col items-center gap-1.5 pt-2 px-2.5 pb-1.5 rounded-2xl border border-slate-200 bg-white shadow-2xs">
+        <div
+          style={{
+            width: "100%",
+            margin: "auto",
+            position: "relative",
+            zIndex: 1,
+            display: "flex",
+            justifyContent: "center",
+          }}
+        >
+          <iframe
+            data-aa="2459265"
+            src="//acceptable.a-ads.com/2459265/?size=Adaptive"
+            title="Publicidad"
+            style={{
+              border: 0,
+              padding: 0,
+              width: "100%",
+              maxWidth: "970px",
+              minHeight: "90px",
+              height: "auto",
+              overflow: "hidden",
+              display: "block",
+              margin: "auto",
+            }}
+          />
+        </div>
+        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+          {label}
         </span>
       </div>
     </div>

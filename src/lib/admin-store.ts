@@ -12,7 +12,8 @@ export type AdSlotType =
   | "top-leaderboard"
   | "in-feed"
   | "home-bottom"
-  | "gameday-sidebar";
+  | "gameday-sidebar"
+  | "recap-large";
 
 export type CanonicalSlotKey = "general";
 

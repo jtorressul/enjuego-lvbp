@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { InfoPage } from "@/components/InfoPage";
 import { FeaturedRecap, RecapCard } from "@/components/news/RecapCards";
+import { AadsStickyBanner, AdBanner } from "@/components/AdBanner";
 import { buildGameRecaps, formatRecapDate } from "@/lib/game-recaps";
 import { fetchLvbpSchedule, fetchLvbpStandingsAndLeaders } from "@/lib/mlb-lvbp-service";
 import { findGameHighlight } from "@/lib/youtube-highlight";
@@ -52,6 +53,7 @@ export default async function NoticiasPage() {
 
   return (
     <InfoPage wide bare>
+      <AadsStickyBanner />
       <div className="space-y-8">
         <div>
           <p className="text-xs font-extrabold uppercase tracking-wider text-amber-600">LVBP</p>
@@ -65,6 +67,7 @@ export default async function NoticiasPage() {
         ) : (
           <p className="text-sm text-slate-500">Todavía no hay juegos finalizados.</p>
         )}
+        <AdBanner slot="recap-large" />
         {dates.map((date) => (
           <section key={date}>
             <h2 className="text-sm font-black uppercase tracking-wider text-slate-500">{formatRecapDate(date)}</h2>

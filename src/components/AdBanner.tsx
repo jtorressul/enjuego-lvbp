@@ -119,9 +119,42 @@ export function AdBanner({
   const finalHref = propLinkUrl || ad?.href || "";
   const finalAlt = ad?.alt || alt || "Publicidad";
 
-  // Hidden completely when no active ad is assigned to this slot
+  // Fallback to AADS Ad Unit (320x50) when no direct sponsor banner is assigned
   if (!finalImageUrl || imageError) {
-    return null;
+    return (
+      <div
+        className={`w-full my-2.5 flex flex-col items-center justify-center ${className}`}
+        data-ad-slot={slot}
+      >
+        <div
+          className="ad-box flex flex-col items-center gap-1 pt-2 px-2 pb-1.5 rounded-[14px] border border-[#e4e8ee] bg-white shadow-2xs max-w-full overflow-hidden"
+          style={{ backgroundColor: "#ffffff", borderColor: "#e4e8ee" }}
+        >
+          <div id="frame" style={{ width: "320px", maxWidth: "100%", margin: "auto", height: "auto" }}>
+            <iframe
+              data-aa="2459241"
+              src="https://ad.a-ads.com/2459241/?size=320x50"
+              title="Publicidad"
+              style={{
+                border: 0,
+                padding: 0,
+                width: "320px",
+                height: "50px",
+                overflow: "hidden",
+                display: "block",
+                margin: "auto",
+              }}
+            />
+          </div>
+          <span
+            className="ad-label text-[0.62rem] font-bold uppercase tracking-[0.1em] leading-none"
+            style={{ color: "#667085" }}
+          >
+            Publicidad
+          </span>
+        </div>
+      </div>
+    );
   }
 
   const imgElement = (

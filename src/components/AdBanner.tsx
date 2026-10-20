@@ -148,7 +148,7 @@ export function AdBanner({
             style={{
               width: "320px",
               margin: "auto",
-              zIndex: 99998,
+              zIndex: 1,
               position: "relative",
               height: "auto",
             }}
@@ -254,7 +254,7 @@ export function AadsStickyBanner() {
   return (
     <div
       className="aads-sticky-container"
-      style={{ position: "relative", zIndex: 99999 }}
+      style={{ position: "relative", zIndex: 40 }}
     >
       <input
         autoComplete="off"
@@ -276,7 +276,7 @@ export function AadsStickyBanner() {
             left: 0,
             right: 0,
             margin: "auto",
-            zIndex: 99999,
+            zIndex: 40,
             backgroundColor: "rgba(255, 255, 255, 0.96)",
             backdropFilter: "blur(8px)",
             WebkitBackdropFilter: "blur(8px)",
@@ -295,7 +295,7 @@ export function AadsStickyBanner() {
               borderRadius: "6px",
               background: "rgba(241, 245, 249, 0.95)",
               padding: "6px",
-              zIndex: 99999,
+              zIndex: 41,
               cursor: "pointer",
               border: "1px solid rgba(203, 213, 225, 0.8)",
               boxShadow: "0 1px 3px rgba(0, 0, 0, 0.06)",
@@ -322,7 +322,7 @@ export function AadsStickyBanner() {
               width: "100%",
               margin: "auto",
               position: "relative",
-              zIndex: 99998,
+              zIndex: 1,
             }}
           >
             <iframe

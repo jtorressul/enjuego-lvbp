@@ -1885,15 +1885,15 @@ export function EnJuegoPortal({
 
       {/* MOBILE SLIDE-OVER DRAWER */}
       {mobileDrawerOpen && (
-        <div className="fixed inset-0 z-[100] flex justify-end lg:hidden animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-[200] flex justify-end lg:hidden animate-in fade-in duration-150">
           {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-slate-950/65 backdrop-blur-xs transition-opacity"
+            className="fixed inset-0 bg-slate-950/65 backdrop-blur-xs transition-opacity z-[200]"
             onClick={() => setMobileDrawerOpen(false)}
           />
 
           {/* Drawer Panel (Wider & Larger Touch Targets for Mobile) */}
-          <div className="relative w-full max-w-[86vw] sm:max-w-sm bg-white h-dvh shadow-2xl flex flex-col z-10 overflow-hidden">
+          <div className="relative w-full max-w-[86vw] sm:max-w-sm bg-white h-dvh shadow-2xl flex flex-col z-[201] overflow-hidden">
             {/* Drawer Header with Dark Theme Contrast for Logo - STICKY & PINNED */}
             <div
               className="drawer-header px-4 py-3.5 border-b flex items-center justify-between text-white shrink-0 sticky top-0 z-20 shadow-xs"

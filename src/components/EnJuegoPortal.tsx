@@ -2461,17 +2461,20 @@ export function EnJuegoPortal({
         </div>
         {/* SECTION: GAMEDAY (/juego/[id]) */}
         {section === "juego" && (
-          <GamedayView
-            gameId={selectedGameId}
-            onBack={() => router.push(`/resultados?liga=${activeLeague}`)}
-            onSelectTeam={openTeamPage}
-            currentUser={currentUser}
-            onRequireAuth={() => {
-              setAuthModalTab("quick");
-              setAuthModalOpen(true);
-            }}
-            onShareGame={(g) => setShareModalGame(g)}
-          />
+          <>
+            <AadsSkyscraperBanner mode="floating-only" />
+            <GamedayView
+              gameId={selectedGameId}
+              onBack={() => router.push(`/resultados?liga=${activeLeague}`)}
+              onSelectTeam={openTeamPage}
+              currentUser={currentUser}
+              onRequireAuth={() => {
+                setAuthModalTab("quick");
+                setAuthModalOpen(true);
+              }}
+              onShareGame={(g) => setShareModalGame(g)}
+            />
+          </>
         )}
 
         {/* SECTION: HOME (/ & /inicio) */}

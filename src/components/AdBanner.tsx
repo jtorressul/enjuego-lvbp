@@ -128,6 +128,53 @@ export function AdBanner({
       return <AadsAdaptiveBanner className={className} />;
     }
 
+    if (slot === "gameday-sidebar") {
+      return (
+        <div className={`w-full my-3 ${className}`} data-ad-slot={slot}>
+          <div className="w-full flex flex-col items-center gap-1.5 p-3 rounded-2xl border border-slate-200 bg-white shadow-2xs">
+            <div style={{ width: "100%", textAlign: "center", marginBottom: "4px" }}>
+              <a
+                style={{
+                  display: "inline-block",
+                  fontSize: "11px",
+                  color: "#64748b",
+                  padding: "2px 8px",
+                  background: "#F8F8F9",
+                  textDecoration: "none",
+                  borderRadius: "4px",
+                  border: "1px solid #e2e8f0",
+                  fontWeight: 600,
+                }}
+                target="_blank"
+                rel="noopener"
+                href="https://aads.com/campaigns/new?source_id=2459266&source_type=ad_unit&partner=2459266"
+              >
+                Advertise here
+              </a>
+            </div>
+            <iframe
+              data-aa="2459266"
+              src="//acceptable.a-ads.com/2459266/?size=Adaptive"
+              title="Publicidad"
+              style={{
+                border: 0,
+                padding: 0,
+                width: "100%",
+                minHeight: "250px",
+                height: "auto",
+                overflow: "hidden",
+                margin: "0 auto",
+                display: "block",
+              }}
+            />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Publicidad
+            </span>
+          </div>
+        </div>
+      );
+    }
+
     // Only render A-Ads unit in top-leaderboard so there are no duplicate IDs
     // or overlaps with mobile navigation bars at the bottom
     if (slot !== "top-leaderboard") {

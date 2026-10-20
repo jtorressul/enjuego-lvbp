@@ -1342,8 +1342,7 @@ export function EnJuegoPortal({
 
   return (
     <div
-      className="min-h-screen flex flex-col bg-[#f3f6fb] text-slate-900"
-      style={{ paddingBottom: "calc(4.75rem + env(safe-area-inset-bottom, 0px))" }}
+      className="min-h-screen flex flex-col bg-[#f3f6fb] text-slate-900 max-md:pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))]"
     >
       {/* CLEAN EDITORIAL TOPBAR WITH REAL NEXT.JS LINKS */}
       {/* TOPBAR WITH BRAND HORIZONTAL LOGO (AS REQUESTED) */}
@@ -3816,7 +3815,7 @@ export function EnJuegoPortal({
       </nav>
 
       {/* FOOTER */}
-      <footer className="border-t border-slate-200 bg-white py-6 mt-6 sm:mt-8 mb-0">
+      <footer className="border-t border-slate-200 bg-white py-5 mt-6 sm:mt-8">
         <div className="max-w-7xl mx-auto px-4 space-y-4 text-xs text-slate-500">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">

@@ -991,7 +991,7 @@ export function EnJuegoPortal({
       list.push(g);
       map.set(g.date, list);
     }
-    return Array.from(map.entries());
+    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
   }, [filteredCalendarGames]);
 
   // Render a broadcast-quality Scoreboard Card for Pizarra del Día & Resultados
@@ -3107,7 +3107,7 @@ export function EnJuegoPortal({
             ) : (
               /* CASE B: ALL TEAMS SELECTED — GROUPED BY DAY IN SPANISH */
               <div className="space-y-6">
-                {calendarGamesByDate.slice(0, 10).map(([dateIso, dayGames]) => {
+                {calendarGamesByDate.map(([dateIso, dayGames]) => {
                   const dInfo = formatCompactDay(dateIso);
                   return (
                     <div key={dateIso} className="space-y-3">

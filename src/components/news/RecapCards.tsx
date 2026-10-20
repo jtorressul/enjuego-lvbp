@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { GameRecap, RecapSide, RecapStanding } from "@/lib/game-recaps";
 import type { YoutubeHighlight } from "@/lib/youtube-highlight";
+import { RecapHighlightPlayer } from "@/components/news/RecapHighlightPlayer";
 
 function TeamMark({ side, won, align = "start" }: { side: RecapSide; won: boolean; align?: "start" | "end" }) {
   return (
@@ -194,26 +195,17 @@ export function RecapArticle({
         {recap.loserStanding ? <StandingChip standing={recap.loserStanding} logo={loser.logo} /> : null}
       </div>
 
-      {highlight ? (
-        <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
-          <div className="aspect-video bg-slate-950">
-            <iframe
-              src={`https://www.youtube-nocookie.com/embed/${highlight.videoId}?rel=0&modestbranding=1`}
-              title={highlight.title}
-              className="h-full w-full"
-              loading="lazy"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-            />
-          </div>
-          <div className="px-4 py-3">
-            <p className="text-sm font-black text-slate-950">{highlight.title}</p>
-            <p className="mt-1 text-xs text-slate-500">
-              {highlight.author}. El video se busca en YouTube al abrir la nota y no se guarda en En Juego.
-            </p>
-          </div>
-        </section>
-      ) : null}
+      <RecapHighlightPlayer
+        initialHighlight={highlight}
+        query={{
+          id: recap.id,
+          date: recap.date,
+          awayName: recap.away.name,
+          homeName: recap.home.name,
+          awayNick: recap.away.nick,
+          homeNick: recap.home.nick,
+        }}
+      />
 
       <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-7 space-y-4 text-sm sm:text-base leading-relaxed text-slate-700">
         {recap.paragraphs.map((paragraph) => (

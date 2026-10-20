@@ -64,6 +64,13 @@ function isRecent(published: string): boolean {
   return Boolean(days && Number(days[1]) <= 2);
 }
 
+function teamKeywords(name: string, nick?: string): string[] {
+  const raw = `${name || ""} ${nick || ""}`;
+  return plain(raw)
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length >= 4 && !["para", "club", "beisbol", "base", "valencia", "barquisimeto"].includes(w));
+}
+
 function scoreCandidate(item: Candidate, query: HighlightQuery): number {
   const title = plain(item.title);
   const author = plain(item.author);
@@ -81,8 +88,11 @@ function scoreCandidate(item: Candidate, query: HighlightQuery): number {
     return -1;
   }
 
-  const awayHit = title.includes(plain(query.awayNick)) || title.includes(plain(query.awayName));
-  const homeHit = title.includes(plain(query.homeNick)) || title.includes(plain(query.homeName));
+  const awayKeywords = teamKeywords(query.awayName, query.awayNick);
+  const homeKeywords = teamKeywords(query.homeName, query.homeNick);
+
+  const awayHit = awayKeywords.some((w) => title.includes(w));
+  const homeHit = homeKeywords.some((w) => title.includes(w));
 
   const dated = title.includes(plain(datePhrase(query.date)));
   const recent = isRecent(item.published);
@@ -139,7 +149,9 @@ export async function findGameHighlight(query: HighlightQuery): Promise<YoutubeH
   const cached = memory.get(query.id);
   if (cached && Date.now() - cached.at < MEMORY_MS) return cached.value;
 
-  const search = `${query.awayName} vs ${query.homeName} LVBP resumen ${datePhrase(query.date)}`;
+  const awayKeys = teamKeywords(query.awayName, query.awayNick).join(" ");
+  const homeKeys = teamKeywords(query.homeName, query.homeNick).join(" ");
+  const search = `${awayKeys} vs ${homeKeys} LVBP resumen ${datePhrase(query.date)}`;
   let value: YoutubeHighlight | null = null;
   try {
     const response = await fetch("https://www.youtube.com/youtubei/v1/search?prettyPrint=false", {

@@ -121,19 +121,34 @@ export function AdBanner({
 
   // Fallback to AADS Ad Unit (320x50) when no direct sponsor banner is assigned
   if (!finalImageUrl || imageError) {
+    // Only render A-Ads unit in top-leaderboard so there are no duplicate IDs
+    // or overlaps with mobile navigation bars at the bottom
+    if (slot !== "top-leaderboard") {
+      return null;
+    }
+
     return (
       <div
-        className={`w-full my-2.5 flex flex-col items-center justify-center ${className}`}
+        className={`w-full my-3 flex flex-col items-center justify-center ${className}`}
         data-ad-slot={slot}
       >
         <div
-          className="ad-box flex flex-col items-center gap-1 pt-2 px-2 pb-1.5 rounded-[14px] border border-[#e4e8ee] bg-white shadow-2xs max-w-full overflow-hidden"
+          className="ad-box flex flex-col items-center gap-1 pt-2 px-3 pb-1.5 rounded-[14px] border border-[#e4e8ee] bg-white shadow-2xs"
           style={{ backgroundColor: "#ffffff", borderColor: "#e4e8ee" }}
         >
-          <div id="frame" style={{ width: "320px", maxWidth: "100%", margin: "auto", height: "auto" }}>
+          <div
+            id="frame"
+            style={{
+              width: "320px",
+              margin: "auto",
+              zIndex: 99998,
+              position: "relative",
+              height: "auto",
+            }}
+          >
             <iframe
               data-aa="2459241"
-              src="https://ad.a-ads.com/2459241/?size=320x50"
+              src="//ad.a-ads.com/2459241/?size=320x50"
               title="Publicidad"
               style={{
                 border: 0,

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { MLB_TEAMS } from "@/lib/mlb-teams";
+import { publicCacheHeaders, withEdgeCache } from "@/lib/edge-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -123,13 +124,17 @@ const PREFERRED_TOP_TEAM_BY_SERIES: Record<string, number[]> = {
 };
 
 export async function GET(request: Request) {
+  return withEdgeCache(request, () => handlePostseason(request));
+}
+
+async function handlePostseason(request: Request) {
   const { searchParams } = new URL(request.url);
   const season = searchParams.get("season") || "2026";
 
   try {
     const res = await fetch(
       `https://statsapi.mlb.com/api/v1/schedule/postseason/series?season=${season}&sportId=1`,
-      { next: { revalidate: 25 } }
+      { next: { revalidate: 120 } }
     );
     if (!res.ok) {
       throw new Error(`MLB postseason API returned ${res.status}`);
@@ -293,9 +298,7 @@ export async function GET(request: Request) {
         updatedAt: new Date().toISOString(),
       },
       {
-        headers: {
-          "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300",
-        },
+        headers: publicCacheHeaders(90, 120),
       }
     );
   } catch (err: any) {

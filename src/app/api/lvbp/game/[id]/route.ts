@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { fetchLvbpGameday } from "@/lib/mlb-lvbp-service";
 import { simulateGamedayStep } from "@/lib/live-simulator";
 import { checkAndDispatchGameAlerts } from "@/lib/score-notifications";
+import { publicCacheHeaders, withEdgeCache } from "@/lib/edge-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,7 @@ export async function GET(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
+  return withEdgeCache(request, async () => {
   try {
     const { id } = await context.params;
     const { searchParams } = new URL(request.url);
@@ -39,17 +41,8 @@ export async function GET(
     }
 
     const isFinal = gameday?.status === "FINISHED";
-    const isLive = gameday?.status === "IN_PROGRESS";
-    const cacheHeader = isFinal
-      ? "public, s-maxage=3600, stale-while-revalidate=7200"
-      : isLive
-        ? "public, s-maxage=10, stale-while-revalidate=20"
-        : "public, s-maxage=60, stale-while-revalidate=120";
-
     return NextResponse.json(gameday, {
-      headers: {
-        "Cache-Control": cacheHeader,
-      },
+      headers: isFinal ? publicCacheHeaders(300, 3600, 7200) : publicCacheHeaders(30),
     });
   } catch (error: any) {
     return NextResponse.json(
@@ -57,4 +50,5 @@ export async function GET(
       { status: 500 }
     );
   }
+  });
 }

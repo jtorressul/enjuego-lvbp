@@ -43,9 +43,23 @@ import {
   type AdClickLogEntry,
   type AdSlotInfo,
   type CanonicalSlotKey,
+  LIVE_WINDOW_SECONDS,
   type LiveSession,
   type TrafficDaySummary,
 } from "@/lib/admin-store";
+
+function formatSessionDeviceLabel(s: LiveSession): string {
+  const hardware =
+    s.deviceModel?.trim() ||
+    (s.device === "mobile" ? "Móvil" : "Escritorio");
+  const browser = s.browser
+    ? `${s.browser}${s.browserVersion ? ` ${s.browserVersion}` : ""}`
+    : "";
+  const os = s.os
+    ? `${s.os}${s.platformVersion ? ` ${s.platformVersion}` : ""}`
+    : "";
+  return [hardware, browser, os].filter(Boolean).join(" · ");
+}
 import type { UserProfile } from "@/lib/user-auth";
 import dynamic from "next/dynamic";
 
@@ -746,8 +760,8 @@ export default function AdminDashboardPage() {
     <div className="min-h-dvh bg-slate-50/75 text-slate-900 pb-20">
       {/* EXECUTIVE TOP BAR */}
       <header className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <Link
               href="/inicio"
               className="flex items-center gap-2 group transition opacity-95 hover:opacity-100"
@@ -756,14 +770,14 @@ export default function AdminDashboardPage() {
               <img
                 src="/logo.png"
                 alt="EnJuego"
-                className="h-7 w-auto object-contain"
+                className="h-7 w-auto object-contain shrink-0"
               />
-              <span className="text-xs font-semibold tracking-tight text-slate-300">
+              <span className="text-xs font-semibold tracking-tight text-slate-300 hidden sm:inline">
                 Workspace
               </span>
             </Link>
-            <span className="text-slate-600 font-light">/</span>
-            <div className="flex items-center gap-1.5">
+            <span className="text-slate-600 font-light hidden sm:inline">/</span>
+            <div className="flex items-center gap-1.5 shrink-0">
               <span className="text-xs font-semibold text-slate-100">
                 Dashboard
               </span>
@@ -1652,13 +1666,14 @@ export default function AdminDashboardPage() {
                   </h2>
                 </div>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Visitantes activos en los últimos 75 segundos en <strong>enjuego.online</strong>.
+                  Visitantes activos en los últimos {LIVE_WINDOW_SECONDS} segundos en{" "}
+                  <strong>enjuego.online</strong>.
                 </p>
               </div>
 
               {presence.sessions.length === 0 ? (
                 <div className="rounded-lg bg-slate-50 border border-slate-200/80 p-6 text-center text-xs text-slate-500">
-                  No hay sesiones activas en los últimos 75 segundos.
+                  No hay sesiones activas en los últimos {LIVE_WINDOW_SECONDS} segundos.
                 </div>
               ) : (
                 <div className="overflow-x-auto rounded-lg border border-slate-200/80">
@@ -1669,7 +1684,7 @@ export default function AdminDashboardPage() {
                         <th className="py-2.5 px-3">Ubicación</th>
                         <th className="py-2.5 px-3">Equipo</th>
                         <th className="py-2.5 px-3">Viendo Ahora</th>
-                        <th className="py-2.5 px-3">Dispositivo / SO</th>
+                        <th className="py-2.5 px-3">Dispositivo / navegador</th>
                         <th className="py-2.5 px-3">Actividad</th>
                       </tr>
                     </thead>
@@ -1715,19 +1730,58 @@ export default function AdminDashboardPage() {
                               </span>
                             </td>
                             <td className="py-2.5 px-3 font-medium text-slate-900">
-                              {s.sectionLabel}{" "}
-                              <span className="text-slate-400 font-mono text-[10px]">
-                                ({s.path})
-                              </span>
+                              <div>{s.sectionLabel}</div>
+                              <a
+                                href={s.path}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-slate-400 font-mono text-[10px] hover:text-amber-700"
+                              >
+                                {s.path}
+                              </a>
+                              {Array.isArray(s.recentPaths) && s.recentPaths.length > 1 ? (
+                                <div
+                                  className="text-[10px] text-slate-400 mt-0.5 truncate max-w-[220px]"
+                                  title={s.recentPaths.join(" → ")}
+                                >
+                                  Reciente: {s.recentPaths.slice(0, 3).join(" → ")}
+                                </div>
+                              ) : null}
                             </td>
-                            <td className="py-2.5 px-3 text-slate-700">
-                              <span className="font-medium">
-                                {s.device === "mobile" ? "Móvil" : "Desktop"}
-                              </span>
-                              {s.os ? <span className="text-slate-400"> · {s.os}</span> : ""}
+                            <td
+                              className="py-2.5 px-3 text-slate-700 max-w-[240px]"
+                              title={s.viewport || formatSessionDeviceLabel(s)}
+                            >
+                              <div className="font-medium leading-snug">
+                                {formatSessionDeviceLabel(s)}
+                              </div>
+                              <div className="flex flex-wrap items-center gap-1 mt-1">
+                                {s.isPwa ? (
+                                  <span className="px-1.5 py-0.5 rounded bg-violet-50 border border-violet-200 text-[9px] font-semibold text-violet-700">
+                                    PWA
+                                  </span>
+                                ) : (
+                                  <span className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-[9px] font-medium text-slate-600">
+                                    Web
+                                  </span>
+                                )}
+                                {s.language ? (
+                                  <span className="text-[9px] text-slate-400">{s.language}</span>
+                                ) : null}
+                              </div>
+                              {s.viewport ? (
+                                <div className="text-[10px] text-slate-400 mt-0.5 truncate">
+                                  {s.viewport}
+                                </div>
+                              ) : null}
                             </td>
                             <td className="py-2.5 px-3 text-slate-500 tabular-nums">
-                              hace {secAgo}s
+                              <div>hace {secAgo}s</div>
+                              {typeof s.pageViews === "number" && s.pageViews > 0 ? (
+                                <div className="text-[10px] text-slate-400">
+                                  {s.pageViews} vista{s.pageViews === 1 ? "" : "s"}
+                                </div>
+                              ) : null}
                             </td>
                           </tr>
                         );

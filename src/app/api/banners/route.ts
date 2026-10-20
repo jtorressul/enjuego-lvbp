@@ -5,13 +5,23 @@ import {
   isAdCampaignLive,
   pickAdsForPageSlots,
   recordBannerMetric,
+  mergeHeartbeatClientFields,
   recordPresenceHeartbeat,
 } from "@/lib/admin-store";
 import { resolveVisitorGeo } from "@/lib/geo-utils";
+import { publicCacheHeaders, withEdgeCache } from "@/lib/edge-cache";
+
+const BOT_UA_REGEX = /(bot|crawler|spider|whatsapp|facebookexternalhit|twitterbot|curl|python|headless)/i;
+
+function isBotUserAgent(ua?: string | null): boolean {
+  if (!ua) return false;
+  return BOT_UA_REGEX.test(ua);
+}
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
+  return withEdgeCache(request, async () => {
   try {
     const { searchParams } = new URL(request.url);
     const slotsParam = searchParams.get("slots");
@@ -39,7 +49,7 @@ export async function GET(request: Request) {
           ...assigned,
           slots: assigned,
         },
-        { headers: { "Cache-Control": "no-store, max-age=0" } }
+        { headers: publicCacheHeaders(60) }
       );
     }
 
@@ -67,11 +77,7 @@ export async function GET(request: Request) {
         campaigns: activeCampaigns,
         slots: assigned,
       },
-      {
-        headers: {
-          "Cache-Control": "no-store, max-age=0",
-        },
-      }
+      { headers: publicCacheHeaders(60) }
     );
   } catch (err: any) {
     return NextResponse.json(
@@ -79,14 +85,33 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
+  });
 }
 
 export async function POST(request: Request) {
   try {
+    const ua = request.headers.get("user-agent");
+    if (isBotUserAgent(ua)) {
+      return NextResponse.json({ ok: true, ignored: true });
+    }
+
     const body = await request.json();
     const action = body?.action;
-    const ua = request.headers.get("user-agent");
     const uaMeta = detectUserAgentMeta(ua);
+
+    if (action === "impressions" && Array.isArray(body.items)) {
+      const items = body.items.slice(0, 12);
+      for (const item of items) {
+        if (!item?.campaignId) continue;
+        await recordBannerMetric(String(item.campaignId), "impression", {
+          device: uaMeta.device,
+          os: uaMeta.os,
+          slot: item.slot ? String(item.slot) : "top-leaderboard",
+          pagePath: item.path ? String(item.path) : "/inicio",
+        });
+      }
+      return NextResponse.json({ ok: true });
+    }
 
     if (action === "metric") {
       const { campaignId, metric, slot, path } = body;
@@ -111,7 +136,7 @@ export async function POST(request: Request) {
         isRegistered,
         path,
         sectionLabel,
-        device,
+        client,
       } = body;
 
       if (!sessionId) {
@@ -119,6 +144,7 @@ export async function POST(request: Request) {
       }
 
       const geo = resolveVisitorGeo(request, body);
+      const clientFields = mergeHeartbeatClientFields(ua, client);
 
       const res = await recordPresenceHeartbeat(
         {
@@ -130,7 +156,7 @@ export async function POST(request: Request) {
           isRegistered: Boolean(isRegistered),
           path: String(path || "/inicio").slice(0, 80),
           sectionLabel: String(sectionLabel || "Inicio").slice(0, 48),
-          device: device === "mobile" ? "mobile" : uaMeta.device,
+          device: uaMeta.device,
           os: uaMeta.os,
           countryCode: geo.countryCode,
           countryName: geo.countryName,
@@ -138,6 +164,7 @@ export async function POST(request: Request) {
           region: geo.region,
           city: geo.city,
           locationLabel: geo.locationLabel,
+          ...clientFields,
         },
         ua
       );

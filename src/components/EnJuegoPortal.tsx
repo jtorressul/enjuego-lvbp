@@ -462,16 +462,45 @@ export function EnJuegoPortal({
     const seasonParam = "2026";
 
     let timerId: NodeJS.Timeout | null = null;
+    let lastLoadAt = 0;
+    const isGameView =
+      section === "juego" ||
+      (typeof window !== "undefined" && window.location.pathname.startsWith("/juego"));
 
     const scheduleNextPoll = (hasLive: boolean) => {
       if (timerId) clearTimeout(timerId);
       if (controller.signal.aborted) return;
+
+      if (isGameView) {
+        // Stop repetitive background polling while viewing game detail (/juego/[id]).
+        // Polling is handled strictly by GamedayView for that specific game.
+        // Refresh global portal data at most every 5 minutes (300,000 ms).
+        timerId = setTimeout(() => {
+          if (
+            typeof document !== "undefined" &&
+            document.visibilityState === "visible" &&
+            !document.hidden &&
+            !controller.signal.aborted
+          ) {
+            loadAllData(false);
+          } else if (!controller.signal.aborted) {
+            scheduleNextPoll(hasLive);
+          }
+        }, 300000);
+        return;
+      }
+
       // 25s if a game is live, 60s if all games are scheduled or finished
       const delay = hasLive ? 25000 : 60000;
       timerId = setTimeout(() => {
-        if (!document.hidden && !controller.signal.aborted) {
+        if (
+          typeof document !== "undefined" &&
+          document.visibilityState === "visible" &&
+          !document.hidden &&
+          !controller.signal.aborted
+        ) {
           loadAllData(false);
-        } else if (document.hidden && !controller.signal.aborted) {
+        } else if (!controller.signal.aborted) {
           // Check again in 30s if still hidden
           scheduleNextPoll(hasLive);
         }
@@ -479,16 +508,14 @@ export function EnJuegoPortal({
     };
 
     const loadAllData = async (isInitial: boolean) => {
+      lastLoadAt = Date.now();
       if (isInitial) setLoading(true);
       try {
-        const [schRes, stdRes, commRes, mlbRes] = await Promise.all([
+        const [schRes, stdRes, mlbRes] = await Promise.all([
           fetch(`/api/lvbp/schedule?season=${seasonParam}&league=${targetLeague}`, {
             signal: controller.signal,
           }),
           fetch(`/api/lvbp/standings?season=${seasonParam}&league=${targetLeague}`, {
-            signal: controller.signal,
-          }),
-          fetch(`/api/lvbp/interactive?mode=community`, {
             signal: controller.signal,
           }),
           targetLeague === "lvbp"
@@ -499,7 +526,6 @@ export function EnJuegoPortal({
         ]);
         const schData = await schRes.json();
         const stdData = await stdRes.json();
-        const commData = await commRes.json().catch(() => ({}));
         const mlbData = mlbRes ? await mlbRes.json().catch(() => ({})) : null;
 
         if (controller.signal.aborted) return;
@@ -522,9 +548,6 @@ export function EnJuegoPortal({
         setSchedule(loadedGames);
         setStandings(cleanStandings);
         setLeaders(stdData.leaders || { hitting: [], pitching: [] });
-        if (Array.isArray(commData?.posts)) {
-          setCommunityPosts(mapServerPosts(commData.posts));
-        }
 
         if (targetLeague === "mlb") {
           setMlbJornadaGames(loadedGames);
@@ -576,7 +599,13 @@ export function EnJuegoPortal({
     loadAllData(true);
 
     const handleVisibilityOrFocus = () => {
-      if (document.visibilityState === "visible" && !controller.signal.aborted) {
+      if (isGameView) return; // Do not reload global schedule/standings on focus when viewing a specific game
+      if (
+        typeof document !== "undefined" &&
+        document.visibilityState === "visible" &&
+        !controller.signal.aborted &&
+        Date.now() - lastLoadAt > 45_000
+      ) {
         loadAllData(false);
       }
     };
@@ -589,7 +618,42 @@ export function EnJuegoPortal({
       document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
       window.removeEventListener("focus", handleVisibilityOrFocus);
     };
-  }, [userSelectedDateManually, userSelectedMlbDate, activeLeague]);
+  }, [userSelectedDateManually, userSelectedMlbDate, activeLeague, section]);
+
+  // Dedicated poll for community comments every 60s (only when in /inicio home view)
+  useEffect(() => {
+    if (section !== "home") return;
+    let active = true;
+
+    const loadCommunity = async () => {
+      try {
+        const res = await fetch("/api/lvbp/interactive?mode=community");
+        const data = await res.json();
+        if (active && Array.isArray(data?.posts)) {
+          setCommunityPosts(mapServerPosts(data.posts));
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    loadCommunity();
+
+    const interval = setInterval(() => {
+      if (
+        typeof document !== "undefined" &&
+        document.visibilityState === "visible" &&
+        !document.hidden
+      ) {
+        loadCommunity();
+      }
+    }, 60000);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [section]);
 
   const dates = useMemo(
     () => [...new Set(schedule.map((g) => g.date))].sort(),
@@ -837,6 +901,22 @@ export function EnJuegoPortal({
   // Real-time visitor presence heartbeat for /admin monitor
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    try {
+      const search = window.location.search;
+      if (search) {
+        const params = new URLSearchParams(search);
+        if (params.get("admin") === "1") {
+          localStorage.setItem("es_admin", "true");
+        }
+      }
+      if (localStorage.getItem("es_admin") === "true") {
+        return; // Exclude admin from visitor and heartbeat analytics
+      }
+    } catch {
+      // ignore storage errors
+    }
+
     let sessionId = window.sessionStorage.getItem("enjuego_live_sid");
     if (!sessionId) {
       sessionId = `sid_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -854,10 +934,9 @@ export function EnJuegoPortal({
       return "Inicio";
     };
 
-    const sendHeartbeat = () => {
-      const isMobile =
-        window.innerWidth < 768 ||
-        /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    const sendHeartbeat = async () => {
+      const { getHeartbeatClientPayload } = await import("@/lib/client-device-hints");
+      const client = await getHeartbeatClientPayload();
 
       fetch("/api/banners", {
         method: "POST",
@@ -872,18 +951,23 @@ export function EnJuegoPortal({
           isRegistered: Boolean(currentUser?.id),
           path: window.location.pathname + window.location.search,
           sectionLabel: getSectionLabel(),
-          device: isMobile ? "mobile" : "desktop",
           timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          client,
         }),
       }).catch(() => {});
     };
 
+    void import("@/lib/client-device-hints").then((m) => m.warmExtendedDeviceHints());
     sendHeartbeat();
     const interval = setInterval(() => {
-      if (!document.hidden) {
+      if (
+        typeof document !== "undefined" &&
+        document.visibilityState === "visible" &&
+        !document.hidden
+      ) {
         sendHeartbeat();
       }
-    }, 90_000);
+    }, 150_000);
     return () => clearInterval(interval);
   }, [section, selectedGameId, selectedTeamCode, currentUser, favoriteTeamCode]);
 

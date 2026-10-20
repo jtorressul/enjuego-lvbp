@@ -1,35 +1,64 @@
 import { NextResponse } from "next/server";
 import { fetchLvbpSchedule, fetchMlbSchedule } from "@/lib/mlb-lvbp-service";
 import { checkAndDispatchGameAlerts } from "@/lib/score-notifications";
+import type { ScheduleGame } from "@/lib/types";
+import { publicCacheHeaders, withEdgeCache } from "@/lib/edge-cache";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const league = searchParams.get("league") === "mlb" ? "mlb" : "lvbp";
-    const season = searchParams.get("season") || "2026";
-    const games = league === "mlb" ? await fetchMlbSchedule(season) : await fetchLvbpSchedule(season);
-    if (league === "lvbp" && Array.isArray(games)) {
-      checkAndDispatchGameAlerts(games).catch(() => {});
-    }
-    const hasLive = Array.isArray(games) && games.some((g: any) => g.status === "IN_PROGRESS");
-    const cacheHeader = hasLive
-      ? "public, s-maxage=15, stale-while-revalidate=30"
-      : "public, s-maxage=60, stale-while-revalidate=120";
+let lastScheduleAlertAt = 0;
 
-    return NextResponse.json(
-      { games, league },
-      {
-        headers: {
-          "Cache-Control": cacheHeader,
-        },
+function toScheduleListItem(game: ScheduleGame) {
+  return {
+    id: game.id,
+    date: game.date,
+    startsAt: game.startsAt,
+    time: game.time,
+    status: game.status,
+    statusLabel: game.statusLabel,
+    inning: game.inning,
+    currentInning: game.currentInning,
+    awayTeam: game.awayTeam,
+    homeTeam: game.homeTeam,
+    awayScore: game.awayScore,
+    homeScore: game.homeScore,
+    awayHits: game.awayHits,
+    homeHits: game.homeHits,
+    awayErrors: game.awayErrors,
+    homeErrors: game.homeErrors,
+    venue: game.venue,
+    venueCity: game.venueCity,
+    tv: game.tv,
+    tvChannels: game.tvChannels,
+    youtubeVideoId: game.youtubeVideoId,
+    youtubeUrl: game.youtubeUrl,
+    decisions: game.decisions,
+  };
+}
+
+export async function GET(request: Request) {
+  return withEdgeCache(request, async () => {
+    try {
+      const { searchParams } = new URL(request.url);
+      const league = searchParams.get("league") === "mlb" ? "mlb" : "lvbp";
+      const season = searchParams.get("season") || "2026";
+      const games = league === "mlb" ? await fetchMlbSchedule(season) : await fetchLvbpSchedule(season);
+      if (league === "lvbp" && Array.isArray(games)) {
+        const now = Date.now();
+        if (now - lastScheduleAlertAt > 45_000) {
+          lastScheduleAlertAt = now;
+          checkAndDispatchGameAlerts(games).catch(() => {});
+        }
       }
-    );
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || "No se pudo cargar el calendario", games: [] },
-      { status: 500 }
-    );
-  }
+      return NextResponse.json(
+        { games: Array.isArray(games) ? games.map(toScheduleListItem) : [], league },
+        { headers: publicCacheHeaders(30) }
+      );
+    } catch (error: any) {
+      return NextResponse.json(
+        { error: error?.message || "No se pudo cargar el calendario", games: [] },
+        { status: 500 }
+      );
+    }
+  });
 }

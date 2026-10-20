@@ -270,9 +270,7 @@ export function GamedayView({
 
     const loadGame = async () => {
       try {
-        const res = await fetch(`/api/lvbp/game/${gameId}?_t=${Date.now()}`, {
-          cache: "no-store",
-        });
+        const res = await fetch(`/api/lvbp/game/${gameId}`);
         const data = await res.json();
         if (active && !data.error) {
           latestStatus = data.status;
@@ -288,7 +286,15 @@ export function GamedayView({
     loadGame();
 
     const timer = setInterval(() => {
-      if (!document.hidden && latestStatus !== "FINISHED") {
+      if (latestStatus === "FINISHED") {
+        clearInterval(timer);
+        return;
+      }
+      if (
+        typeof document !== "undefined" &&
+        document.visibilityState === "visible" &&
+        !document.hidden
+      ) {
         loadGame();
       }
     }, 25000);
@@ -313,15 +319,18 @@ export function GamedayView({
   useEffect(() => {
     if (!game) return;
     let active = true;
+    const finished = game.status === "FINISHED";
 
-    let sid = "anon";
+    let sid = "";
     try {
-      const savedSid = localStorage.getItem("enjuego_sid");
-      if (savedSid) {
-        sid = savedSid;
-      } else {
-        sid = `s-${Math.random().toString(36).slice(2, 10)}`;
-        localStorage.setItem("enjuego_sid", sid);
+      if (localStorage.getItem("es_admin") !== "true") {
+        const savedSid = localStorage.getItem("enjuego_sid");
+        if (savedSid) {
+          sid = savedSid;
+        } else {
+          sid = `s-${Math.random().toString(36).slice(2, 10)}`;
+          localStorage.setItem("enjuego_sid", sid);
+        }
       }
       const savedVote = localStorage.getItem(`enjuego_vote_${gameId}`);
       if (savedVote === "away" || savedVote === "home") {
@@ -338,7 +347,7 @@ export function GamedayView({
         const res = await fetch(
           `/api/lvbp/interactive?mode=game&gameId=${encodeURIComponent(gameId)}&away=${encodeURIComponent(
             game.awayTeam.code
-          )}&home=${encodeURIComponent(game.homeTeam.code)}&sid=${encodeURIComponent(sid)}`
+          )}&home=${encodeURIComponent(game.homeTeam.code)}`
         );
         const data = await res.json();
         if (!active || data.error) return;
@@ -369,17 +378,45 @@ export function GamedayView({
       }
     };
 
+    const sendPresence = () => {
+      if (!sid || finished) return;
+      if (
+        typeof document !== "undefined" &&
+        (document.visibilityState !== "visible" || document.hidden)
+      ) {
+        return;
+      }
+      fetch("/api/lvbp/interactive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "presence", gameId, sid }),
+      }).catch(() => {});
+    };
+
     syncInteractive();
+    if (finished) {
+      return () => {
+        active = false;
+      };
+    }
+
+    sendPresence();
     const poll = setInterval(() => {
-      if (!document.hidden) {
+      if (
+        typeof document !== "undefined" &&
+        document.visibilityState === "visible" &&
+        !document.hidden
+      ) {
         syncInteractive();
       }
-    }, 30000);
+    }, 25000);
+    const presenceTimer = setInterval(sendPresence, 120000);
     return () => {
       active = false;
       clearInterval(poll);
+      clearInterval(presenceTimer);
     };
-  }, [gameId, game?.awayTeam?.code, game?.homeTeam?.code]);
+  }, [gameId, game?.awayTeam?.code, game?.homeTeam?.code, game?.status]);
 
   // Handle Real Radio Audio Stream Playback
   useEffect(() => {

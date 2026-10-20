@@ -6,50 +6,52 @@ import {
   getCommunityFeed,
   getGameInteractiveState,
   reactCommunityPost,
+  touchGamePresence,
 } from "@/lib/community-store";
+import { publicCacheHeaders, withEdgeCache } from "@/lib/edge-cache";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const mode = searchParams.get("mode") || "game";
+const BOT_UA = /(bot|crawler|spider|whatsapp|facebookexternalhit|twitterbot|curl|python|headless)/i;
 
-    if (mode === "community") {
-      const posts = await getCommunityFeed();
+export async function GET(request: Request) {
+  return withEdgeCache(request, async () => {
+    try {
+      const { searchParams } = new URL(request.url);
+      const mode = searchParams.get("mode") || "game";
+
+      if (mode === "community") {
+        const posts = await getCommunityFeed();
+        return NextResponse.json({ posts }, { headers: publicCacheHeaders(70) });
+      }
+
+      const gameId = searchParams.get("gameId") || "870098";
+      const awayAbbr = searchParams.get("away") || "CAR";
+      const homeAbbr = searchParams.get("home") || "MAG";
+      const state = await getGameInteractiveState(gameId, awayAbbr, homeAbbr);
+      return NextResponse.json(state, { headers: publicCacheHeaders(30) });
+    } catch (error: any) {
       return NextResponse.json(
-        { posts },
-        {
-          headers: {
-            "Cache-Control": "public, s-maxage=15, stale-while-revalidate=30",
-          },
-        }
+        { error: error?.message || "Error al obtener datos interactivos" },
+        { status: 500 }
       );
     }
-
-    const gameId = searchParams.get("gameId") || "870098";
-    const awayAbbr = searchParams.get("away") || "CAR";
-    const homeAbbr = searchParams.get("home") || "MAG";
-    const sessionId = searchParams.get("sid") || undefined;
-
-    const state = await getGameInteractiveState(gameId, awayAbbr, homeAbbr, sessionId);
-    return NextResponse.json(state, {
-      headers: {
-        "Cache-Control": "public, s-maxage=5, stale-while-revalidate=10",
-      },
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || "Error al obtener datos interactivos" },
-      { status: 500 }
-    );
-  }
+  });
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const action = body?.action;
+
+    if (action === "presence") {
+      const ua = request.headers.get("user-agent") || "";
+      if (BOT_UA.test(ua)) return NextResponse.json({ ok: true, ignored: true });
+      const gameId = String(body.gameId || "");
+      const sid = String(body.sid || "");
+      if (gameId && sid) await touchGamePresence(gameId, sid);
+      return NextResponse.json({ ok: true });
+    }
 
     if (action === "vote") {
       const gameId = String(body.gameId || "870098");

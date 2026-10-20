@@ -251,9 +251,7 @@ export default function MlbPlayoffBracket({ season = 2026 }: MlbPlayoffBracketPr
     let active = true;
     async function loadBracket() {
       try {
-        const res = await fetch(`/api/mlb/postseason?season=${season}`, {
-          cache: "no-store",
-        });
+        const res = await fetch(`/api/mlb/postseason?season=${season}`);
         if (!res.ok) return;
         const data = await res.json();
         if (active && data?.seriesById) {
@@ -266,7 +264,15 @@ export default function MlbPlayoffBracket({ season = 2026 }: MlbPlayoffBracketPr
       }
     }
     loadBracket();
-    const timer = setInterval(loadBracket, 30000);
+    const timer = setInterval(() => {
+      if (
+        typeof document !== "undefined" &&
+        document.visibilityState === "visible" &&
+        !document.hidden
+      ) {
+        loadBracket();
+      }
+    }, 60000);
     return () => {
       active = false;
       clearInterval(timer);

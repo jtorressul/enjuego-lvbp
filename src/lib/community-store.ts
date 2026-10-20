@@ -47,14 +47,46 @@ function getVenezuelaTimeString(): string {
   }
 }
 
+function cleanGameId(gameId: string) {
+  return String(gameId).replace(/[^a-zA-Z0-9_-]/g, "");
+}
+
+async function readPresenceMap(gameId: string): Promise<Record<string, number>> {
+  const kv = await getKvStore();
+  const rawPresence = await kv.get(`presence:v2:${cleanGameId(gameId)}`, { skipKv: true });
+  if (!rawPresence) return {};
+  try {
+    const parsed = JSON.parse(rawPresence);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+export async function touchGamePresence(gameId: string, sessionId: string) {
+  const sid = String(sessionId || "").slice(0, 64);
+  if (!sid) return;
+  const kv = await getKvStore();
+  const now = Date.now();
+  const presenceMap = await readPresenceMap(gameId);
+  for (const [existingSid, ts] of Object.entries(presenceMap)) {
+    if (now - ts > 180000) delete presenceMap[existingSid];
+  }
+  presenceMap[sid] = now;
+  await kv.put(`presence:v2:${cleanGameId(gameId)}`, JSON.stringify(presenceMap), {
+    expirationTtl: 3600,
+    persistToKv: false,
+  });
+}
+
 export async function getGameInteractiveState(
   gameId: string,
   _awayAbbr: string,
   _homeAbbr: string,
-  sessionId?: string
+  _sessionId?: string
 ) {
   const kv = await getKvStore();
-  const cleanId = String(gameId).replace(/[^a-zA-Z0-9_-]/g, "");
+  const cleanId = cleanGameId(gameId);
 
   // 1. Real Votes (starts at 0 - no fake votes)
   const rawVotes = await kv.get(`votes:v2:${cleanId}`);
@@ -78,30 +110,14 @@ export async function getGameInteractiveState(
     }
   }
 
-  // 3. Real Active Presence (Stored in Edge Cache + Memory - 0 KV quota consumed!)
-  const rawPresence = await kv.get(`presence:v2:${cleanId}`, { skipKv: true });
+  // Read-only. Presence writes happen on POST action=presence so this GET stays cacheable.
   const now = Date.now();
-  let presenceMap: Record<string, number> = {};
-  if (rawPresence) {
-    try {
-      presenceMap = JSON.parse(rawPresence);
-    } catch {
-      presenceMap = {};
-    }
+  const presenceMap = await readPresenceMap(gameId);
+  let activeRealSessions = 0;
+  for (const ts of Object.values(presenceMap)) {
+    if (now - ts <= 180000) activeRealSessions += 1;
   }
-  for (const [sid, ts] of Object.entries(presenceMap)) {
-    if (now - ts > 90000) {
-      delete presenceMap[sid];
-    }
-  }
-  if (sessionId) {
-    presenceMap[sessionId] = now;
-    await kv.put(`presence:v2:${cleanId}`, JSON.stringify(presenceMap), {
-      expirationTtl: 3600,
-      persistToKv: false,
-    });
-  }
-  const activeRealSessions = Math.max(1, Object.keys(presenceMap).length);
+  activeRealSessions = Math.max(1, activeRealSessions);
 
   return {
     votes,

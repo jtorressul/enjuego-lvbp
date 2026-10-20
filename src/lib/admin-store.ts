@@ -113,7 +113,18 @@ export interface LiveSession {
   firstSeen: number;
   lastSeen: number;
   pageViews?: number;
+  browser?: string;
+  browserVersion?: string;
+  deviceModel?: string;
+  platformVersion?: string;
+  viewport?: string;
+  isPwa?: boolean;
+  language?: string;
+  recentPaths?: string[];
 }
+
+export const LIVE_WINDOW_MS = 240_000;
+export const LIVE_WINDOW_SECONDS = LIVE_WINDOW_MS / 1000;
 
 export interface DailyTrafficStats {
   dateKey: string;
@@ -315,6 +326,8 @@ export function getCaracasDateTimeString(ts = Date.now()): string {
 export function detectUserAgentMeta(ua?: string | null): {
   device: "mobile" | "desktop";
   os: string;
+  browser: string;
+  browserVersion: string;
 } {
   const s = String(ua || "");
   const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(s);
@@ -324,7 +337,70 @@ export function detectUserAgentMeta(ua?: string | null): {
   else if (/Windows/i.test(s)) os = "Windows";
   else if (/Macintosh|Mac OS X/i.test(s)) os = "Mac";
   else if (/Linux/i.test(s)) os = "Linux";
-  return { device: isMobile ? "mobile" : "desktop", os };
+
+  let browser = "Otro";
+  let browserVersion = "";
+  const edge = /Edg\/(\d+)/.exec(s);
+  const chrome = /Chrome\/(\d+)/.exec(s);
+  const firefox = /Firefox\/(\d+)/.exec(s);
+  const safari = /Version\/(\d+).*Safari/.exec(s);
+  const opera = /OPR\/(\d+)/.exec(s);
+  if (edge) {
+    browser = "Edge";
+    browserVersion = edge[1];
+  } else if (chrome && !/Edg\//.test(s)) {
+    browser = "Chrome";
+    browserVersion = chrome[1];
+  } else if (firefox) {
+    browser = "Firefox";
+    browserVersion = firefox[1];
+  } else if (safari && /Safari/.test(s) && !/Chrome/.test(s)) {
+    browser = "Safari";
+    browserVersion = safari[1];
+  } else if (opera) {
+    browser = "Opera";
+    browserVersion = opera[1];
+  }
+
+  return {
+    device: isMobile ? "mobile" : "desktop",
+    os,
+    browser,
+    browserVersion,
+  };
+}
+
+function trimClientField(value: unknown, max: number): string | undefined {
+  if (value == null) return undefined;
+  const clean = String(value).trim();
+  if (!clean) return undefined;
+  return clean.slice(0, max);
+}
+
+export function mergeHeartbeatClientFields(
+  ua: string | null | undefined,
+  client?: Record<string, unknown> | null
+): Pick<
+  LiveSession,
+  | "browser"
+  | "browserVersion"
+  | "deviceModel"
+  | "platformVersion"
+  | "viewport"
+  | "isPwa"
+  | "language"
+> {
+  const uaMeta = detectUserAgentMeta(ua);
+  const c = client || {};
+  return {
+    browser: trimClientField(c.browser, 24) || uaMeta.browser,
+    browserVersion: trimClientField(c.browserVersion, 12) || uaMeta.browserVersion,
+    deviceModel: trimClientField(c.deviceModel, 48),
+    platformVersion: trimClientField(c.platformVersion, 24),
+    viewport: trimClientField(c.viewport, 64),
+    isPwa: Boolean(c.isPwa),
+    language: trimClientField(c.language, 16),
+  };
 }
 
 export function isAdCampaignLive(ad: AdCampaign): boolean {
@@ -476,12 +552,6 @@ export async function pickAdsForPageSlots(
       continue;
     }
     usedIds.add(picked.id);
-    await recordBannerMetric(picked.id, "impression", {
-      device: context?.device || "mobile",
-      os: context?.os || "Otro",
-      slot: rawSlot,
-      pagePath: context?.pagePath || "/inicio",
-    }).catch(() => {});
 
     const goParams = new URLSearchParams({
       id: picked.id,
@@ -631,14 +701,41 @@ export async function getRecentAdClickLog(): Promise<AdClickLogEntry[]> {
 // ============================================================================
 // LIVE PRESENCE & HISTORICAL TRAFFIC ANALYTICS
 // ============================================================================
-const LIVE_WINDOW_MS = 75_000;
+const presenceTouchRef = globalThis as unknown as {
+  __ENJUEGO_PRESENCE_TOUCH__?: Map<string, number>;
+};
+if (!presenceTouchRef.__ENJUEGO_PRESENCE_TOUCH__) {
+  presenceTouchRef.__ENJUEGO_PRESENCE_TOUCH__ = new Map();
+}
+const presenceTouch = presenceTouchRef.__ENJUEGO_PRESENCE_TOUCH__;
 
 export async function recordPresenceHeartbeat(
   input: Omit<LiveSession, "firstSeen" | "lastSeen">,
   userAgent?: string | null
 ): Promise<{ onlineCount: number }> {
-  const { kv } = await getAdminKv();
+  if (
+    userAgent &&
+    /(bot|crawler|spider|whatsapp|facebookexternalhit|twitterbot|curl|python|headless)/i.test(
+      userAgent
+    )
+  ) {
+    return { onlineCount: 0 };
+  }
+
   const now = Date.now();
+  const touchKey = `${input.sessionId}|${input.path}`;
+  const lastTouch = presenceTouch.get(touchKey) || 0;
+  if (now - lastTouch < 60_000) {
+    return { onlineCount: 0 };
+  }
+  presenceTouch.set(touchKey, now);
+  if (presenceTouch.size > 4000) {
+    for (const [key, ts] of presenceTouch) {
+      if (now - ts > 120_000) presenceTouch.delete(key);
+    }
+  }
+
+  const { kv } = await getAdminKv();
   const uaMeta = detectUserAgentMeta(userAgent);
   const resolvedOs = input.os || uaMeta.os;
 
@@ -660,6 +757,10 @@ export async function recordPresenceHeartbeat(
   if (existingIdx >= 0) {
     const prev = sessions[existingIdx];
     isNewPageHit = prev.path !== input.path;
+    let recentPaths = prev.recentPaths?.length ? [...prev.recentPaths] : [prev.path];
+    if (isNewPageHit) {
+      recentPaths = [input.path, ...recentPaths.filter((p) => p !== input.path)].slice(0, 5);
+    }
     sessions[existingIdx] = {
       ...prev,
       ...input,
@@ -670,6 +771,9 @@ export async function recordPresenceHeartbeat(
       city: input.city || prev.city,
       locationLabel: input.locationLabel || prev.locationLabel,
       os: resolvedOs,
+      deviceModel: input.deviceModel || prev.deviceModel,
+      platformVersion: input.platformVersion || prev.platformVersion,
+      recentPaths,
       lastSeen: now,
       pageViews: (prev.pageViews || 1) + (isNewPageHit ? 1 : 0),
     };
@@ -678,6 +782,7 @@ export async function recordPresenceHeartbeat(
     sessions.unshift({
       ...input,
       os: resolvedOs,
+      recentPaths: [input.path],
       firstSeen: now,
       lastSeen: now,
       pageViews: 1,

@@ -22,6 +22,27 @@ export interface AdBannerProps {
 let cachedRouteKey = "";
 let assignedSlotsCache: Record<string, ServedSlotAd | null> | null = null;
 let fetchPromise: Promise<Record<string, ServedSlotAd | null>> | null = null;
+const reportedImpressions = new Set<string>();
+const pendingImpressions: { campaignId: string; slot: string; path: string }[] = [];
+let impressionFlush: ReturnType<typeof setTimeout> | null = null;
+
+function reportImpression(campaignId: string, slot: string, path: string) {
+  const key = `${path}|${slot}|${campaignId}`;
+  if (reportedImpressions.has(key)) return;
+  reportedImpressions.add(key);
+  pendingImpressions.push({ campaignId, slot, path });
+  if (impressionFlush) return;
+  impressionFlush = setTimeout(() => {
+    impressionFlush = null;
+    const items = pendingImpressions.splice(0, pendingImpressions.length);
+    if (!items.length) return;
+    fetch("/api/banners", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "impressions", items }),
+    }).catch(() => {});
+  }, 400);
+}
 
 function getSlotsForRoute(routeKey: string): string {
   if (routeKey === "/" || routeKey.startsWith("/inicio")) {
@@ -44,8 +65,7 @@ async function loadPageSlotAds(
     assignedSlotsCache = null;
     const slotsQuery = getSlotsForRoute(routeKey);
     fetchPromise = fetch(
-      `/api/banners?slots=${encodeURIComponent(slotsQuery)}&path=${encodeURIComponent(routeKey)}&_t=${Date.now()}`,
-      { cache: "no-store" }
+      `/api/banners?slots=${encodeURIComponent(slotsQuery)}&path=${encodeURIComponent(routeKey)}`
     )
       .then(async (res) => {
         if (!res.ok) throw new Error("Failed");
@@ -89,6 +109,11 @@ export function AdBanner({
       mounted = false;
     };
   }, [slot, pathname]);
+
+  useEffect(() => {
+    if (!ad?.id) return;
+    reportImpression(ad.id, slot, pathname);
+  }, [ad?.id, slot, pathname]);
 
   const finalImageUrl = propImageUrl || ad?.imageUrl || "";
   const finalHref = propLinkUrl || ad?.href || "";

@@ -20,16 +20,20 @@ export async function GET(request: Request) {
   try {
     const campaigns = await getAdCampaigns();
     const ad = campaigns.find((c) => c.id === id);
-    const uaMeta = detectUserAgentMeta(request.headers.get("user-agent"));
+    const ua = request.headers.get("user-agent") || "";
+    const isBot = /(bot|crawler|spider|whatsapp|facebookexternalhit|twitterbot|curl|python|headless)/i.test(ua);
+    const uaMeta = detectUserAgentMeta(ua);
 
-    await recordBannerMetric(id, "click", {
-      device: uaMeta.device,
-      os: uaMeta.os,
-      slot,
-      pagePath,
-      campaignName: ad?.name || ad?.companyName || id,
-      targetUrl: ad?.linkUrl || "",
-    }).catch(() => {});
+    if (!isBot) {
+      await recordBannerMetric(id, "click", {
+        device: uaMeta.device,
+        os: uaMeta.os,
+        slot,
+        pagePath,
+        campaignName: ad?.name || ad?.companyName || id,
+        targetUrl: ad?.linkUrl || "",
+      }).catch(() => {});
+    }
 
     if (ad && ad.linkUrl && /^https?:\/\//i.test(ad.linkUrl.trim())) {
       return NextResponse.redirect(ad.linkUrl.trim(), 302);

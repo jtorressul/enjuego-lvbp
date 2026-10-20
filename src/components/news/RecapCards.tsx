@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { GameRecap, RecapSide, RecapStanding } from "@/lib/game-recaps";
+import type { YoutubeHighlight } from "@/lib/youtube-highlight";
 
 function TeamMark({ side, won, align = "start" }: { side: RecapSide; won: boolean; align?: "start" | "end" }) {
   return (
@@ -49,7 +50,13 @@ function StandingChip({ standing, logo }: { standing: RecapStanding; logo: strin
   );
 }
 
-export function FeaturedRecap({ recap }: { recap: GameRecap }) {
+export function FeaturedRecap({
+  recap,
+  highlight,
+}: {
+  recap: GameRecap;
+  highlight?: YoutubeHighlight | null;
+}) {
   return (
     <article className="keep-dark overflow-hidden rounded-3xl bg-slate-950 text-white shadow-md">
       <div className="px-5 py-5 sm:px-7 sm:py-7">
@@ -66,12 +73,26 @@ export function FeaturedRecap({ recap }: { recap: GameRecap }) {
         </div>
         <h2 className="mt-6 text-xl sm:text-3xl font-black leading-tight">{recap.headline}</h2>
         <p className="mt-2 text-sm text-slate-300 max-w-3xl">{recap.paragraphs[0]}</p>
+
+        {highlight ? (
+          <div className="mt-5 overflow-hidden rounded-2xl border border-slate-800 bg-black aspect-video max-w-2xl">
+            <iframe
+              src={`https://www.youtube-nocookie.com/embed/${highlight.videoId}?rel=0&modestbranding=1`}
+              title={highlight.title}
+              className="h-full w-full"
+              loading="lazy"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+            />
+          </div>
+        ) : null}
+
         <div className="mt-5 flex flex-wrap gap-2">
           <Link
             href={`/noticias/${recap.id}`}
             className="rounded-xl bg-amber-400 px-4 py-2 text-xs font-black text-slate-950"
           >
-            Leer el resumen
+            Leer el resumen completo
           </Link>
           <Link
             href={`/juego/${recap.id}`}
@@ -105,7 +126,15 @@ export function RecapCard({ recap }: { recap: GameRecap }) {
   );
 }
 
-export function RecapArticle({ recap, more }: { recap: GameRecap; more: GameRecap[] }) {
+export function RecapArticle({
+  recap,
+  more,
+  highlight,
+}: {
+  recap: GameRecap;
+  more: GameRecap[];
+  highlight?: YoutubeHighlight | null;
+}) {
   const winner = recap.winnerSide === "away" ? recap.away : recap.home;
   const loser = recap.winnerSide === "away" ? recap.home : recap.away;
   return (
@@ -164,6 +193,27 @@ export function RecapArticle({ recap, more }: { recap: GameRecap; more: GameReca
         {recap.winnerStanding ? <StandingChip standing={recap.winnerStanding} logo={winner.logo} /> : null}
         {recap.loserStanding ? <StandingChip standing={recap.loserStanding} logo={loser.logo} /> : null}
       </div>
+
+      {highlight ? (
+        <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
+          <div className="aspect-video bg-slate-950">
+            <iframe
+              src={`https://www.youtube-nocookie.com/embed/${highlight.videoId}?rel=0&modestbranding=1`}
+              title={highlight.title}
+              className="h-full w-full"
+              loading="lazy"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+            />
+          </div>
+          <div className="px-4 py-3">
+            <p className="text-sm font-black text-slate-950">{highlight.title}</p>
+            <p className="mt-1 text-xs text-slate-500">
+              {highlight.author}. El video se busca en YouTube al abrir la nota y no se guarda en En Juego.
+            </p>
+          </div>
+        </section>
+      ) : null}
 
       <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-7 space-y-4 text-sm sm:text-base leading-relaxed text-slate-700">
         {recap.paragraphs.map((paragraph) => (

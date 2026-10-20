@@ -3,6 +3,7 @@ import { InfoPage } from "@/components/InfoPage";
 import { FeaturedRecap, RecapCard } from "@/components/news/RecapCards";
 import { buildGameRecaps, formatRecapDate } from "@/lib/game-recaps";
 import { fetchLvbpSchedule, fetchLvbpStandingsAndLeaders } from "@/lib/mlb-lvbp-service";
+import { findGameHighlight } from "@/lib/youtube-highlight";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,17 @@ export default async function NoticiasPage() {
   const [featured, ...rest] = recaps;
   const dates = [...new Set(rest.map((recap) => recap.date))];
 
+  const featuredHighlight = featured
+    ? await findGameHighlight({
+        id: featured.id,
+        date: featured.date,
+        awayName: featured.away.name,
+        homeName: featured.home.name,
+        awayNick: featured.away.nick,
+        homeNick: featured.home.nick,
+      })
+    : null;
+
   return (
     <InfoPage wide bare>
       <div className="space-y-8">
@@ -31,7 +43,11 @@ export default async function NoticiasPage() {
             El resumen sale del marcador en cuanto el juego termina: resultado, pitcheo de decisión y lugar en la tabla.
           </p>
         </div>
-        {featured ? <FeaturedRecap recap={featured} /> : <p className="text-sm text-slate-500">Todavía no hay juegos finalizados.</p>}
+        {featured ? (
+          <FeaturedRecap recap={featured} highlight={featuredHighlight} />
+        ) : (
+          <p className="text-sm text-slate-500">Todavía no hay juegos finalizados.</p>
+        )}
         {dates.map((date) => (
           <section key={date}>
             <h2 className="text-sm font-black uppercase tracking-wider text-slate-500">{formatRecapDate(date)}</h2>

@@ -4,6 +4,7 @@ import { InfoPage } from "@/components/InfoPage";
 import { RecapArticle } from "@/components/news/RecapCards";
 import { buildGameRecaps } from "@/lib/game-recaps";
 import { fetchLvbpSchedule, fetchLvbpStandingsAndLeaders } from "@/lib/mlb-lvbp-service";
+import { findGameHighlight } from "@/lib/youtube-highlight";
 
 export const dynamic = "force-dynamic";
 
@@ -36,10 +37,18 @@ export default async function NoticiaPage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const { recap, more } = await loadRecap(id);
   if (!recap) notFound();
+  const highlight = await findGameHighlight({
+    id: recap.id,
+    date: recap.date,
+    awayName: recap.away.name,
+    homeName: recap.home.name,
+    awayNick: recap.away.nick,
+    homeNick: recap.home.nick,
+  });
 
   return (
     <InfoPage wide bare>
-      <RecapArticle recap={recap} more={more} />
+      <RecapArticle recap={recap} more={more} highlight={highlight} />
     </InfoPage>
   );
 }

@@ -1347,10 +1347,16 @@ export function EnJuegoPortal({
 
             <div className="flex items-center gap-1.5">
               {hasLiveStream && !isFinal ? (
-                <div className="flex-1 rounded-xl bg-red-600 group-hover:bg-red-700 text-white py-2 px-3 text-xs font-black text-center transition truncate shadow-xs flex items-center justify-center gap-1.5">
+                <a
+                  href="https://ok.ru/video/14909080673812"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex-1 rounded-xl bg-red-600 hover:bg-red-700 text-white py-2 px-3 text-xs font-black text-center transition truncate shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                >
                   <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                  <span>▶ Ver Transmisión en Vivo ›</span>
-                </div>
+                  <span>▶ Ver Transmisión en Vivo ↗</span>
+                </a>
               ) : (
                 <div className="flex-1 rounded-xl bg-slate-100 group-hover:bg-amber-400 text-slate-800 group-hover:text-slate-950 py-2 px-3 text-xs font-extrabold text-center transition truncate">
                   {isLive

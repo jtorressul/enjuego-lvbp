@@ -40,9 +40,9 @@ export function BroadcastChannelsRow({
     e.stopPropagation();
     const info = getChannelInfo(ch);
 
-    // If clicking TVES or OK.ru, open official TVES live stream
-    if (ch.toLowerCase().includes("ok.ru") || ch.toLowerCase().includes("ok ru")) {
-      window.open("https://www.tves.gob.ve/en-vivo/", "_blank", "noopener,noreferrer");
+    // If clicking TVES or OK.ru, open direct live stream in new tab
+    if (ch.toLowerCase().includes("ok.ru") || ch.toLowerCase().includes("ok ru") || ch.toLowerCase().includes("tves")) {
+      window.open("https://ok.ru/video/14909080673812", "_blank", "noopener,noreferrer");
       return;
     }
 

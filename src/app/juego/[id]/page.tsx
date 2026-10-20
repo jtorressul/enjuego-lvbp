@@ -12,12 +12,51 @@ export async function generateMetadata({
   try {
     const data = await fetchLvbpGameday(id);
     if (data?.awayTeam && data?.homeTeam) {
+      const isLive = data.status === "IN_PROGRESS";
       const isFinal = data.status === "FINISHED";
-      const statusText = isFinal
-        ? `Final: ${data.awayTeam.name} ${data.awayScore} - ${data.homeScore} ${data.homeTeam.name}`
-        : `${data.awayTeam.name} vs ${data.homeTeam.name} en Vivo`;
-      const title = `${statusText} · Marcador, Box Score y Jugada a Jugada`;
-      const description = `Sigue el partido ${data.awayTeam.name} vs ${data.homeTeam.name} en vivo por la LVBP. Marcador actualizado, jugada a jugada, alineaciones, box score, canales de TV abierta y highlights en video.`;
+
+      const awayCode = (data.awayTeam.code || "").toUpperCase();
+      const homeCode = (data.homeTeam.code || "").toUpperCase();
+      const awayName = data.awayTeam.name || "Visitante";
+      const homeName = data.homeTeam.name || "Home Club";
+
+      // Live stream indicator
+      const hasLiveStream =
+        id === "870072" ||
+        ((awayCode === "CAR" && homeCode === "LAG") || (awayCode === "LAG" && homeCode === "CAR")) ||
+        Boolean(data.youtubeVideoId);
+
+      const inningText = data.inningState
+        ? `${data.inningState.top ? "Alta" : "Baja"} ${data.inningState.inning}°`
+        : data.statusLabel || "En Vivo";
+
+      const statusPrefix = isLive
+        ? `🔴 EN VIVO (${inningText}): ${awayName} ${data.awayScore} - ${data.homeScore} ${homeName}`
+        : isFinal
+          ? `⚾ FINAL: ${awayName} ${data.awayScore} - ${data.homeScore} ${homeName}`
+          : `⚾ HOY (${data.time || "7:00 PM"}): ${awayName} vs ${homeName}`;
+
+      const title = `${statusPrefix} · Marcador y Transmisión`;
+
+      const tvList =
+        hasLiveStream
+          ? "OK.ru (En Vivo Web), TV Abierta y Cable"
+          : data.tvChannels && data.tvChannels.length > 0
+            ? data.tvChannels.join(", ")
+            : data.tv || "TV Abierta y Streaming";
+
+      const description = isLive
+        ? `🔴 Sigue en vivo el juego ${awayName} (${data.awayScore}) vs ${homeName} (${data.homeScore}). Señal de TV: ${tvList}. Pizarra jugada a jugada, alineaciones, pitcheos y estadísticas en tiempo real.`
+        : isFinal
+          ? `Marcador final: ${awayName} ${data.awayScore} - ${data.homeScore} ${homeName}. Box score completo, estadísticas individuales, decisiones de pitcheo y resumen del partido.`
+          : `Duelo de la LVBP: ${awayName} vs ${homeName} a las ${data.time || "7:00 PM"} en ${data.venue || "Venezuela"}. Transmisión: ${tvList}. Alineaciones oficiales y marcador en vivo.`;
+
+      // 1200x630 Matchup Open Graph Image
+      const ogImageUrl =
+        awayCode && homeCode
+          ? `https://enjuego.online/og/matchups/${awayCode}-${homeCode}.png`
+          : "https://enjuego.online/og/lvbp-default.png";
+
       return {
         title,
         description,
@@ -28,15 +67,60 @@ export async function generateMetadata({
           title,
           description,
           url: `https://enjuego.online/juego/${id}`,
-          images: [{ url: data.homeTeam.logoUrl || "/logo.png", alt: `${data.awayTeam.name} vs ${data.homeTeam.name}` }],
+          siteName: "En Juego · Béisbol Venezolano",
+          type: "article",
+          images: [
+            {
+              url: ogImageUrl,
+              width: 1200,
+              height: 630,
+              alt: `${awayName} vs ${homeName}`,
+              type: "image/png",
+            },
+          ],
+        },
+        twitter: {
+          card: "summary_large_image",
+          title,
+          description,
+          images: [ogImageUrl],
         },
       };
     }
   } catch {}
 
+  const fallbackTitle = "Juego LVBP en Vivo · Pizarra, Marcadores y Transmisión";
+  const fallbackDesc =
+    "Sigue los partidos de la LVBP en vivo: marcadores jugada a jugada, canales de TV en vivo, alineaciones y tabla de posiciones del béisbol venezolano.";
+
   return {
-    title: "Juego LVBP en Vivo · Pizarra, Box Score y Jugada a Jugada",
-    description: "Sigue el partido de la LVBP en vivo: marcador actualizado, jugada a jugada, alineaciones y canales de TV.",
+    title: fallbackTitle,
+    description: fallbackDesc,
+    alternates: {
+      canonical: `https://enjuego.online/juego/${id}`,
+    },
+    openGraph: {
+      title: fallbackTitle,
+      description: fallbackDesc,
+      url: `https://enjuego.online/juego/${id}`,
+      siteName: "En Juego · Béisbol Venezolano",
+      type: "article",
+      images: [
+        {
+          url: "https://enjuego.online/og/lvbp-default.png",
+          width: 1200,
+          height: 630,
+          alt: "En Juego · Béisbol Venezolano",
+          type: "image/png",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: fallbackTitle,
+      description: fallbackDesc,
+      images: ["https://enjuego.online/og/lvbp-default.png"],
+    },
   };
 }
 

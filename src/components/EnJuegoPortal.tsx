@@ -879,7 +879,11 @@ export function EnJuegoPortal({
     };
 
     sendHeartbeat();
-    const interval = setInterval(sendHeartbeat, 25_000);
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        sendHeartbeat();
+      }
+    }, 90_000);
     return () => clearInterval(interval);
   }, [section, selectedGameId, selectedTeamCode, currentUser, favoriteTeamCode]);
 

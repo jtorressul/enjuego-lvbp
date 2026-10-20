@@ -5,6 +5,8 @@ import { checkAndDispatchGameAlerts } from "@/lib/score-notifications";
 
 export const dynamic = "force-dynamic";
 
+const lastAlertCheckMap = new Map<string, number>();
+
 export async function GET(
   request: Request,
   context: { params: Promise<{ id: string }> }
@@ -20,7 +22,12 @@ export async function GET(
     const gameday = await fetchLvbpGameday(realId);
 
     if (!simulate && id !== "sim-live" && gameday) {
-      checkAndDispatchGameAlerts([gameday as any]).catch(() => {});
+      const now = Date.now();
+      const lastCheck = lastAlertCheckMap.get(realId) || 0;
+      if (now - lastCheck > 40_000) {
+        lastAlertCheckMap.set(realId, now);
+        checkAndDispatchGameAlerts([gameday as any]).catch(() => {});
+      }
     }
 
     if (simulate || id === "sim-live") {

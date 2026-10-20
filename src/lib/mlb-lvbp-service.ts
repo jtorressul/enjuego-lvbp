@@ -301,7 +301,7 @@ export async function fetchLvbpSchedule(season = "2026"): Promise<ScheduleGame[]
     const broadcastMapPromise = getOfficialBroadcastsMap().catch(() => ({} as Record<string, OfficialBroadcastEntry>));
     const url = `${MLB_BASE}/v1/schedule?sportId=${WINTER_SPORT_ID}&leagueId=${LVBP_LEAGUE_ID}&season=${season}&gameType=R,F,D,L,W&hydrate=linescore(runners),team,decisions,probablePitcher,broadcasts`;
     const [res, broadcastMap] = await Promise.all([
-      fetch(url, { cache: "no-store" }),
+      fetch(url, { next: { revalidate: 30 } }),
       broadcastMapPromise,
     ]);
     if (!res.ok) {
@@ -400,7 +400,7 @@ export async function fetchLvbpSchedule(season = "2026"): Promise<ScheduleGame[]
     }
 
     const result = games.length ? games : getFallbackSchedule();
-    lvbpScheduleCache?.set(season, { data: result, expiresAt: now + 15_000 });
+    lvbpScheduleCache?.set(season, { data: result, expiresAt: now + 60_000 });
     return result;
   } catch {
     return getFallbackSchedule();
@@ -416,13 +416,14 @@ export async function fetchLvbpGameday(gamePk: string): Promise<GamedayData> {
 
   try {
     const url = `${MLB_BASE}/v1.1/game/${gamePk}/feed/live`;
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetch(url, { next: { revalidate: 10 } });
     if (!res.ok) {
       return getFallbackGameday(gamePk);
     }
     const raw = await res.json();
     const result = transformMlbLiveFeedToGameday(raw);
-    gamedayCache?.set(gamePk, { data: result, expiresAt: now + 3_000 });
+    const ttl = result.status === "FINISHED" ? 3600_000 : 12_000;
+    gamedayCache?.set(gamePk, { data: result, expiresAt: now + ttl });
     return result;
   } catch {
     return getFallbackGameday(gamePk);

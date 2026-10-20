@@ -144,27 +144,8 @@ export async function fetchStatsLvbpDate(targetDateIso?: string): Promise<Record
 }
 
 export async function getOfficialBroadcastsMap(
-  targetDateIso?: string
+  _targetDateIso?: string
 ): Promise<Record<string, OfficialBroadcastEntry>> {
-  const now = Date.now();
-  if (now - lastFetchTimestamp < CACHE_TTL_MS && Object.keys(cachedBroadcasts).length > 0) {
-    return cachedBroadcasts;
-  }
-
-  try {
-    // Fetch live from stats.lvbp.com
-    const liveMap = await fetchStatsLvbpDate(targetDateIso);
-    if (Object.keys(liveMap).length > 0) {
-      cachedBroadcasts = {
-        ...cachedBroadcasts,
-        ...liveMap,
-      };
-      lastFetchTimestamp = now;
-    }
-  } catch {
-    // Fall back to pre-scraped baseline
-  }
-
   return cachedBroadcasts;
 }
 

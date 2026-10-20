@@ -291,7 +291,7 @@ export function GamedayView({
       if (!document.hidden && latestStatus !== "FINISHED") {
         loadGame();
       }
-    }, 15000);
+    }, 25000);
 
     const handleVisibilityOrFocus = () => {
       if (document.visibilityState === "visible" && latestStatus !== "FINISHED") {
@@ -374,7 +374,7 @@ export function GamedayView({
       if (!document.hidden) {
         syncInteractive();
       }
-    }, 12000);
+    }, 30000);
     return () => {
       active = false;
       clearInterval(poll);

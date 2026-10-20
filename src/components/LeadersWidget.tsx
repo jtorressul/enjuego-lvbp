@@ -28,7 +28,9 @@ function SingleLeaderCard({
     return (
       <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
         <h3 className="text-sm font-black text-slate-900">{title}</h3>
-        <p className="text-xs text-slate-400 mt-3">Se actualizan con los juegos del día.</p>
+        <p className="text-xs text-slate-400 mt-3">
+          Líderes de la temporada. Se actualizan al cerrar cada juego.
+        </p>
       </article>
     );
   }

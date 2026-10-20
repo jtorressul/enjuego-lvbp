@@ -1,12 +1,7 @@
-import React, { Suspense } from "react";
-import { EnJuegoPortal } from "@/components/EnJuegoPortal";
+import { SeededPortal } from "@/components/SeededPortal";
 
 export const dynamic = "force-dynamic";
 
 export default function CalendarioPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-[#f3f6fb]" />}>
-      <EnJuegoPortal initialSection="calendario" />
-    </Suspense>
-  );
+  return <SeededPortal initialSection="calendario" />;
 }

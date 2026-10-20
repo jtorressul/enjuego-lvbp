@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { LeaderCategory, ScheduleGame, StandingRow } from "@/lib/types";
+import type { PortalSeed } from "@/lib/portal-seed";
 import { LVBP_OFFICIAL_LOGO, LVBP_TEAMS, resolveLvbpTeam } from "@/lib/lvbp-teams";
 import { MLB_TEAMS, resolveMlbTeam, resolveAnyBaseballTeam } from "@/lib/mlb-teams";
 import { GamedayView } from "@/components/gameday/GamedayView";
@@ -129,10 +130,18 @@ export function EnJuegoPortal({
   initialSection = "home",
   initialTeamSlug,
   initialGameId,
+  initialSchedule = [],
+  initialStandings = [],
+  initialLeaders = { hitting: [], pitching: [] },
+  initialDateIndex = 0,
 }: {
   initialSection?: NavSection;
   initialTeamSlug?: string;
   initialGameId?: string;
+  initialSchedule?: PortalSeed["schedule"];
+  initialStandings?: PortalSeed["standings"];
+  initialLeaders?: PortalSeed["leaders"];
+  initialDateIndex?: number;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -150,18 +159,21 @@ export function EnJuegoPortal({
     return initialSection;
   }, [pathname, initialSection]);
 
-  const [schedule, setSchedule] = useState<ScheduleGame[]>([]);
+  const hasSeed =
+    initialSchedule.length > 0 ||
+    initialStandings.length > 0 ||
+    initialLeaders.hitting.length > 0;
+  const [schedule, setSchedule] = useState<ScheduleGame[]>(initialSchedule);
   const [mlbJornadaGames, setMlbJornadaGames] = useState<ScheduleGame[]>([]);
   const [jornadaLeague, setJornadaLeague] = useState<"lvbp" | "mlb">("lvbp");
   const [mlbDateIndex, setMlbDateIndex] = useState(0);
   const manualMlbDateRef = useRef(false);
-  const [standings, setStandings] = useState<StandingRow[]>([]);
-  const [leaders, setLeaders] = useState<{ hitting: LeaderCategory[]; pitching: LeaderCategory[] }>({
-    hitting: [],
-    pitching: [],
-  });
-  const [loading, setLoading] = useState(true);
-  const [selectedDateIndex, setSelectedDateIndex] = useState(0);
+  const [standings, setStandings] = useState<StandingRow[]>(initialStandings);
+  const [leaders, setLeaders] = useState<{ hitting: LeaderCategory[]; pitching: LeaderCategory[] }>(
+    initialLeaders
+  );
+  const [loading, setLoading] = useState(!hasSeed);
+  const [selectedDateIndex, setSelectedDateIndex] = useState(initialDateIndex);
   const manualDateRef = useRef(false);
   const [selectedGameId, setSelectedGameId] = useState<string>(
     initialGameId || searchParams?.get("id") || searchParams?.get("game") || "870098"
@@ -599,7 +611,7 @@ export function EnJuegoPortal({
       }
     };
 
-    loadAllData(true);
+    loadAllData(!hasSeed);
 
     const handleVisibilityOrFocus = () => {
       if (isGameView) return; // Do not reload global schedule/standings on focus when viewing a specific game
@@ -3822,6 +3834,15 @@ export function EnJuegoPortal({
               </Link>
               <Link href="/teams?team=leones" className="hover:text-slate-900">
                 Equipos y Roster
+              </Link>
+              <Link href="/quienes-somos" className="hover:text-slate-900">
+                Quiénes somos
+              </Link>
+              <Link href="/contacto" className="hover:text-slate-900">
+                Contacto
+              </Link>
+              <Link href="/privacidad" className="hover:text-slate-900">
+                Privacidad
               </Link>
             </div>
           </div>

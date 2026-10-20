@@ -152,6 +152,41 @@ export interface TrafficDaySummary {
   topRegions?: { region: string; count: number }[];
 }
 
+export interface MonthlyTrafficSummary {
+  monthKey: string; // e.g. "2026-10"
+  monthLabel: string; // e.g. "Octubre 2026"
+  uniqueVisitors: number;
+  mobileVisitors: number;
+  desktopVisitors: number;
+  pageViews: number;
+  peakOnline: number;
+  daysCounted: number;
+  avgDailyVisitors: number;
+}
+
+const MONTH_NAMES_ES: Record<string, string> = {
+  "01": "Enero",
+  "02": "Febrero",
+  "03": "Marzo",
+  "04": "Abril",
+  "05": "Mayo",
+  "06": "Junio",
+  "07": "Julio",
+  "08": "Agosto",
+  "09": "Septiembre",
+  "10": "Octubre",
+  "11": "Noviembre",
+  "12": "Diciembre",
+};
+
+export function getMonthLabel(monthKey: string): string {
+  const parts = monthKey.split("-");
+  const year = parts[0] || "";
+  const month = parts[1] || "";
+  const name = MONTH_NAMES_ES[month] || month;
+  return `${name} ${year}`;
+}
+
 export interface HybridKVStore {
   get(key: string, options?: { skipKv?: boolean; ttlMs?: number }): Promise<string | null>;
   put(
@@ -309,6 +344,7 @@ const METRICS_KEY = "admin:ads:metrics:jugada_v1";
 const CLICK_LOG_KEY = "admin:ads:clicklog:v1";
 const PRESENCE_KEY = "admin:presence:sessions:v1";
 const TRAFFIC_HISTORY_KEY = "admin:traffic:history_v1";
+const MONTHLY_TRAFFIC_KEY = "admin:traffic:monthly_v1";
 const USERS_INDEX_KEY = "admin:users:index:v1";
 const ADMIN_PASS_KEY = "admin:config:password:v1";
 
@@ -869,7 +905,7 @@ export async function recordPresenceHeartbeat(
     persistToKv: false,
   });
 
-  // Update rolling 14-day traffic summary index
+  // Update rolling traffic summary index (retaining up to 120 days)
   try {
     const rawHist = await kv.get(TRAFFIC_HISTORY_KEY, { skipKv: true, ttlMs: 8000 });
     let histMap: Record<string, TrafficDaySummary> = {};
@@ -896,15 +932,55 @@ export async function recordPresenceHeartbeat(
       topRegions,
     };
     const keys = Object.keys(histMap).sort();
-    if (keys.length > 21) {
-      for (const k of keys.slice(0, keys.length - 21)) {
+    if (keys.length > 120) {
+      for (const k of keys.slice(0, keys.length - 120)) {
         delete histMap[k];
       }
     }
     await kv.put(TRAFFIC_HISTORY_KEY, JSON.stringify(histMap), {
-      expirationTtl: 86400 * 60,
+      expirationTtl: 86400 * 180,
       persistToKv: false,
     });
+
+    // Update monthly traffic aggregation
+    const monthKey = dateKey.slice(0, 7);
+    let monthlyMap: Record<string, MonthlyTrafficSummary> = {};
+    const rawMonths = await kv.get(MONTHLY_TRAFFIC_KEY, { skipKv: true, ttlMs: 10000 });
+    if (rawMonths) {
+      try {
+        monthlyMap = JSON.parse(rawMonths) || {};
+      } catch {
+        monthlyMap = {};
+      }
+    }
+
+    const daysInThisMonth = Object.values(histMap).filter((d) => d.dateKey.startsWith(monthKey));
+    if (daysInThisMonth.length > 0) {
+      const monthVisitors = daysInThisMonth.reduce((acc, d) => acc + (d.uniqueVisitors || 0), 0);
+      const monthMobile = daysInThisMonth.reduce((acc, d) => acc + (d.mobileVisitors || 0), 0);
+      const monthDesktop = daysInThisMonth.reduce((acc, d) => acc + (d.desktopVisitors || 0), 0);
+      const monthPages = daysInThisMonth.reduce((acc, d) => acc + (d.pageViews || 0), 0);
+      const monthPeak = Math.max(...daysInThisMonth.map((d) => d.peakOnline || 0), 0);
+      const daysCounted = daysInThisMonth.length;
+      const avgDaily = Math.round(monthVisitors / daysCounted);
+
+      monthlyMap[monthKey] = {
+        monthKey,
+        monthLabel: getMonthLabel(monthKey),
+        uniqueVisitors: monthVisitors,
+        mobileVisitors: monthMobile,
+        desktopVisitors: monthDesktop,
+        pageViews: monthPages,
+        peakOnline: monthPeak,
+        daysCounted,
+        avgDailyVisitors: avgDaily,
+      };
+
+      await kv.put(MONTHLY_TRAFFIC_KEY, JSON.stringify(monthlyMap), {
+        expirationTtl: 86400 * 365,
+        persistToKv: true,
+      });
+    }
   } catch {
     // ignore
   }
@@ -930,12 +1006,23 @@ export async function getLivePresenceSummary(): Promise<{
   liveCountryHits: Record<string, number>;
   liveRegionHits: Record<string, number>;
   trafficHistory: TrafficDaySummary[];
+  currentMonthKey: string;
+  currentMonthLabel: string;
+  currentMonthVisitors: number;
+  currentMonthPageViews: number;
+  currentMonthMobileVisitors: number;
+  currentMonthDesktopVisitors: number;
+  currentMonthPeakOnline: number;
+  currentMonthDaysCounted: number;
+  currentMonthAvgDaily: number;
+  monthlyHistory: MonthlyTrafficSummary[];
 }> {
   const { kv } = await getAdminKv();
   const now = Date.now();
-  const [raw, rawHist] = await Promise.all([
+  const [raw, rawHist, rawMonths] = await Promise.all([
     kv.get(PRESENCE_KEY, { skipKv: true, ttlMs: 3000 }),
     kv.get(TRAFFIC_HISTORY_KEY, { skipKv: true, ttlMs: 5000 }),
+    kv.get(MONTHLY_TRAFFIC_KEY, { skipKv: true, ttlMs: 5000 }),
   ]);
 
   let sessions: LiveSession[] = [];
@@ -1037,9 +1124,46 @@ export async function getLivePresenceSummary(): Promise<{
       .map(([region, count]) => ({ region, count })),
   };
 
+  let monthlyMap: Record<string, MonthlyTrafficSummary> = {};
+  if (rawMonths) {
+    try {
+      monthlyMap = JSON.parse(rawMonths) || {};
+    } catch {
+      monthlyMap = {};
+    }
+  }
+
+  const currentMonthKey = dateKey.slice(0, 7);
+  const daysInCurrentMonth = Object.values(histMap).filter((d) => d.dateKey.startsWith(currentMonthKey));
+  const currentMonthVisitors = daysInCurrentMonth.reduce((acc, d) => acc + (d.uniqueVisitors || 0), 0);
+  const currentMonthMobileVisitors = daysInCurrentMonth.reduce((acc, d) => acc + (d.mobileVisitors || 0), 0);
+  const currentMonthDesktopVisitors = daysInCurrentMonth.reduce((acc, d) => acc + (d.desktopVisitors || 0), 0);
+  const currentMonthPageViews = daysInCurrentMonth.reduce((acc, d) => acc + (d.pageViews || 0), 0);
+  const currentMonthPeakOnline = Math.max(
+    todayPeakOnline,
+    ...daysInCurrentMonth.map((d) => d.peakOnline || 0),
+    0
+  );
+  const currentMonthDaysCounted = Math.max(1, daysInCurrentMonth.length);
+  const currentMonthAvgDaily = Math.round(currentMonthVisitors / currentMonthDaysCounted);
+
+  // Sync current month record in monthlyMap
+  monthlyMap[currentMonthKey] = {
+    monthKey: currentMonthKey,
+    monthLabel: getMonthLabel(currentMonthKey),
+    uniqueVisitors: currentMonthVisitors,
+    mobileVisitors: currentMonthMobileVisitors,
+    desktopVisitors: currentMonthDesktopVisitors,
+    pageViews: currentMonthPageViews,
+    peakOnline: currentMonthPeakOnline,
+    daysCounted: currentMonthDaysCounted,
+    avgDailyVisitors: currentMonthAvgDaily,
+  };
+
+  const monthlyHistory = Object.values(monthlyMap).sort((a, b) => b.monthKey.localeCompare(a.monthKey));
   const trafficHistory = Object.values(histMap)
     .sort((a, b) => a.dateKey.localeCompare(b.dateKey))
-    .slice(-14);
+    .slice(-30);
 
   return {
     sessions: activeSessions,
@@ -1059,6 +1183,16 @@ export async function getLivePresenceSummary(): Promise<{
     liveCountryHits,
     liveRegionHits,
     trafficHistory,
+    currentMonthKey,
+    currentMonthLabel: getMonthLabel(currentMonthKey),
+    currentMonthVisitors,
+    currentMonthPageViews,
+    currentMonthMobileVisitors,
+    currentMonthDesktopVisitors,
+    currentMonthPeakOnline,
+    currentMonthDaysCounted,
+    currentMonthAvgDaily,
+    monthlyHistory,
   };
 }
 

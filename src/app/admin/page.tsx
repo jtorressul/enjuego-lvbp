@@ -46,6 +46,7 @@ import {
   LIVE_WINDOW_SECONDS,
   type LiveSession,
   type TrafficDaySummary,
+  type MonthlyTrafficSummary,
 } from "@/lib/admin-store";
 
 function formatSessionDeviceLabel(s: LiveSession): string {
@@ -186,6 +187,16 @@ export default function AdminDashboardPage() {
     liveCountryHits?: Record<string, number>;
     liveRegionHits?: Record<string, number>;
     trafficHistory?: TrafficDaySummary[];
+    currentMonthKey?: string;
+    currentMonthLabel?: string;
+    currentMonthVisitors?: number;
+    currentMonthPageViews?: number;
+    currentMonthMobileVisitors?: number;
+    currentMonthDesktopVisitors?: number;
+    currentMonthPeakOnline?: number;
+    currentMonthDaysCounted?: number;
+    currentMonthAvgDaily?: number;
+    monthlyHistory?: MonthlyTrafficSummary[];
   }>({
     sessions: [],
     onlineCount: 0,
@@ -204,6 +215,16 @@ export default function AdminDashboardPage() {
     liveCountryHits: {},
     liveRegionHits: {},
     trafficHistory: [],
+    currentMonthKey: "",
+    currentMonthLabel: "",
+    currentMonthVisitors: 0,
+    currentMonthPageViews: 0,
+    currentMonthMobileVisitors: 0,
+    currentMonthDesktopVisitors: 0,
+    currentMonthPeakOnline: 0,
+    currentMonthDaysCounted: 0,
+    currentMonthAvgDaily: 0,
+    monthlyHistory: [],
   });
   const [geoTab, setGeoTab] = useState<"live" | "today">("today");
   const [registeredUsers, setRegisteredUsers] = useState<UserProfile[]>([]);
@@ -840,7 +861,7 @@ export default function AdminDashboardPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         {/* TOP KPI CARDS */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
           <div className="rounded-xl bg-white border border-slate-200/80 p-4 sm:p-5 shadow-xs">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
@@ -891,6 +912,40 @@ export default function AdminDashboardPage() {
               <span className="font-medium text-slate-700">{presence.todayPageViews || 0}</span> vistas
               <span className="text-slate-300">·</span>
               <span>Pico: <strong className="font-medium text-slate-700">{presence.todayPeakOnline}</strong></span>
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-white border border-indigo-200/80 p-4 sm:p-5 shadow-xs bg-gradient-to-b from-indigo-50/20 to-white">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-indigo-700">
+                Visitas del Mes
+              </span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-100/70 px-2 py-0.5 rounded-full">
+                <Calendar className="w-3 h-3 text-indigo-500" />
+                {presence.currentMonthLabel || "Este mes"}
+              </span>
+            </div>
+            <div className="mt-2.5 flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-bold tracking-tight text-indigo-600 tabular-nums">
+                {(presence.currentMonthVisitors || presence.todayUniqueVisitors || 0).toLocaleString("es-VE")}
+              </span>
+              <span className="text-xs text-slate-500 font-medium">
+                acumuladas
+              </span>
+            </div>
+            <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 pt-2 border-t border-slate-100">
+              <span className="font-medium text-slate-700">
+                {(presence.currentMonthPageViews || presence.todayPageViews || 0).toLocaleString("es-VE")}
+              </span>{" "}
+              vistas
+              <span className="text-slate-300">·</span>
+              <span>
+                Prom:{" "}
+                <strong className="font-medium text-slate-700">
+                  {(presence.currentMonthAvgDaily || presence.todayUniqueVisitors || 0).toLocaleString("es-VE")}
+                </strong>
+                /d
+              </span>
             </div>
           </div>
 
@@ -1605,6 +1660,79 @@ export default function AdminDashboardPage() {
            =================================================================== */}
         {activeTab === "users" && (
           <div className="space-y-6">
+            {/* Banner Destacado: Conteo Mensual de Visitas */}
+            <div className="rounded-xl bg-gradient-to-br from-indigo-950 via-slate-900 to-slate-900 border border-indigo-900/40 p-5 text-white shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-indigo-400" />
+                    <span className="text-xs font-semibold tracking-wider text-indigo-300 uppercase">
+                      Contador de Visitas Mensuales
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">
+                      {presence.currentMonthLabel || "Mes en curso"}
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-bold text-white mt-1">
+                    Tráfico y Rendimiento Acumulado del Mes
+                  </h3>
+                </div>
+                <div className="text-xs text-slate-400">
+                  <span>Días con actividad: <strong className="text-white font-semibold">{presence.currentMonthDaysCounted || 1}</strong></span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
+                <div>
+                  <span className="text-[11px] text-slate-400 font-medium uppercase tracking-wider">
+                    Visitas Únicas del Mes
+                  </span>
+                  <p className="text-2xl sm:text-3xl font-bold text-white mt-1 tabular-nums">
+                    {(presence.currentMonthVisitors || presence.todayUniqueVisitors || 0).toLocaleString("es-VE")}
+                  </p>
+                  <p className="text-[11px] text-indigo-300 mt-1">
+                    {(presence.currentMonthMobileVisitors || presence.todayMobileVisitors || 0).toLocaleString("es-VE")} móvil · {(presence.currentMonthDesktopVisitors || presence.todayDesktopVisitors || 0).toLocaleString("es-VE")} PC
+                  </p>
+                </div>
+
+                <div>
+                  <span className="text-[11px] text-slate-400 font-medium uppercase tracking-wider">
+                    Páginas Vistas del Mes
+                  </span>
+                  <p className="text-2xl sm:text-3xl font-bold text-white mt-1 tabular-nums">
+                    {(presence.currentMonthPageViews || presence.todayPageViews || 0).toLocaleString("es-VE")}
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Navegación e impresiones total
+                  </p>
+                </div>
+
+                <div>
+                  <span className="text-[11px] text-slate-400 font-medium uppercase tracking-wider">
+                    Promedio Diario
+                  </span>
+                  <p className="text-2xl sm:text-3xl font-bold text-white mt-1 tabular-nums">
+                    {(presence.currentMonthAvgDaily || presence.todayUniqueVisitors || 0).toLocaleString("es-VE")}
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    visitas únicas por día
+                  </p>
+                </div>
+
+                <div>
+                  <span className="text-[11px] text-slate-400 font-medium uppercase tracking-wider">
+                    Pico Máximo del Mes
+                  </span>
+                  <p className="text-2xl sm:text-3xl font-bold text-emerald-400 mt-1 tabular-nums">
+                    {(presence.currentMonthPeakOnline || presence.todayPeakOnline || 0).toLocaleString("es-VE")}
+                  </p>
+                  <p className="text-[11px] text-emerald-300/80 mt-1">
+                    concurrentes simultáneos
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Sub-KPIs de Audiencia Hoy */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <div className="rounded-xl bg-white border border-slate-200/80 p-4 sm:p-5 shadow-xs">
@@ -2040,7 +2168,85 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            {/* Histórico de Tráfico Diario (Últimos 14 días) */}
+            {/* Histórico de Visitas Mensuales (Acumulado por Mes) */}
+            {Array.isArray(presence.monthlyHistory) &&
+              presence.monthlyHistory.length > 0 && (
+                <div className="rounded-xl bg-white border border-slate-200/80 p-5 shadow-xs space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-indigo-500" />
+                    <div>
+                      <h2 className="text-sm font-semibold tracking-tight text-slate-900">
+                        Histórico de Visitas Mensuales (Acumulado por Mes)
+                      </h2>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Consolidado mensual de visitas únicas acumuladas, páginas vistas, promedio diario y picos concurrentes.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-lg border border-slate-200/80">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-50/75 border-b border-slate-200/80 text-slate-500 uppercase text-[10px] font-semibold tracking-wider">
+                          <th className="py-2.5 px-3">Mes</th>
+                          <th className="py-2.5 px-3">Visitas Únicas</th>
+                          <th className="py-2.5 px-3">Móvil / Desktop</th>
+                          <th className="py-2.5 px-3">Páginas Vistas</th>
+                          <th className="py-2.5 px-3">Promedio Diario</th>
+                          <th className="py-2.5 px-3">Pico Simultáneo</th>
+                          <th className="py-2.5 px-3">Días Registrados</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {presence.monthlyHistory.map((m) => {
+                          const isCurrent = m.monthKey === presence.currentMonthKey;
+                          return (
+                            <tr
+                              key={m.monthKey}
+                              className={`transition-colors ${
+                                isCurrent
+                                  ? "bg-indigo-50/40 hover:bg-indigo-50/60"
+                                  : "hover:bg-slate-50/70"
+                              }`}
+                            >
+                              <td className="py-2.5 px-3 font-semibold text-slate-900">
+                                <div className="flex items-center gap-2">
+                                  <span>{m.monthLabel}</span>
+                                  {isCurrent && (
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-700">
+                                      En curso
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 font-bold text-slate-900 tabular-nums">
+                                {m.uniqueVisitors.toLocaleString("es-VE")}
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-600 font-medium tabular-nums">
+                                {m.mobileVisitors.toLocaleString("es-VE")} móv · {m.desktopVisitors.toLocaleString("es-VE")} PC
+                              </td>
+                              <td className="py-2.5 px-3 font-medium text-slate-900 tabular-nums">
+                                {m.pageViews.toLocaleString("es-VE")}
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-700 font-medium tabular-nums">
+                                {m.avgDailyVisitors.toLocaleString("es-VE")}/día
+                              </td>
+                              <td className="py-2.5 px-3 font-medium text-emerald-600 tabular-nums">
+                                {m.peakOnline} concurrentes
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-500 tabular-nums">
+                                {m.daysCounted} {m.daysCounted === 1 ? "día" : "días"}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+            {/* Histórico de Tráfico Diario (Últimos 30 días) */}
             {Array.isArray(presence.trafficHistory) &&
               presence.trafficHistory.length > 0 && (
                 <div className="rounded-xl bg-white border border-slate-200/80 p-5 shadow-xs space-y-3">
@@ -2048,7 +2254,7 @@ export default function AdminDashboardPage() {
                     <Calendar className="w-4 h-4 text-slate-500" />
                     <div>
                       <h2 className="text-sm font-semibold tracking-tight text-slate-900">
-                        Histórico de Tráfico Diario (Últimos 14 días)
+                        Histórico de Tráfico Diario (Últimos 30 días)
                       </h2>
                       <p className="text-xs text-slate-500 mt-0.5">
                         Evolución diaria de visitantes únicos, páginas vistas y pico de usuarios conectados simultáneamente.

@@ -91,9 +91,6 @@ export const metadata: Metadata = {
       "Marcadores jugada a jugada, calendario de canales de TV, tabla de posiciones y highlights en video del béisbol venezolano.",
     images: ["/logo.png"],
   },
-  other: {
-    coinzilla: "fc345bee396a9722c44693ef89327997",
-  },
 };
 
 const jsonLd = {
@@ -135,7 +132,6 @@ export default function RootLayout({
   return (
     <html lang="es" data-theme="light">
       <head>
-        <meta name="coinzilla" content="fc345bee396a9722c44693ef89327997" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

@@ -233,20 +233,8 @@ export function AdBanner({
 export function AadsStickyBanner() {
   const [closed, setClosed] = useState(false);
 
-  useEffect(() => {
-    if (
-      typeof window !== "undefined" &&
-      sessionStorage.getItem("aads_sticky_2459265_closed") === "1"
-    ) {
-      setClosed(true);
-    }
-  }, []);
-
   const handleClose = () => {
     setClosed(true);
-    try {
-      sessionStorage.setItem("aads_sticky_2459265_closed", "1");
-    } catch {}
   };
 
   if (closed) return null;
@@ -419,20 +407,8 @@ export function AadsSkyscraperBanner({
 }) {
   const [closed, setClosed] = useState(false);
 
-  useEffect(() => {
-    if (
-      typeof window !== "undefined" &&
-      sessionStorage.getItem("aads_skyscraper_2459266_closed") === "1"
-    ) {
-      setClosed(true);
-    }
-  }, []);
-
   const handleClose = () => {
     setClosed(true);
-    try {
-      sessionStorage.setItem("aads_skyscraper_2459266_closed", "1");
-    } catch {}
   };
 
   if (closed) return null;

@@ -222,6 +222,8 @@ export function RecapArticle({
         </Link>
       </div>
 
+      <AdBanner slot="recap-large" />
+
       {more.length > 0 ? (
         <section>
           <h2 className="text-sm font-black text-slate-950">Más de esa jornada</h2>

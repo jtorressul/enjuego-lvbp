@@ -8,9 +8,26 @@ import { findGameHighlight } from "@/lib/youtube-highlight";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Noticias de la LVBP · En Juego",
+  title: "Noticias y Highlights LVBP · Resúmenes en Video de Cada Juego",
   description:
-    "Resúmenes automáticos de cada juego final de la LVBP: marcador, lanzadores de decisión y lugar en la tabla.",
+    "Videos oficiales, highlights y resúmenes de cada juego final de la LVBP. Revive las mejores jugadas, jonrones y momentos decisivos con video oficial de BeisbolPlay.",
+  alternates: {
+    canonical: "https://enjuego.online/noticias",
+  },
+  keywords: [
+    "highlights lvbp",
+    "videos lvbp",
+    "resumen lvbp",
+    "noticias lvbp",
+    "beisbolplay highlights",
+    "mejores jugadas lvbp",
+    "resumen de juegos lvbp",
+  ],
+  openGraph: {
+    title: "Noticias y Highlights LVBP · Resúmenes en Video",
+    description: "Revive en video las mejores jugadas de cada partido de la LVBP.",
+    url: "https://enjuego.online/noticias",
+  },
 };
 
 export default async function NoticiasPage() {

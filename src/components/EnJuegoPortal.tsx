@@ -243,7 +243,17 @@ export function EnJuegoPortal({
   const [calendarStateFilter, setCalendarStateFilter] = useState<"ALL" | "UPCOMING" | "FINISHED">(
     "ALL"
   );
-  const [calendarPickDate, setCalendarPickDate] = useState("");
+  const [calendarPickDate, setCalendarPickDate] = useState(() => {
+    const dates = [...new Set(initialSchedule.map((game) => game.date))].sort();
+    if (!dates.length) return "";
+    const today = getTodayCaracasIso();
+    const live = initialSchedule.find((game) => game.status === "IN_PROGRESS");
+    const target = live?.date || today;
+    let index = dates.indexOf(target);
+    if (index === -1) index = dates.findIndex((date) => date >= target);
+    if (index === -1) index = dates.length - 1;
+    return dates[index] || "";
+  });
   const [userPickedCalendarDate, setUserPickedCalendarDate] = useState(false);
   const [standingsPhase, setStandingsPhase] = useState<"REGULAR" | "ROUND_ROBIN" | "FINAL">(
     "REGULAR"

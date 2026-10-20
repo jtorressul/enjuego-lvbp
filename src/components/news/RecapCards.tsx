@@ -51,7 +51,7 @@ function StandingChip({ standing, logo }: { standing: RecapStanding; logo: strin
 
 export function FeaturedRecap({ recap }: { recap: GameRecap }) {
   return (
-    <article className="overflow-hidden rounded-3xl bg-slate-950 text-white shadow-md">
+    <article className="keep-dark overflow-hidden rounded-3xl bg-slate-950 text-white shadow-md">
       <div className="px-5 py-5 sm:px-7 sm:py-7">
         <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-extrabold uppercase tracking-wider text-amber-300">
           <span>Final de la jornada</span>
@@ -113,7 +113,7 @@ export function RecapArticle({ recap, more }: { recap: GameRecap; more: GameReca
       <Link href="/noticias" className="text-xs font-extrabold text-slate-500 hover:text-slate-950">
         ← Noticias
       </Link>
-      <article className="overflow-hidden rounded-3xl bg-slate-950 text-white">
+      <article className="keep-dark overflow-hidden rounded-3xl bg-slate-950 text-white">
         <div className="px-5 py-6 sm:px-8 sm:py-8">
           <p className="text-[11px] font-extrabold uppercase tracking-wider text-amber-300">
             {recap.dateLabel}

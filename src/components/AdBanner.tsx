@@ -26,6 +26,22 @@ const reportedImpressions = new Set<string>();
 const pendingImpressions: { campaignId: string; slot: string; path: string }[] = [];
 let impressionFlush: ReturnType<typeof setTimeout> | null = null;
 
+let vignetteLoaded = false;
+
+function loadVignetteOnce() {
+  if (vignetteLoaded || typeof document === "undefined") return;
+  if (document.querySelector("script[data-zone='12075701']")) {
+    vignetteLoaded = true;
+    return;
+  }
+  vignetteLoaded = true;
+  const script = document.createElement("script");
+  script.dataset.zone = "12075701";
+  script.src = "https://n6wxm.com/vignette.min.js";
+  script.async = true;
+  (document.body || document.documentElement).appendChild(script);
+}
+
 function reportImpression(campaignId: string, slot: string, path: string) {
   const key = `${path}|${slot}|${campaignId}`;
   if (reportedImpressions.has(key)) return;
@@ -97,6 +113,11 @@ export function AdBanner({
   const pathname = usePathname() || "/inicio";
   const [ad, setAd] = useState<ServedSlotAd | null>(null);
   const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    if (pathname.startsWith("/admin")) return;
+    loadVignetteOnce();
+  }, [pathname]);
 
   useEffect(() => {
     let mounted = true;

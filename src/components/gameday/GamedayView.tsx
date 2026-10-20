@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { GamedayData, PlayByPlayItem, ScheduleGame } from "@/lib/types";
 import { playerHeadshot, LVBP_TEAMS } from "@/lib/lvbp-teams";
@@ -654,14 +654,49 @@ export function GamedayView({
     }
   };
 
-  const effectiveYtId =
-    game.youtubeVideoId ||
-    (game.id === "870075" ||
-    (game.date === "2026-10-19" &&
-      ((game.awayTeam.code === "MAG" && game.homeTeam.code === "LAR") ||
-        (game.awayTeam.code === "LAR" && game.homeTeam.code === "MAG")))
-      ? "JpQMLHvmpB4"
-      : null);
+  const effectiveLiveStream = useMemo(() => {
+    // 1. Caracas vs La Guaira (ID 870072 or CAR vs LAG on 2026-10-20)
+    const isCarVsLag =
+      game.id === "870072" ||
+      ((game.awayTeam?.code === "CAR" && game.homeTeam?.code === "LAG") ||
+       (game.awayTeam?.code === "LAG" && game.homeTeam?.code === "CAR"));
+
+    if (isCarVsLag) {
+      return {
+        type: "okru" as const,
+        embedUrl: "https://ok.ru/videoembed/14909080673812",
+        externalUrl: "https://ok.ru/video/14909080673812",
+        title: `Transmisión en Vivo: ${game.awayTeam.name} vs ${game.homeTeam.name}`,
+        badge: "Señal en Vivo",
+        channelLabel: "OK.ru",
+      };
+    }
+
+    // 2. YouTube Streams
+    const ytId =
+      game.youtubeVideoId ||
+      (game.id === "870075" ||
+      (game.date === "2026-10-19" &&
+        ((game.awayTeam.code === "MAG" && game.homeTeam.code === "LAR") ||
+          (game.awayTeam.code === "LAR" && game.homeTeam.code === "MAG")))
+        ? "JpQMLHvmpB4"
+        : null);
+
+    if (ytId) {
+      return {
+        type: "youtube" as const,
+        embedUrl: `https://www.youtube-nocookie.com/embed/${ytId}?autoplay=0&rel=0&modestbranding=1`,
+        externalUrl: game.youtubeUrl || `https://www.youtube.com/watch?v=${ytId}`,
+        title: `Transmisión Oficial en Vivo: ${game.awayTeam.name} vs ${game.homeTeam.name}`,
+        badge: "Transmisión Oficial",
+        channelLabel: "YouTube",
+      };
+    }
+
+    return null;
+  }, [game]);
+
+  const effectiveYtId = effectiveLiveStream?.type === "youtube" ? "JpQMLHvmpB4" : null;
 
   const totalVotes = votes.away + votes.home;
   const awayVotePct = totalVotes > 0 ? Math.round((votes.away / totalVotes) * 100) : 50;
@@ -688,28 +723,27 @@ export function GamedayView({
 
             if (hasOpenTv && primaryOpenChannel) {
               const primaryInfo = getChannelInfo(primaryOpenChannel);
-              const isYouTube =
-                primaryOpenChannel.toLowerCase().includes("youtube") || Boolean(effectiveYtId);
+              const isMediaStream = Boolean(effectiveLiveStream);
 
               return (
                 <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <div className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-2xs ${
-                        isYouTube ? "bg-red-50 border border-red-200 text-red-600" : "bg-emerald-50 border border-emerald-200 text-emerald-600"
+                        isMediaStream ? "bg-red-50 border border-red-200 text-red-600" : "bg-emerald-50 border border-emerald-200 text-emerald-600"
                       }`}>
-                        {isYouTube ? <Play className="w-4 h-4 fill-current" /> : <Tv className="w-5 h-5" />}
+                        {isMediaStream ? <Play className="w-4 h-4 fill-current" /> : <Tv className="w-5 h-5" />}
                       </div>
                       <div>
                         <span className={`text-[10px] font-black uppercase tracking-wider flex items-center gap-1 ${
-                          isYouTube ? "text-red-600" : "text-emerald-600"
+                          isMediaStream ? "text-red-600" : "text-emerald-600"
                         }`}>
                           <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${
-                            isYouTube ? "bg-red-500" : "bg-emerald-500"
-                          }`} /> {isYouTube ? "YouTube LVBP Oficial" : "TV Abierta Nacional"}
+                            isMediaStream ? "bg-red-500" : "bg-emerald-500"
+                          }`} /> {isMediaStream ? (effectiveLiveStream?.badge || "En Vivo") : "TV Abierta Nacional"}
                         </span>
                         <h3 className="text-sm font-black text-slate-900">
-                          {isYouTube ? "Transmisión en Vivo" : "Señal en Vivo Gratuita"}
+                          {isMediaStream ? "Transmisión en Vivo" : "Señal en Vivo Gratuita"}
                         </h3>
                       </div>
                     </div>
@@ -720,21 +754,21 @@ export function GamedayView({
                         <span className="tabular-nums">{formattedViewers}</span>
                       </span>
                       <span className={`px-2 py-0.5 rounded-md text-[10px] font-black border ${
-                        isYouTube ? "bg-red-50 border-red-200 text-red-800" : "bg-emerald-50 border-emerald-200 text-emerald-800"
+                        isMediaStream ? "bg-red-50 border-red-200 text-red-800" : "bg-emerald-50 border-emerald-200 text-emerald-800"
                       }`}>
-                        {primaryOpenChannel}
+                        {effectiveLiveStream ? effectiveLiveStream.channelLabel : primaryOpenChannel}
                       </span>
                     </div>
                   </div>
 
-                  {isYouTube ? (
-                    /* Inline YouTube Player (Sin PiP, embebido directo en la web) */
+                  {effectiveLiveStream ? (
+                    /* Inline Live Stream Player (YouTube u OK.ru) */
                     <div className="space-y-2">
                       <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-800 shadow-md">
                         <iframe
-                          src={`https://www.youtube-nocookie.com/embed/${effectiveYtId || "JpQMLHvmpB4"}?autoplay=0&rel=0&modestbranding=1`}
-                          title="Transmisión Oficial en Vivo"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          src={effectiveLiveStream.embedUrl}
+                          title={effectiveLiveStream.title}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
                           allowFullScreen
                           className="w-full h-full border-0"
                         />
@@ -746,12 +780,12 @@ export function GamedayView({
                           <b className="tabular-nums font-black">{formattedViewers}</b> en la web
                         </span>
                         <a
-                          href={game.youtubeUrl || `https://www.youtube.com/watch?v=${effectiveYtId || "JpQMLHvmpB4"}`}
+                          href={effectiveLiveStream.externalUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 font-bold text-slate-600 hover:text-red-600 transition"
                         >
-                          <span>Abrir en YouTube</span>
+                          <span>{effectiveLiveStream.type === "okru" ? "Abrir en OK.ru" : "Abrir en YouTube"}</span>
                           <ExternalLink className="w-3 h-3" />
                         </a>
                       </div>
@@ -1392,7 +1426,11 @@ export function GamedayView({
             </span>
             <span className="capitalize text-slate-500">· {game.dateLabel}</span>
             <BroadcastChannelsRow
-              channels={game.tvChannels?.length ? game.tvChannels : game.tv ? [game.tv] : []}
+              channels={
+                effectiveLiveStream?.type === "okru"
+                  ? ["OK.ru", ...(game.tvChannels?.length ? game.tvChannels : game.tv ? [game.tv] : [])]
+                  : (game.tvChannels?.length ? game.tvChannels : game.tv ? [game.tv] : [])
+              }
               gameTitle={`${game.awayTeam.name} vs ${game.homeTeam.name}`}
               youtubeVideoId={effectiveYtId || undefined}
               badgeSize="md"
@@ -1635,7 +1673,7 @@ export function GamedayView({
           {tab === "resumen" && (
             <div className="space-y-5 animate-view-enter">
               {/* 0. TRANSMISIÓN EN VIVO EMBEBIDA DIRECTA EN LA WEB (SIN PIP) */}
-              {effectiveYtId && (
+              {effectiveLiveStream && (
                 <section className="rounded-2xl border border-red-200 bg-white p-3.5 sm:p-4 shadow-xs space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
@@ -1646,11 +1684,11 @@ export function GamedayView({
                         <div className="flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
                           <span className="text-[10px] font-black uppercase tracking-wider text-red-600">
-                            Transmisión Oficial LVBP
+                            {effectiveLiveStream.badge}
                           </span>
                         </div>
                         <h3 className="text-sm font-black text-slate-900 leading-tight">
-                          {game.awayTeam.name} vs {game.homeTeam.name} en YouTube
+                          {game.awayTeam.name} vs {game.homeTeam.name} ({effectiveLiveStream.channelLabel})
                         </h3>
                       </div>
                     </div>
@@ -1669,9 +1707,9 @@ export function GamedayView({
 
                   <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-800 shadow-md">
                     <iframe
-                      src={`https://www.youtube-nocookie.com/embed/${effectiveYtId}?autoplay=0&rel=0&modestbranding=1`}
-                      title={`Transmisión Oficial en Vivo: ${game.awayTeam.name} vs ${game.homeTeam.name}`}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      src={effectiveLiveStream.embedUrl}
+                      title={effectiveLiveStream.title}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
                       allowFullScreen
                       className="w-full h-full border-0"
                     />
@@ -1682,12 +1720,12 @@ export function GamedayView({
                       Disfruta la transmisión completa con audio y video directo en la web.
                     </span>
                     <a
-                      href={game.youtubeUrl || `https://www.youtube.com/watch?v=${effectiveYtId}`}
+                      href={effectiveLiveStream.externalUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 font-bold text-slate-700 hover:text-red-600 transition shrink-0 ml-2"
                     >
-                      <span>YouTube</span>
+                      <span>{effectiveLiveStream.type === "okru" ? "Abrir en OK.ru" : "Abrir en YouTube"}</span>
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   </div>

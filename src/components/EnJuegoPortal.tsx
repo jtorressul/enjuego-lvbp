@@ -106,16 +106,28 @@ function formatCompactDay(iso: string): {
 }
 
 function getGameTvChannels(game: ScheduleGame): string[] {
+  let list: string[] = [];
   if (Array.isArray(game.tvChannels) && game.tvChannels.length > 0) {
-    return game.tvChannels;
-  }
-  if (game.tv) {
-    return game.tv
+    list = [...game.tvChannels];
+  } else if (game.tv) {
+    list = game.tv
       .split(/[·,/]/)
       .map((s) => s.trim())
       .filter(Boolean);
+  } else {
+    list = ["IVC", "ByM Sport", "BeisbolPlay"];
   }
-  return ["IVC", "ByM Sport", "BeisbolPlay"];
+
+  const isCarVsLag =
+    game.id === "870072" ||
+    ((game.awayTeam?.code === "CAR" && game.homeTeam?.code === "LAG") ||
+     (game.awayTeam?.code === "LAG" && game.homeTeam?.code === "CAR"));
+
+  if (isCarVsLag && !list.some((c) => c.toLowerCase().includes("ok"))) {
+    return ["OK.ru", ...list];
+  }
+
+  return list;
 }
 
 function tvChannelBadgeStyle(channel: string): string {
@@ -127,6 +139,7 @@ function tvChannelBadgeStyle(channel: string): string {
   if (c.includes("1baseball")) return "bg-emerald-50 text-emerald-700 border-emerald-200";
   if (c.includes("meridiano")) return "bg-purple-50 text-purple-700 border-purple-200";
   if (c.includes("beisbolplay")) return "bg-slate-100 text-slate-700 border-slate-300";
+  if (c.includes("ok.ru") || c.includes("ok ru")) return "bg-orange-50 text-orange-700 border-orange-300";
   return "bg-blue-50 text-blue-700 border-blue-200";
 }
 
@@ -1110,7 +1123,16 @@ export function EnJuegoPortal({
     const isFinal = game.status === "FINISHED";
     const awayWon = isFinal && game.awayScore > game.homeScore;
     const homeWon = isFinal && game.homeScore > game.awayScore;
-    const tvChannels = getGameTvChannels(game);
+    const isCarVsLag =
+      game.id === "870072" ||
+      ((game.awayTeam?.code === "CAR" && game.homeTeam?.code === "LAG") ||
+       (game.awayTeam?.code === "LAG" && game.homeTeam?.code === "CAR"));
+    const hasLiveStream = isCarVsLag || Boolean(game.youtubeVideoId);
+    const rawTvChannels = getGameTvChannels(game);
+    const tvChannels =
+      isCarVsLag && !rawTvChannels.some((c) => c.toLowerCase().includes("ok"))
+        ? ["OK.ru", ...rawTvChannels]
+        : rawTvChannels;
     const isFavGame =
       favoriteTeamCode &&
       (game.awayTeam.code === favoriteTeamCode || game.homeTeam.code === favoriteTeamCode);
@@ -1323,13 +1345,20 @@ export function EnJuegoPortal({
             )}
 
             <div className="flex items-center gap-1.5">
-              <div className="flex-1 rounded-xl bg-slate-100 group-hover:bg-amber-400 text-slate-800 group-hover:text-slate-950 py-2 px-3 text-xs font-extrabold text-center transition truncate">
-                {isLive
-                  ? "Seguir Gameday ›"
-                  : isFinal
-                    ? "Box Score y Jugadas ›"
-                    : "Previa y Alineación ›"}
-              </div>
+              {hasLiveStream && !isFinal ? (
+                <div className="flex-1 rounded-xl bg-red-600 group-hover:bg-red-700 text-white py-2 px-3 text-xs font-black text-center transition truncate shadow-xs flex items-center justify-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                  <span>▶ Ver Transmisión en Vivo ›</span>
+                </div>
+              ) : (
+                <div className="flex-1 rounded-xl bg-slate-100 group-hover:bg-amber-400 text-slate-800 group-hover:text-slate-950 py-2 px-3 text-xs font-extrabold text-center transition truncate">
+                  {isLive
+                    ? "Seguir Gameday ›"
+                    : isFinal
+                      ? "Box Score y Jugadas ›"
+                      : "Previa y Alineación ›"}
+                </div>
+              )}
               {isFinal && (
                 <Link
                   href={`/noticias/${game.id}`}

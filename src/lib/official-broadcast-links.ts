@@ -108,6 +108,14 @@ export const OFFICIAL_BROADCAST_CHANNELS: Record<string, BroadcastChannelInfo> =
     isOpenTv: true,
     description: "Señal abierta de televisión venezolana con transmisiones deportivas.",
   },
+  "OK.ru": {
+    name: "OK.ru",
+    officialUrl: "https://ok.ru/video/14909080673812",
+    badgeLabel: "OK.ru En Vivo",
+    type: "open_stream",
+    isOpenTv: true,
+    description: "Transmisión en vivo Caracas vs La Guaira disponible online.",
+  },
 };
 
 export function cleanChannelName(str: string): string {
@@ -132,7 +140,9 @@ export function isOpenTvChannel(channelName: string): boolean {
     clean.includes("canal i") ||
     clean.includes("canali") ||
     clean.includes("tlt") ||
-    clean.includes("youtube")
+    clean.includes("youtube") ||
+    clean.includes("ok.ru") ||
+    clean.includes("ok ru")
   );
 }
 

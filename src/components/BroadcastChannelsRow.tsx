@@ -40,6 +40,12 @@ export function BroadcastChannelsRow({
     e.stopPropagation();
     const info = getChannelInfo(ch);
 
+    // If clicking OK.ru, open live stream
+    if (ch.toLowerCase().includes("ok.ru") || ch.toLowerCase().includes("ok ru")) {
+      window.open("https://ok.ru/video/14909080673812", "_blank", "noopener,noreferrer");
+      return;
+    }
+
     // If clicking YouTube, open inline video player directly in the web (NO PiP popup)
     if (ch.toLowerCase().includes("youtube")) {
       const vId =
@@ -80,6 +86,9 @@ export function BroadcastChannelsRow({
     }
     if (norm.includes("beisbolplay")) {
       return "bg-amber-500/15 text-amber-900 hover:bg-amber-500 hover:text-slate-950 border-amber-300 font-black";
+    }
+    if (norm.includes("ok.ru") || norm.includes("ok ru")) {
+      return "bg-orange-600/15 text-orange-800 hover:bg-orange-600 hover:text-white border-orange-300 font-black";
     }
     if (norm.includes("youtube")) {
       return "bg-red-600/10 text-red-600 hover:bg-red-600 hover:text-white border-red-300";

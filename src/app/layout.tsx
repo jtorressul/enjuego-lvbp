@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import "./globals.css";
 import { PwaManager } from "@/components/pwa/PwaManager";
 
@@ -59,11 +58,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" data-theme="light">
-      <head>
-        <Script id="monetag-inpage" strategy="beforeInteractive">
-          {`(function(s){s.dataset.zone='12075764',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`}
-        </Script>
-      </head>
       <body className="min-h-screen antialiased selection:bg-amber-400 selection:text-slate-950 transition-colors duration-300">
         {children}
         <PwaManager />

@@ -186,6 +186,7 @@ export function GamedayView({
   const [feedFilter, setFeedFilter] = useState<"all" | "scoring" | "hits" | "changes">("all");
   const [boxSide, setBoxSide] = useState<"away" | "home">("away");
   const [openInnings, setOpenInnings] = useState<Record<string, boolean>>({});
+  const [showEarlyStream, setShowEarlyStream] = useState(false);
 
   // Quiniela & Interactive state (synced with Cloudflare KV via /api/lvbp/interactive)
   const [userVote, setUserVote] = useState<"away" | "home" | null>(null);
@@ -654,19 +655,36 @@ export function GamedayView({
     }
   };
 
+  // Check if current time in Venezuela (UTC-4) is >= 18:30 (6:30 PM)
+  const isPast630Pm = (() => {
+    try {
+      const now = new Date();
+      // UTC-4 hours for Caracas
+      const caracasHour = (now.getUTCHours() - 4 + 24) % 24;
+      const caracasMin = now.getUTCMinutes();
+      const currentMinutes = caracasHour * 60 + caracasMin;
+      return currentMinutes >= 18 * 60 + 30; // 18:30 (6:30 PM)
+    } catch {
+      return true;
+    }
+  })();
+
   const isCarVsLag =
     game.id === "870072" ||
     ((game.awayTeam?.code === "CAR" && game.homeTeam?.code === "LAG") ||
      (game.awayTeam?.code === "LAG" && game.homeTeam?.code === "CAR"));
 
+  const isStreamActive = isPast630Pm || showEarlyStream;
+
   const effectiveLiveStream = isCarVsLag
     ? {
-        type: "okru" as const,
+        type: "tves" as const,
         embedUrl: "https://ok.ru/videoembed/14909080673812",
-        externalUrl: "https://ok.ru/video/14909080673812",
-        title: `Transmisión en Vivo: ${game.awayTeam.name} vs ${game.homeTeam.name}`,
-        badge: "Señal en Vivo",
-        channelLabel: "OK.ru",
+        externalUrl: "https://www.tves.gob.ve/en-vivo/",
+        title: `Transmisión Oficial TVES: ${game.awayTeam.name} vs ${game.homeTeam.name}`,
+        badge: "Señal Oficial TVES · TV Abierta Nacional",
+        channelLabel: "TVES",
+        isActive: isStreamActive,
       }
     : (() => {
         const ytId =
@@ -686,6 +704,7 @@ export function GamedayView({
             title: `Transmisión Oficial en Vivo: ${game.awayTeam.name} vs ${game.homeTeam.name}`,
             badge: "Transmisión Oficial",
             channelLabel: "YouTube",
+            isActive: true,
           };
         }
 
@@ -758,34 +777,59 @@ export function GamedayView({
                   </div>
 
                   {effectiveLiveStream ? (
-                    /* Inline Live Stream Player (YouTube u OK.ru) */
-                    <div className="space-y-2">
-                      <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-800 shadow-md">
-                        <iframe
-                          src={effectiveLiveStream.embedUrl}
-                          title={effectiveLiveStream.title}
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-                          allowFullScreen
-                          className="w-full h-full border-0"
-                        />
+                    /* Inline Live Stream Player (TVES u oficial) */
+                    effectiveLiveStream.isActive ? (
+                      <div className="space-y-2">
+                        <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-800 shadow-md">
+                          <iframe
+                            src={effectiveLiveStream.embedUrl}
+                            title={effectiveLiveStream.title}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+                            allowFullScreen
+                            className="w-full h-full border-0"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] px-1 text-slate-500">
+                          <span className="flex items-center gap-1.5 font-bold text-red-600">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
+                            <Eye className="w-3.5 h-3.5 text-red-600" />
+                            <b className="tabular-nums font-black">{formattedViewers}</b> en la web
+                          </span>
+                          <a
+                            href={effectiveLiveStream.externalUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 font-bold text-slate-600 hover:text-red-600 transition"
+                          >
+                            <span>{effectiveLiveStream.type === "tves" ? "tves.gob.ve" : "Abrir en YouTube"}</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between text-[11px] px-1 text-slate-500">
-                        <span className="flex items-center gap-1.5 font-bold text-red-600">
-                          <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
-                          <Eye className="w-3.5 h-3.5 text-red-600" />
-                          <b className="tabular-nums font-black">{formattedViewers}</b> en la web
-                        </span>
-                        <a
-                          href={effectiveLiveStream.externalUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 font-bold text-slate-600 hover:text-red-600 transition"
+                    ) : (
+                      <div className="rounded-xl border border-slate-200 bg-slate-900 text-white p-4 space-y-2.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-black text-amber-400 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                            Previa Oficial TVES · TV Abierta
+                          </span>
+                          <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 text-[10px] font-black border border-slate-700">
+                            Inicia 6:30 PM
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-300">
+                          La transmisión en vivo de TVES comenzará a las 6:30 PM con la previa del encuentro. ¡La señal cargará automáticamente!
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setShowEarlyStream(true)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black transition cursor-pointer"
                         >
-                          <span>{effectiveLiveStream.type === "okru" ? "Abrir en OK.ru" : "Abrir en YouTube"}</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
+                          <Play className="w-3.5 h-3.5 fill-current" />
+                          <span>Ver señal previa ahora</span>
+                        </button>
                       </div>
-                    </div>
+                    )
                   ) : (
                     /* TV Screen Preview Box (Desktop PiP launcher for other open channels) */
                     <div
@@ -1423,8 +1467,8 @@ export function GamedayView({
             <span className="capitalize text-slate-500">· {game.dateLabel}</span>
             <BroadcastChannelsRow
               channels={
-                effectiveLiveStream?.type === "okru"
-                  ? ["OK.ru", ...(game.tvChannels?.length ? game.tvChannels : game.tv ? [game.tv] : [])]
+                effectiveLiveStream?.type === "tves"
+                  ? ["TVES", ...(game.tvChannels?.length ? game.tvChannels : game.tv ? [game.tv] : [])]
                   : (game.tvChannels?.length ? game.tvChannels : game.tv ? [game.tv] : [])
               }
               gameTitle={`${game.awayTeam.name} vs ${game.homeTeam.name}`}
@@ -1670,62 +1714,98 @@ export function GamedayView({
             <div className="space-y-5 animate-view-enter">
               {/* 0. TRANSMISIÓN EN VIVO EMBEBIDA DIRECTA EN LA WEB (SIN PIP) */}
               {effectiveLiveStream && (
-                <section className="rounded-2xl border border-red-200 bg-white p-3.5 sm:p-4 shadow-xs space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-red-600 text-white flex items-center justify-center shadow-xs shrink-0">
-                        <Play className="w-4 h-4 fill-white" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
-                          <span className="text-[10px] font-black uppercase tracking-wider text-red-600">
-                            {effectiveLiveStream.badge}
-                          </span>
+                effectiveLiveStream.isActive ? (
+                  <section className="rounded-2xl border border-red-200 bg-white p-3.5 sm:p-4 shadow-xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-red-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                          <Play className="w-4 h-4 fill-white" />
                         </div>
-                        <h3 className="text-sm font-black text-slate-900 leading-tight">
-                          {game.awayTeam.name} vs {game.homeTeam.name} ({effectiveLiveStream.channelLabel})
-                        </h3>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
+                            <span className="text-[10px] font-black uppercase tracking-wider text-red-600">
+                              {effectiveLiveStream.badge}
+                            </span>
+                          </div>
+                          <h3 className="text-sm font-black text-slate-900 leading-tight">
+                            {game.awayTeam.name} vs {game.homeTeam.name} ({effectiveLiveStream.channelLabel})
+                          </h3>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-600 text-white text-[10px] font-black shadow-2xs">
+                          <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                          EN VIVO
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-white text-[10px] font-black shadow-2xs">
+                          <Eye className="w-3.5 h-3.5 text-red-400" />
+                          <span className="tabular-nums font-black">{formattedViewers}</span>
+                          <span className="text-slate-400 font-bold hidden sm:inline">en la web</span>
+                        </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-600 text-white text-[10px] font-black shadow-2xs">
-                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                        EN VIVO
+
+                    <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-800 shadow-md">
+                      <iframe
+                        src={effectiveLiveStream.embedUrl}
+                        title={effectiveLiveStream.title}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+                        allowFullScreen
+                        className="w-full h-full border-0"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
+                      <span className="text-slate-600 font-medium">
+                        Disfruta la transmisión completa con audio y video directo en la web.
                       </span>
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-white text-[10px] font-black shadow-2xs">
-                        <Eye className="w-3.5 h-3.5 text-red-400" />
-                        <span className="tabular-nums font-black">{formattedViewers}</span>
-                        <span className="text-slate-400 font-bold hidden sm:inline">en la web</span>
+                      <a
+                        href={effectiveLiveStream.externalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 font-bold text-slate-700 hover:text-red-600 transition shrink-0 ml-2"
+                      >
+                        <span>{effectiveLiveStream.type === "tves" ? "tves.gob.ve" : "YouTube"}</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </section>
+                ) : (
+                  <section className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 text-white p-4 sm:p-5 shadow-xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
+                        <span className="text-xs font-black uppercase tracking-wider text-amber-400">
+                          {effectiveLiveStream.badge}
+                        </span>
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px] font-black border border-slate-700">
+                        Inicia 6:30 PM
                       </span>
                     </div>
-                  </div>
 
-                  <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-800 shadow-md">
-                    <iframe
-                      src={effectiveLiveStream.embedUrl}
-                      title={effectiveLiveStream.title}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-                      allowFullScreen
-                      className="w-full h-full border-0"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
-                    <span className="text-slate-600 font-medium">
-                      Disfruta la transmisión completa con audio y video directo en la web.
-                    </span>
-                    <a
-                      href={effectiveLiveStream.externalUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 font-bold text-slate-700 hover:text-red-600 transition shrink-0 ml-2"
-                    >
-                      <span>{effectiveLiveStream.type === "okru" ? "Abrir en OK.ru" : "Abrir en YouTube"}</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  </div>
-                </section>
+                    <div className="py-2 text-center space-y-2">
+                      <Tv className="w-9 h-9 text-amber-400 mx-auto" />
+                      <h3 className="text-sm sm:text-base font-black text-white">
+                        La transmisión en vivo comenzará a las 6:30 PM
+                      </h3>
+                      <p className="text-xs text-slate-300 max-w-md mx-auto">
+                        Sintoniza la previa oficial de TVES de {game.awayTeam.name} vs {game.homeTeam.name}. ¡Mantén abierta esta página, el reproductor cargará automáticamente!
+                      </p>
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => setShowEarlyStream(true)}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black transition cursor-pointer shadow-xs"
+                        >
+                          <Play className="w-3.5 h-3.5 fill-current" />
+                          <span>Ver señal previa ahora</span>
+                        </button>
+                      </div>
+                    </div>
+                  </section>
+                )
               )}
 
               {/* 1. SITUACIÓN DEL JUEGO (SI ESTÁ EN VIVO) */}

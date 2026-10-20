@@ -40,7 +40,7 @@ export async function generateMetadata({
 
       const tvList =
         hasLiveStream
-          ? "OK.ru (En Vivo Web), TV Abierta y Cable"
+          ? "TVES (Señal Oficial TV Abierta), TV y Cable"
           : data.tvChannels && data.tvChannels.length > 0
             ? data.tvChannels.join(", ")
             : data.tv || "TV Abierta y Streaming";

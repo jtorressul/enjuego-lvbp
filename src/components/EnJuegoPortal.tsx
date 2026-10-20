@@ -124,8 +124,8 @@ function getGameTvChannels(game?: ScheduleGame | null): string[] {
     ((game.awayTeam?.code === "CAR" && game.homeTeam?.code === "LAG") ||
      (game.awayTeam?.code === "LAG" && game.homeTeam?.code === "CAR"));
 
-  if (isCarVsLag && !list.some((c) => c && c.toLowerCase().includes("ok"))) {
-    return ["OK.ru", ...list];
+  if (isCarVsLag && !list.some((c) => c && (c.toLowerCase().includes("tves") || c.toLowerCase().includes("teves")))) {
+    return ["TVES", ...list];
   }
 
   return list;
@@ -1131,8 +1131,8 @@ export function EnJuegoPortal({
     const hasLiveStream = isCarVsLag || Boolean(game.youtubeVideoId);
     const rawTvChannels = getGameTvChannels(game);
     const tvChannels =
-      isCarVsLag && !rawTvChannels.some((c) => c.toLowerCase().includes("ok"))
-        ? ["OK.ru", ...rawTvChannels]
+      isCarVsLag && !rawTvChannels.some((c) => c.toLowerCase().includes("tves"))
+        ? ["TVES", ...rawTvChannels]
         : rawTvChannels;
     const isFavGame =
       favoriteTeamCode &&

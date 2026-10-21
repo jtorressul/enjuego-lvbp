@@ -2702,69 +2702,81 @@ export function EnJuegoPortal({
                     <Link
                       key={game.id}
                       href={`/juego/${game.id}`}
-                      className={`flex flex-col justify-between rounded-xl sm:rounded-2xl px-2.5 py-1.5 sm:px-3 sm:py-2 border text-left shrink-0 transition cursor-pointer shadow-2xs min-w-[136px] sm:min-w-[155px] md:min-w-[165px] h-[58px] sm:h-16 ${
+                      className={`flex flex-col justify-between rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 border text-left shrink-0 transition-all cursor-pointer min-w-[140px] sm:min-w-[158px] md:min-w-[165px] h-14 sm:h-16 ${
                         isSelected
-                          ? "bg-amber-50/70 border-amber-400"
+                          ? "bg-amber-50/70 border-amber-400 shadow-xs"
                           : isLive
-                            ? "bg-white border-red-300 hover:border-red-400"
-                            : "bg-white border-slate-200/90 hover:border-slate-300 hover:shadow-xs"
+                            ? "bg-white border-red-300 hover:border-red-400 shadow-2xs hover:shadow-xs"
+                            : "bg-white border-slate-200 hover:border-slate-300 shadow-2xs hover:shadow-xs"
                       }`}
                     >
                       {/* Top status & TV channel */}
                       <div className="flex items-center justify-between gap-1 leading-none">
                         <span
-                          className={`text-[9px] sm:text-[10px] uppercase tracking-tight ${
+                          className={`text-[10px] uppercase tracking-tight ${
                             isLive
                               ? "text-red-600 font-black flex items-center gap-1"
                               : isPlayed
-                                ? "text-slate-600 font-semibold"
-                                : "text-slate-500 font-medium"
+                                ? "text-slate-600 font-bold"
+                                : "text-slate-500 font-semibold"
                           }`}
                         >
                           {isLive && <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />}
-                          {isLive ? (game.inning || "En Vivo") : isPlayed ? "Finalizado" : game.time}
+                          {isLive ? (game.inning || "En Vivo") : isPlayed ? "Final" : game.time}
                         </span>
                         {tvList[0] && !isPlayed && (
-                          <span className="text-[8px] sm:text-[9px] font-bold text-amber-900 bg-amber-50/90 border border-amber-200/80 px-1.5 py-0.2 rounded-full truncate max-w-[55px] sm:max-w-[70px] leading-tight shrink-0">
+                          <span className="text-[9px] font-semibold text-slate-500 bg-slate-100 border border-slate-200/80 px-1.5 py-0.5 rounded truncate max-w-[62px] sm:max-w-[75px] leading-none shrink-0">
                             {tvList[0]}
                           </span>
                         )}
                       </div>
 
-                      {/* Teams and Scores (2 compact rows matching exact reference) */}
+                      {/* Teams and Scores (clean, professional sports typography) */}
                       <div className="space-y-0.5 my-auto">
                         {/* Away Team */}
-                        <div className="flex items-center justify-between gap-1.5 text-xs">
+                        <div className="flex items-center justify-between gap-2 text-xs">
                           <span className="flex items-center gap-1.5 font-bold text-slate-800 truncate min-w-0">
                             <img
                               src={game.awayTeam.logoUrl}
                               alt=""
-                              className="w-3.5 h-3.5 sm:w-4 sm:h-4 object-contain shrink-0"
+                              className="w-4 h-4 object-contain shrink-0"
                             />
-                            <span className="truncate text-[11px] sm:text-xs">
+                            <span className="truncate text-[11px] sm:text-xs font-semibold text-slate-900">
                               {game.awayTeam.nick || game.awayTeam.shortName}
                             </span>
                           </span>
-                          <b className="text-slate-950 font-black tabular-nums text-xs sm:text-sm shrink-0">
-                            {isPlayed ? game.awayScore : "–"}
-                          </b>
+                          {isPlayed ? (
+                            <b className="text-slate-950 font-black tabular-nums text-xs sm:text-sm shrink-0">
+                              {game.awayScore}
+                            </b>
+                          ) : (
+                            <span className="text-slate-300 font-normal text-xs shrink-0 select-none">
+                              –
+                            </span>
+                          )}
                         </div>
 
                         {/* Home Team */}
-                        <div className="flex items-center justify-between gap-1.5 text-xs">
+                        <div className="flex items-center justify-between gap-2 text-xs">
                           <span className="flex items-center gap-1.5 font-bold text-slate-800 truncate min-w-0">
                             <img
                               src={game.homeTeam.logoUrl}
                               alt=""
-                              className="w-3.5 h-3.5 sm:w-4 sm:h-4 object-contain shrink-0"
+                              className="w-4 h-4 object-contain shrink-0"
                             />
-                            <span className="truncate text-[11px] sm:text-xs">
+                            <span className="truncate text-[11px] sm:text-xs font-semibold text-slate-900">
                               {game.homeTeam.nick || game.homeTeam.shortName}
                             </span>
                           </span>
-                          <b className="text-slate-950 font-black tabular-nums text-xs sm:text-sm shrink-0">
-                            {isPlayed ? game.homeScore : "–"}
-                          </b>
+                          {isPlayed ? (
+                            <b className="text-slate-950 font-black tabular-nums text-xs sm:text-sm shrink-0">
+                              {game.homeScore}
+                            </b>
+                          ) : (
+                            <span className="text-slate-300 font-normal text-xs shrink-0 select-none">
+                              –
+                            </span>
+                          )}
                         </div>
                       </div>
                     </Link>

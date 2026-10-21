@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   SOCCER_LEAGUES,
@@ -10,9 +11,16 @@ import {
   type SoccerLeagueId,
 } from "@/lib/soccer-leagues";
 import type { SoccerMatch, SoccerStandingRow } from "@/lib/soccer-service";
-import { AuthModal } from "@/components/AuthModal";
-import { SoccerGamedayView } from "@/components/soccer/SoccerGamedayView";
 import { UserProfile } from "@/lib/user-auth";
+
+const AuthModal = dynamic(
+  () => import("@/components/AuthModal").then((m) => m.AuthModal),
+  { ssr: false }
+);
+const SoccerGamedayView = dynamic(
+  () => import("@/components/soccer/SoccerGamedayView").then((m) => m.SoccerGamedayView),
+  { ssr: false }
+);
 import {
   Trophy,
   Calendar,
@@ -127,15 +135,17 @@ export function SoccerPortal({
     }
   }, [searchParams]);
 
-  const switchLeague = async (nextLeague: SoccerLeagueId) => {
+  const switchLeague = async (nextLeague: SoccerLeagueId, silent = false) => {
     setActiveLeague(nextLeague);
-    setSelectedDate("ALL");
-    setSelectedClubId("ALL");
-    setLoading(true);
+    if (!silent) {
+      setSelectedDate("ALL");
+      setSelectedClubId("ALL");
+      setLoading(true);
+    }
 
     try {
       const [resMatches, resStandings] = await Promise.all([
-        fetch(`/api/soccer/scoreboard?league=${nextLeague}`).then((r) => r.json()),
+        fetch(`/api/soccer/scoreboard?league=${nextLeague}&_t=${Date.now()}`).then((r) => r.json()),
         fetch(`/api/soccer/standings?league=${nextLeague}`).then((r) => r.json()),
       ]);
 
@@ -148,9 +158,40 @@ export function SoccerPortal({
     } catch (err) {
       console.error("[SoccerPortal] Error loading league data:", err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
+
+  // Automatic real-time scoreboard polling (12s when matches are live, 25s otherwise)
+  useEffect(() => {
+    if (activeMatchId) return; // Gameday view handles its own live polling
+    const hasLive = matches.some((m) => m.status === "IN_PROGRESS");
+    const intervalMs = hasLive ? 12_000 : 25_000;
+
+    const refreshScoreboardSilently = async () => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      try {
+        const res = await fetch(`/api/soccer/scoreboard?league=${activeLeague}&_t=${Date.now()}`);
+        const data = await res.json();
+        if (Array.isArray(data?.matches)) {
+          setMatches(data.matches);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    const timer = setInterval(refreshScoreboardSilently, intervalMs);
+    const onFocus = () => refreshScoreboardSilently();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, [activeLeague, activeMatchId, matches]);
 
   const handleSelectLeague = (id: SoccerLeagueId) => {
     setActiveMatchId(null);
@@ -242,6 +283,9 @@ export function SoccerPortal({
               <img
                 src="/logo.png"
                 alt="En Juego · Deportes en Vivo"
+                width={120}
+                height={40}
+                decoding="async"
                 className="h-8 sm:h-9 md:h-9.5 w-auto object-contain transition-transform group-hover:scale-102 shrink-0"
               />
               <span

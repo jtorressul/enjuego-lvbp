@@ -17,24 +17,38 @@ export function HomeSoccerShowcase() {
 
   useEffect(() => {
     let isCancelled = false;
-    setLoading(true);
+    let intervalId: ReturnType<typeof setInterval> | null = null;
 
-    fetch(`/api/soccer/scoreboard?league=${selectedLeague}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (!isCancelled && Array.isArray(data?.matches)) {
-          setMatches(data.matches);
-        }
-      })
-      .catch((err) => {
-        console.error("[HomeSoccerShowcase] Error fetching soccer matches:", err);
-      })
-      .finally(() => {
-        if (!isCancelled) setLoading(false);
-      });
+    const loadMatches = (silent = false) => {
+      if (!silent) setLoading(true);
+      fetch(`/api/soccer/scoreboard?league=${selectedLeague}&_t=${Date.now()}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (!isCancelled && Array.isArray(data?.matches)) {
+            setMatches(data.matches);
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (!isCancelled && !silent) setLoading(false);
+        });
+    };
+
+    const startTimeout = setTimeout(() => {
+      if (!isCancelled) {
+        loadMatches(false);
+        intervalId = setInterval(() => {
+          if (typeof document !== "undefined" && document.visibilityState === "visible") {
+            loadMatches(true);
+          }
+        }, 15_000);
+      }
+    }, 120);
 
     return () => {
       isCancelled = true;
+      clearTimeout(startTimeout);
+      if (intervalId) clearInterval(intervalId);
     };
   }, [selectedLeague]);
 

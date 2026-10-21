@@ -132,14 +132,11 @@ export default function RootLayout({
   return (
     <html lang="es" data-theme="light">
       <head>
+        <link rel="preconnect" href="https://a.espncdn.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://a.espncdn.com" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8181027493659485"
-          crossOrigin="anonymous"
         />
       </head>
       <body className="min-h-screen antialiased selection:bg-amber-400 selection:text-slate-950 transition-colors duration-300">

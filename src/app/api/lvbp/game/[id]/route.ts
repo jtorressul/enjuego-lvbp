@@ -42,7 +42,7 @@ export async function GET(
 
     const isFinal = gameday?.status === "FINISHED";
     return NextResponse.json(gameday, {
-      headers: isFinal ? publicCacheHeaders(300, 3600, 7200) : publicCacheHeaders(30),
+      headers: isFinal ? publicCacheHeaders(300, 3600, 7200) : publicCacheHeaders(6),
     });
   } catch (error: any) {
     return NextResponse.json(

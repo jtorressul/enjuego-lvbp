@@ -14,10 +14,11 @@ export async function GET(request: Request) {
       const date = searchParams.get("date") || searchParams.get("fecha") || undefined;
 
       const matches = await fetchSoccerScoreboard(leagueId, date);
+      const hasLive = matches.some((m) => m.status === "IN_PROGRESS");
 
       return NextResponse.json(
         { league: leagueId, matches },
-        { headers: publicCacheHeaders(45) }
+        { headers: publicCacheHeaders(hasLive ? 6 : 15) }
       );
     } catch (error: any) {
       return NextResponse.json(

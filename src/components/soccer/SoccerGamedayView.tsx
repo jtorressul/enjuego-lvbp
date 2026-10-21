@@ -241,7 +241,7 @@ export function SoccerGamedayView({
     if (!silent) setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/soccer/match?liga=${leagueId}&id=${matchId}`);
+      const res = await fetch(`/api/soccer/match?liga=${leagueId}&id=${matchId}&_t=${Date.now()}`);
       if (!res.ok) throw new Error("No se pudo cargar el detalle del partido");
       const data = await res.json();
       if (data.match) {
@@ -250,7 +250,7 @@ export function SoccerGamedayView({
         setError("Partido no disponible");
       }
     } catch (err: any) {
-      setError(err?.message || "Error de conexión");
+      if (!silent) setError(err?.message || "Error de conexión");
     } finally {
       if (!silent) setLoading(false);
     }
@@ -261,11 +261,25 @@ export function SoccerGamedayView({
   }, [leagueId, matchId]);
 
   useEffect(() => {
-    if (!match || match.status !== "IN_PROGRESS") return;
+    if (!match || match.status === "FINISHED") return;
+    const intervalMs = match.status === "IN_PROGRESS" ? 10_000 : 25_000;
     const timer = setInterval(() => {
-      loadDetail(true);
-    }, 20_000);
-    return () => clearInterval(timer);
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        loadDetail(true);
+      }
+    }, intervalMs);
+    const onFocus = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        loadDetail(true);
+      }
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
   }, [match?.status, leagueId, matchId]);
 
   // Filtered shots for Shotmap (Screenshot 3)

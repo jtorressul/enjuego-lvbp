@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { LeaderCategory, ScheduleGame, StandingRow } from "@/lib/types";
 import type { PortalSeed } from "@/lib/portal-seed";
@@ -9,22 +10,47 @@ import { LVBP_OFFICIAL_LOGO, LVBP_TEAMS, resolveLvbpTeam } from "@/lib/lvbp-team
 import { MLB_TEAMS, resolveMlbTeam, resolveAnyBaseballTeam } from "@/lib/mlb-teams";
 import { LIDOM_TEAMS, LMP_TEAMS } from "@/lib/winter-teams";
 import { LeagueId, LEAGUES, LEAGUES_LIST, LEAGUE_MENU_ITEMS, parseLeague } from "@/lib/leagues";
-import { GamedayView } from "@/components/gameday/GamedayView";
 import { LeadersWidget } from "@/components/LeadersWidget";
-import { TeamRosterView } from "@/components/TeamRosterView";
 import { BroadcastChannelsRow } from "@/components/BroadcastChannelsRow";
-import { AuthModal } from "@/components/AuthModal";
-import { PwaInstallModal } from "@/components/pwa/PwaInstallModal";
-import { PwaOnboardingModal } from "@/components/pwa/PwaOnboardingModal";
 import { AdBanner, AadsSkyscraperBanner } from "@/components/AdBanner";
 import { HomeSoccerShowcase } from "@/components/HomeSoccerShowcase";
-import MlbPlayoffBracket from "@/components/MlbPlayoffBracket";
-import { ShareGameBannerModal } from "@/components/ShareGameBannerModal";
-import { ShareStandingsModal } from "@/components/ShareStandingsModal";
 import { CalendarMonthPicker } from "@/components/CalendarMonthPicker";
 import { UserProfile } from "@/lib/user-auth";
 import { getFallbackSchedule } from "@/lib/lvbp-fallback-data";
 import { buildGameRecaps } from "@/lib/game-recaps";
+
+const GamedayView = dynamic(
+  () => import("@/components/gameday/GamedayView").then((m) => m.GamedayView),
+  { ssr: false }
+);
+const TeamRosterView = dynamic(
+  () => import("@/components/TeamRosterView").then((m) => m.TeamRosterView),
+  { ssr: false }
+);
+const MlbPlayoffBracket = dynamic(
+  () => import("@/components/MlbPlayoffBracket"),
+  { ssr: false }
+);
+const AuthModal = dynamic(
+  () => import("@/components/AuthModal").then((m) => m.AuthModal),
+  { ssr: false }
+);
+const PwaInstallModal = dynamic(
+  () => import("@/components/pwa/PwaInstallModal").then((m) => m.PwaInstallModal),
+  { ssr: false }
+);
+const PwaOnboardingModal = dynamic(
+  () => import("@/components/pwa/PwaOnboardingModal").then((m) => m.PwaOnboardingModal),
+  { ssr: false }
+);
+const ShareGameBannerModal = dynamic(
+  () => import("@/components/ShareGameBannerModal").then((m) => m.ShareGameBannerModal),
+  { ssr: false }
+);
+const ShareStandingsModal = dynamic(
+  () => import("@/components/ShareStandingsModal").then((m) => m.ShareStandingsModal),
+  { ssr: false }
+);
 import {
   Play,
   Video,
@@ -458,7 +484,7 @@ export function EnJuegoPortal({
     };
   }, []);
 
-  // Fetch today game counts across all Caribbean & MLB leagues for the dropdown badge
+  // Fetch today game counts across all Caribbean & MLB leagues for the dropdown badge (deferred after initial render)
   useEffect(() => {
     let isMounted = true;
     const todayIso = getTodayCaracasIso();
@@ -487,12 +513,20 @@ export function EnJuegoPortal({
           lidom: getCount(results[2]),
           lmp: getCount(results[3]),
         });
+
+        if (results[1].status === "fulfilled" && Array.isArray(results[1].value?.games)) {
+          const cleanMlbGames = (results[1].value.games as ScheduleGame[]).filter((g) =>
+            Boolean(MLB_TEAMS[g.homeTeam?.code] || MLB_TEAMS[g.awayTeam?.code])
+          );
+          setMlbJornadaGames((prev) => (prev.length > 0 ? prev : cleanMlbGames));
+        }
       } catch {}
     }
 
-    fetchAllLeagueCounts();
+    const deferTimer = setTimeout(fetchAllLeagueCounts, 2500);
     return () => {
       isMounted = false;
+      clearTimeout(deferTimer);
     };
   }, []);
 
@@ -668,8 +702,8 @@ export function EnJuegoPortal({
         return;
       }
 
-      // 25s if a game is live, 60s if all games are scheduled or finished
-      const delay = hasLive ? 25000 : 60000;
+      // 15s if a game is live, 35s if all games are scheduled or finished
+      const delay = hasLive ? 15000 : 35000;
       timerId = setTimeout(() => {
         if (
           typeof document !== "undefined" &&
@@ -690,7 +724,7 @@ export function EnJuegoPortal({
       if (isInitial) setLoading(true);
       try {
         const [schRes, stdRes, mlbRes] = await Promise.all([
-          fetch(`/api/lvbp/schedule?season=${seasonParam}&league=${targetLeague}`, {
+          fetch(`/api/lvbp/schedule?season=${seasonParam}&league=${targetLeague}&_t=${Date.now()}`, {
             signal: controller.signal,
           }),
           fetch(`/api/lvbp/standings?season=${seasonParam}&league=${targetLeague}`, {
@@ -768,7 +802,9 @@ export function EnJuegoPortal({
           setSelectedDateIndex((prev) => (manualDateRef.current ? prev : idx));
         }
 
-        const hasLiveGame = loadedGames.some((g) => g.status === "IN_PROGRESS");
+        const hasLiveGame = loadedGames.some(
+          (g) => g.status === "IN_PROGRESS" || g.status === "WARMUP" || g.status === "DELAYED"
+        );
         scheduleNextPoll(hasLiveGame);
       } catch {
         scheduleNextPoll(false);
@@ -779,7 +815,17 @@ export function EnJuegoPortal({
       }
     };
 
-    loadAllData(!hasSeed);
+    if (hasSeed && targetLeague === "lvbp") {
+      // SSR already seeded fresh LVBP schedule, standings & leaders:
+      // avoid redundant network contention during FCP/LCP and start live poll loop
+      lastLoadAt = Date.now();
+      const seedHasLive = initialSchedule.some(
+        (g) => g.status === "IN_PROGRESS" || g.status === "WARMUP" || g.status === "DELAYED"
+      );
+      scheduleNextPoll(seedHasLive);
+    } else {
+      loadAllData(!hasSeed);
+    }
 
     const handleVisibilityOrFocus = () => {
       if (isGameView) return; // Do not reload global schedule/standings on focus when viewing a specific game
@@ -787,7 +833,7 @@ export function EnJuegoPortal({
         typeof document !== "undefined" &&
         document.visibilityState === "visible" &&
         !controller.signal.aborted &&
-        Date.now() - lastLoadAt > 45_000
+        Date.now() - lastLoadAt > 12_000
       ) {
         loadAllData(false);
       }
@@ -803,7 +849,7 @@ export function EnJuegoPortal({
     };
   }, [activeLeague]);
 
-  // Dedicated poll for community comments every 60s (only when in /inicio home view)
+  // Dedicated poll for community comments every 60s (only when in /inicio home view, deferred on mount)
   useEffect(() => {
     if (section !== "home") return;
     let active = true;
@@ -820,7 +866,9 @@ export function EnJuegoPortal({
       }
     };
 
-    loadCommunity();
+    const initTimer = setTimeout(() => {
+      if (active) loadCommunity();
+    }, 1800);
 
     const interval = setInterval(() => {
       if (
@@ -834,6 +882,7 @@ export function EnJuegoPortal({
 
     return () => {
       active = false;
+      clearTimeout(initTimer);
       clearInterval(interval);
     };
   }, [section]);
@@ -1144,8 +1193,10 @@ export function EnJuegoPortal({
       }).catch(() => {});
     };
 
-    void import("@/lib/client-device-hints").then((m) => m.warmExtendedDeviceHints());
-    sendHeartbeat();
+    const hbTimeout = setTimeout(() => {
+      void import("@/lib/client-device-hints").then((m) => m.warmExtendedDeviceHints());
+      sendHeartbeat();
+    }, 1500);
     const interval = setInterval(() => {
       if (
         typeof document !== "undefined" &&
@@ -1155,7 +1206,10 @@ export function EnJuegoPortal({
         sendHeartbeat();
       }
     }, 150_000);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(hbTimeout);
+      clearInterval(interval);
+    };
   }, [section, selectedGameId, selectedTeamCode, currentUser, favoriteTeamCode]);
 
   // Filtered calendar games
@@ -1417,6 +1471,9 @@ export function EnJuegoPortal({
               <img
                 src="/logo.png"
                 alt="En Juego · Deportes en Vivo"
+                width={120}
+                height={40}
+                decoding="async"
                 className="h-8 sm:h-9 md:h-9.5 w-auto object-contain transition-transform group-hover:scale-102 shrink-0"
               />
               <span

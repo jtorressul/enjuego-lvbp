@@ -195,6 +195,7 @@ interface CacheEntry<T> {
 }
 
 const scoreboardCache = new Map<string, CacheEntry<SoccerMatch[]>>();
+const liveTodayCache = new Map<string, CacheEntry<SoccerMatch[]>>();
 const standingsCache = new Map<string, CacheEntry<SoccerStandingRow[]>>();
 const matchDetailCache = new Map<string, CacheEntry<SoccerMatchDetail>>();
 
@@ -237,8 +238,117 @@ function getCurrentYearMonthCaracas(): string {
   }
 }
 
+function parseRawEspnScoreboardEvents(
+  rawEvents: any[],
+  leagueId: SoccerLeagueId,
+  leagueName: string
+): SoccerMatch[] {
+  return rawEvents.map((ev: any) => {
+    const comp = ev.competitions?.[0];
+    const competitors = Array.isArray(comp?.competitors) ? comp.competitors : [];
+    const homeComp = competitors.find((c: any) => c.homeAway === "home") || competitors[0];
+    const awayComp = competitors.find((c: any) => c.homeAway === "away") || competitors[1];
+
+    const state = ev.status?.type?.state;
+    let status: SoccerMatch["status"] = "SCHEDULED";
+    let statusText = "Por Jugar";
+
+    const { dateCaracas, timeCaracas } = formatCaracasTime(ev.date || comp?.date || new Date().toISOString());
+
+    if (state === "in") {
+      status = "IN_PROGRESS";
+      const shortDetail = ev.status?.type?.shortDetail;
+      if (shortDetail === "HT" || shortDetail === "Halftime") {
+        statusText = "ET (Descanso)";
+      } else {
+        statusText = ev.status?.displayClock || `${ev.status?.clock || ""}'` || "En Vivo";
+      }
+    } else if (state === "post") {
+      status = "FINISHED";
+      statusText = "Final";
+    } else {
+      status = "SCHEDULED";
+      statusText = timeCaracas;
+    }
+
+    const isScheduled = status === "SCHEDULED";
+    const translateForm = (rawForm?: string): string | undefined => {
+      if (!rawForm) return undefined;
+      return rawForm
+        .toUpperCase()
+        .split("")
+        .map((ch) => (ch === "W" ? "G" : ch === "D" ? "E" : ch === "L" ? "P" : ch))
+        .join("-");
+    };
+
+    const rawBroadcast =
+      comp?.broadcasts?.[0]?.names?.[0] ||
+      comp?.geoBroadcasts?.[0]?.media?.shortName ||
+      undefined;
+
+    return {
+      id: String(ev.id || Math.random().toString(36).slice(2, 9)),
+      date: ev.date || comp?.date || new Date().toISOString(),
+      dateCaracas,
+      timeCaracas,
+      status,
+      statusText,
+      clock: ev.status?.displayClock,
+      venue: comp?.venue?.fullName || comp?.venue?.shortName || comp?.venue?.address?.city,
+      city: [comp?.venue?.address?.city, comp?.venue?.address?.country].filter(Boolean).join(", ") || undefined,
+      stage: ev.season?.slug?.replace(/-/g, " ") || undefined,
+      broadcast: rawBroadcast,
+      leagueId,
+      leagueName,
+      homeTeam: {
+        id: String(homeComp?.team?.id || "home"),
+        name: homeComp?.team?.displayName || homeComp?.team?.name || "Local",
+        shortName: homeComp?.team?.shortDisplayName || homeComp?.team?.name || "Local",
+        abbreviation: homeComp?.team?.abbreviation || "LOC",
+        logo: homeComp?.team?.logo || `https://a.espncdn.com/i/teamlogos/soccer/500/${homeComp?.team?.id}.png`,
+        score: isScheduled ? undefined : (homeComp?.score !== undefined && homeComp?.score !== "" ? Number(homeComp.score) : undefined),
+        record: homeComp?.records?.[0]?.summary || undefined,
+        form: translateForm(homeComp?.form),
+      },
+      awayTeam: {
+        id: String(awayComp?.team?.id || "away"),
+        name: awayComp?.team?.displayName || awayComp?.team?.name || "Visitante",
+        shortName: awayComp?.team?.shortDisplayName || awayComp?.team?.name || "Visitante",
+        abbreviation: awayComp?.team?.abbreviation || "VIS",
+        logo: awayComp?.team?.logo || `https://a.espncdn.com/i/teamlogos/soccer/500/${awayComp?.team?.id}.png`,
+        score: isScheduled ? undefined : (awayComp?.score !== undefined && awayComp?.score !== "" ? Number(awayComp.score) : undefined),
+        record: awayComp?.records?.[0]?.summary || undefined,
+        form: translateForm(awayComp?.form),
+      },
+    };
+  });
+}
+
+function sortSoccerMatches(matches: SoccerMatch[]): SoccerMatch[] {
+  return matches.sort((a, b) => {
+    const stateOrder = (st: SoccerMatch["status"]) => {
+      if (st === "IN_PROGRESS") return 0;
+      if (st === "SCHEDULED") return 1;
+      return 2;
+    };
+    const orderA = stateOrder(a.status);
+    const orderB = stateOrder(b.status);
+    if (orderA !== orderB) return orderA - orderB;
+
+    if (a.status === "SCHEDULED" && b.status === "SCHEDULED") {
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    }
+    if (a.status === "FINISHED" && b.status === "FINISHED") {
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    }
+    return 0;
+  });
+}
+
 /**
- * Fetch matches / scoreboard from ESPN for a given soccer league
+ * Fetch matches / scoreboard from ESPN for a given soccer league.
+ * Combines the monthly calendar with ESPN's uncached real-time live scoreboard (8s TTL)
+ * so live match scores and minutes never suffer from monthly CDN caching delays.
  */
 export async function fetchSoccerScoreboard(
   leagueId: SoccerLeagueId,
@@ -247,144 +357,111 @@ export async function fetchSoccerScoreboard(
   const currentMonth = getCurrentYearMonthCaracas();
   const cacheKey = `${leagueId}_${targetDate || currentMonth}`;
   const now = Date.now();
-  const cached = scoreboardCache.get(cacheKey);
-
-  if (cached && now < cached.expiresAt) {
-    return cached.data;
-  }
-
   const leagueConfig = SOCCER_LEAGUES[leagueId] || SOCCER_LEAGUES["uefa.champions"];
-  const dateParam = targetDate ? `?dates=${targetDate.replace(/-/g, "")}` : `?dates=${currentMonth}`;
-  const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/${leagueId}/scoreboard${dateParam}`;
 
-  try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": "EnJuego-SoccerService/1.0" },
-      signal: AbortSignal.timeout(10_000),
-    });
-
-    if (!res.ok) {
-      return cached?.data || [];
+  // If a specific date is requested, fetch that date directly with short cache
+  if (targetDate) {
+    const cachedDate = scoreboardCache.get(cacheKey);
+    if (cachedDate && now < cachedDate.expiresAt) {
+      return cachedDate.data;
     }
-
-    const json = await res.json();
-    const rawEvents = Array.isArray(json.events) ? json.events : [];
-
-    const matches: SoccerMatch[] = rawEvents.map((ev: any) => {
-      const comp = ev.competitions?.[0];
-      const competitors = Array.isArray(comp?.competitors) ? comp.competitors : [];
-      const homeComp = competitors.find((c: any) => c.homeAway === "home") || competitors[0];
-      const awayComp = competitors.find((c: any) => c.homeAway === "away") || competitors[1];
-
-      const state = ev.status?.type?.state;
-      let status: SoccerMatch["status"] = "SCHEDULED";
-      let statusText = "Por Jugar";
-
-      const { dateCaracas, timeCaracas } = formatCaracasTime(ev.date || comp?.date || new Date().toISOString());
-
-      if (state === "in") {
-        status = "IN_PROGRESS";
-        const shortDetail = ev.status?.type?.shortDetail;
-        if (shortDetail === "HT" || shortDetail === "Halftime") {
-          statusText = "ET (Descanso)";
-        } else {
-          statusText = ev.status?.displayClock || `${ev.status?.clock || ""}'` || "En Vivo";
-        }
-      } else if (state === "post") {
-        status = "FINISHED";
-        statusText = "Final";
-      } else {
-        status = "SCHEDULED";
-        statusText = timeCaracas;
-      }
-
-      const isScheduled = status === "SCHEDULED";
-      const translateForm = (rawForm?: string): string | undefined => {
-        if (!rawForm) return undefined;
-        return rawForm
-          .toUpperCase()
-          .split("")
-          .map((ch) => (ch === "W" ? "G" : ch === "D" ? "E" : ch === "L" ? "P" : ch))
-          .join("-");
-      };
-
-      const rawBroadcast =
-        comp?.broadcasts?.[0]?.names?.[0] ||
-        comp?.geoBroadcasts?.[0]?.media?.shortName ||
-        undefined;
-
-      return {
-        id: String(ev.id || Math.random().toString(36).slice(2, 9)),
-        date: ev.date || comp?.date || new Date().toISOString(),
-        dateCaracas,
-        timeCaracas,
-        status,
-        statusText,
-        clock: ev.status?.displayClock,
-        venue: comp?.venue?.fullName || comp?.venue?.shortName || comp?.venue?.address?.city,
-        city: [comp?.venue?.address?.city, comp?.venue?.address?.country].filter(Boolean).join(", ") || undefined,
-        stage: ev.season?.slug?.replace(/-/g, " ") || undefined,
-        broadcast: rawBroadcast,
-        leagueId,
-        leagueName: leagueConfig.name,
-        homeTeam: {
-          id: String(homeComp?.team?.id || "home"),
-          name: homeComp?.team?.displayName || homeComp?.team?.name || "Local",
-          shortName: homeComp?.team?.shortDisplayName || homeComp?.team?.name || "Local",
-          abbreviation: homeComp?.team?.abbreviation || "LOC",
-          logo: homeComp?.team?.logo || `https://a.espncdn.com/i/teamlogos/soccer/500/${homeComp?.team?.id}.png`,
-          score: isScheduled ? undefined : (homeComp?.score !== undefined && homeComp?.score !== "" ? Number(homeComp.score) : undefined),
-          record: homeComp?.records?.[0]?.summary || undefined,
-          form: translateForm(homeComp?.form),
-        },
-        awayTeam: {
-          id: String(awayComp?.team?.id || "away"),
-          name: awayComp?.team?.displayName || awayComp?.team?.name || "Visitante",
-          shortName: awayComp?.team?.shortDisplayName || awayComp?.team?.name || "Visitante",
-          abbreviation: awayComp?.team?.abbreviation || "VIS",
-          logo: awayComp?.team?.logo || `https://a.espncdn.com/i/teamlogos/soccer/500/${awayComp?.team?.id}.png`,
-          score: isScheduled ? undefined : (awayComp?.score !== undefined && awayComp?.score !== "" ? Number(awayComp.score) : undefined),
-          record: awayComp?.records?.[0]?.summary || undefined,
-          form: translateForm(awayComp?.form),
-        },
-      };
-    });
-
-    // Smart Sort:
-    // 1. Live games at top (IN_PROGRESS)
-    // 2. Scheduled games next (earliest kickoff first)
-    // 3. Finished games (most recently finished first, so latest results are seen immediately)
-    matches.sort((a, b) => {
-      const stateOrder = (st: SoccerMatch["status"]) => {
-        if (st === "IN_PROGRESS") return 0;
-        if (st === "SCHEDULED") return 1;
-        return 2;
-      };
-      const orderA = stateOrder(a.status);
-      const orderB = stateOrder(b.status);
-      if (orderA !== orderB) return orderA - orderB;
-
-      if (a.status === "SCHEDULED" && b.status === "SCHEDULED") {
-        return new Date(a.date).getTime() - new Date(b.date).getTime();
-      }
-      if (a.status === "FINISHED" && b.status === "FINISHED") {
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
-      }
-      return 0;
-    });
-
-    // Cache: 45s if has live games, 5 min otherwise
-    const hasLive = matches.some((m) => m.status === "IN_PROGRESS");
-    scoreboardCache.set(cacheKey, {
-      data: matches,
-      expiresAt: now + (hasLive ? 45_000 : 300_000),
-    });
-
-    return matches;
-  } catch (err) {
-    console.error(`[SoccerService] Error fetching scoreboard for ${leagueId}:`, err);
-    return cached?.data || [];
+    const cleanDate = targetDate.replace(/-/g, "");
+    const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/${leagueId}/scoreboard?dates=${cleanDate}`;
+    try {
+      const res = await fetch(url, {
+        cache: "no-store",
+        headers: { "User-Agent": "EnJuego-SoccerService/1.0" },
+        signal: AbortSignal.timeout(8_000),
+      });
+      if (!res.ok) return cachedDate?.data || [];
+      const json = await res.json();
+      const matches = sortSoccerMatches(
+        parseRawEspnScoreboardEvents(Array.isArray(json.events) ? json.events : [], leagueId, leagueConfig.name)
+      );
+      const hasLive = matches.some((m) => m.status === "IN_PROGRESS");
+      scoreboardCache.set(cacheKey, {
+        data: matches,
+        expiresAt: now + (hasLive ? 8_000 : 30_000),
+      });
+      return matches;
+    } catch {
+      return cachedDate?.data || [];
+    }
   }
+
+  // Default: Merge monthly schedule cache (120s TTL) + Real-time Live Scoreboard (8s TTL, cache: "no-store")
+  const cachedMonth = scoreboardCache.get(cacheKey);
+  const cachedLive = liveTodayCache.get(leagueId);
+
+  const monthPromise =
+    cachedMonth && now < cachedMonth.expiresAt
+      ? Promise.resolve(cachedMonth.data)
+      : (async () => {
+          try {
+            const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/${leagueId}/scoreboard?dates=${currentMonth}`;
+            const res = await fetch(url, {
+              cache: "no-store",
+              headers: { "User-Agent": "EnJuego-SoccerService/1.0" },
+              signal: AbortSignal.timeout(8_000),
+            });
+            if (!res.ok) return cachedMonth?.data || [];
+            const json = await res.json();
+            const parsed = parseRawEspnScoreboardEvents(
+              Array.isArray(json.events) ? json.events : [],
+              leagueId,
+              leagueConfig.name
+            );
+            scoreboardCache.set(cacheKey, {
+              data: parsed,
+              expiresAt: Date.now() + 120_000,
+            });
+            return parsed;
+          } catch {
+            return cachedMonth?.data || [];
+          }
+        })();
+
+  const livePromise =
+    cachedLive && now < cachedLive.expiresAt
+      ? Promise.resolve(cachedLive.data)
+      : (async () => {
+          try {
+            // Query ESPN's real-time default scoreboard (no ?dates=YYYYMM range, so zero monthly CDN lag)
+            const liveUrl = `https://site.api.espn.com/apis/site/v2/sports/soccer/${leagueId}/scoreboard`;
+            const res = await fetch(liveUrl, {
+              cache: "no-store",
+              headers: { "User-Agent": "EnJuego-SoccerService/1.0" },
+              signal: AbortSignal.timeout(6_000),
+            });
+            if (!res.ok) return cachedLive?.data || [];
+            const json = await res.json();
+            const parsed = parseRawEspnScoreboardEvents(
+              Array.isArray(json.events) ? json.events : [],
+              leagueId,
+              leagueConfig.name
+            );
+            const hasLive = parsed.some((m) => m.status === "IN_PROGRESS");
+            liveTodayCache.set(leagueId, {
+              data: parsed,
+              expiresAt: Date.now() + (hasLive ? 8_000 : 15_000),
+            });
+            return parsed;
+          } catch {
+            return cachedLive?.data || [];
+          }
+        })();
+
+  const [monthMatches, liveMatches] = await Promise.all([monthPromise, livePromise]);
+  const mergedMap = new Map<string, SoccerMatch>();
+  for (const m of monthMatches) {
+    mergedMap.set(m.id, m);
+  }
+  // Overwrite with real-time live scoreboard entries
+  for (const lm of liveMatches) {
+    mergedMap.set(lm.id, lm);
+  }
+
+  return sortSoccerMatches(Array.from(mergedMap.values()));
 }
 
 /**
@@ -502,8 +579,9 @@ export async function fetchSoccerMatchDetail(
 
   try {
     const res = await fetch(url, {
-      next: { revalidate: 20 },
+      cache: "no-store",
       headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+      signal: AbortSignal.timeout(8_000),
     });
 
     if (!res.ok) {
@@ -1146,7 +1224,7 @@ export async function fetchSoccerMatchDetail(
       latestPlay,
     };
 
-    const ttl = isLive ? 20 * 1000 : isCompleted ? 60 * 60 * 1000 : 5 * 60 * 1000;
+    const ttl = isLive ? 8 * 1000 : isCompleted ? 60 * 60 * 1000 : 30 * 1000;
     matchDetailCache.set(cacheKey, {
       data: detail,
       expiresAt: now + ttl,

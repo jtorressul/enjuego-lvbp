@@ -55,7 +55,7 @@ export async function loadLvbpPortalSeed(): Promise<PortalSeed> {
       leaders: table.leaders || EMPTY_LEADERS,
       dateIndex: dateIndexFor(schedule),
     };
-    cachedSeed = { data, expiresAt: now + 30_000 };
+    cachedSeed = { data, expiresAt: now + 10_000 };
     return data;
   } catch {
     if (cachedSeed) return cachedSeed.data;

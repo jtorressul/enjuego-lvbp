@@ -31,25 +31,20 @@ html[data-theme="dark"] body {
 
 @keyframes fadeSlideUp {
   0% {
-    opacity: 0;
-    transform: translateY(14px) scale(0.99);
+    opacity: 1;
+    transform: translateY(4px);
   }
   100% {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
 }
 
 @keyframes scalePop {
   0% {
-    opacity: 0;
-    transform: scale(0.82);
-  }
-  70% {
-    transform: scale(1.06);
+    transform: scale(0.95);
   }
   100% {
-    opacity: 1;
     transform: scale(1);
   }
 }
@@ -65,29 +60,12 @@ html[data-theme="dark"] body {
 }
 
 .animate-view-enter {
-  animation: fadeSlideUp 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: none;
 }
 
 main section,
 main article {
-  animation: fadeSlideUp 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
-  transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.26s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.22s ease,
-    background-color 0.25s ease;
-}
-
-main .grid > article:nth-child(1) {
-  animation-delay: 0.02s;
-}
-main .grid > article:nth-child(2) {
-  animation-delay: 0.06s;
-}
-main .grid > article:nth-child(3) {
-  animation-delay: 0.1s;
-}
-main .grid > article:nth-child(4) {
-  animation-delay: 0.14s;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
 main .grid > article:hover {

@@ -56,9 +56,12 @@ export async function GET(request: Request) {
           checkAndDispatchGameAlerts(games).catch(() => {});
         }
       }
+      const hasLive =
+        Array.isArray(games) &&
+        games.some((g) => g.status === "IN_PROGRESS" || g.status === "WARMUP" || g.status === "DELAYED");
       return NextResponse.json(
         { games: Array.isArray(games) ? games.map(toScheduleListItem) : [], league },
-        { headers: publicCacheHeaders(30) }
+        { headers: publicCacheHeaders(hasLive ? 6 : 15) }
       );
     } catch (error: any) {
       return NextResponse.json(

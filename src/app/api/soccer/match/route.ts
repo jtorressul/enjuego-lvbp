@@ -29,7 +29,7 @@ export async function GET(request: Request) {
         );
       }
 
-      const cacheSeconds = match.status === "IN_PROGRESS" ? 15 : match.status === "FINISHED" ? 300 : 60;
+      const cacheSeconds = match.status === "IN_PROGRESS" ? 6 : match.status === "FINISHED" ? 300 : 20;
 
       return NextResponse.json(
         { league: leagueId, match },

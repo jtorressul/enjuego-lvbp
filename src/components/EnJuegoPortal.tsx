@@ -1501,9 +1501,9 @@ export function EnJuegoPortal({
             </Link>
           </div>
 
-          {/* Center Column: Desktop Main Navigation (True Mathematical Center, Zero Dropdowns, Zero Emojis) */}
+          {/* Center Column: Desktop Main Navigation (Structured Segmented Dock, True Center, Zero Dropdowns) */}
           <nav
-            className="hidden lg:flex items-center justify-center h-15 sm:h-16 gap-5 xl:gap-6"
+            className="hidden lg:flex items-center justify-center p-1 rounded-xl bg-slate-900/90 border border-slate-800/90 gap-0.5 shadow-inner"
             aria-label="Navegación Principal"
           >
             {[
@@ -1525,16 +1525,13 @@ export function EnJuegoPortal({
                 <Link
                   key={item.key}
                   href={item.href}
-                  className={`h-full flex items-center relative text-xs font-black tracking-wider uppercase transition-colors select-none px-1 cursor-pointer ${
+                  className={`px-3 xl:px-3.5 py-1.5 rounded-lg text-xs font-extrabold tracking-wide transition-all select-none cursor-pointer ${
                     isActive
-                      ? "text-white"
-                      : "text-slate-300 hover:text-white"
+                      ? "bg-rose-600 text-white shadow-xs"
+                      : "text-slate-300 hover:text-white hover:bg-white/[0.06]"
                   }`}
                 >
                   <span>{item.label}</span>
-                  {isActive && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.75 bg-rose-600 rounded-full" />
-                  )}
                 </Link>
               );
             })}
@@ -1648,6 +1645,40 @@ export function EnJuegoPortal({
           </div>
         </div>
 
+        {/* Mobile & Tablet Horizontal Quick Navigation Strip (<1024px) */}
+        <div className="lg:hidden border-t border-slate-800/80 bg-[#090f1d] px-3 py-1.5 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-1.5 min-w-max">
+            {[
+              { key: "home", label: "Inicio", href: "/inicio" },
+              { key: "futbol", label: "Fútbol Europeo", href: "/futbol" },
+              { key: "resultados", label: "Resultados", href: `/resultados?liga=${activeLeague}` },
+              { key: "posiciones", label: "Posiciones", href: `/posiciones?liga=${activeLeague}` },
+              { key: "calendario", label: "Calendario", href: `/calendario?liga=${activeLeague}` },
+              { key: "lideres", label: "Líderes", href: `/lideres?liga=${activeLeague}` },
+              {
+                key: "equipos",
+                label: "Equipos",
+                href: `/teams?team=${activeTeamsCatalog?.[selectedTeamCode]?.slug || currentLeague.defaultTeamCode}&liga=${activeLeague || "lvbp"}`,
+              },
+              { key: "noticias", label: "Noticias", href: "/noticias" },
+            ].map((item) => {
+              const isActive = section === item.key;
+              return (
+                <Link
+                  key={item.key}
+                  href={item.href}
+                  className={`px-3 py-1 rounded-lg text-[11px] font-extrabold tracking-wide transition shrink-0 ${
+                    isActive
+                      ? "bg-rose-600 text-white"
+                      : "text-slate-300 hover:text-white bg-slate-900/80 border border-slate-800"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
       </header>
 
       {/* MOBILE SLIDE-OVER DRAWER */}
@@ -1842,7 +1873,7 @@ export function EnJuegoPortal({
                       className="flex-1 py-2.5 px-3 rounded-xl font-black text-xs text-center transition cursor-pointer shadow-xs"
                       style={{ backgroundColor: "#f59e0b", color: "#0f172a" }}
                     >
-                      Entrar como Fan ⚡
+                      Entrar como Fan
                     </button>
                     <button
                       type="button"
@@ -2455,49 +2486,18 @@ export function EnJuegoPortal({
 
         {/* SECTION: HOME (/ & /inicio) */}
         {section === "home" && (
-          <div className="space-y-6 sm:space-y-8">
-            {/* Favorite Team Selector Bar */}
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
-              <div className="flex items-center gap-2 text-xs">
-                <Star className="w-4 h-4 text-amber-500 fill-amber-400 shrink-0" />
-                <span className="font-extrabold text-slate-800">
-                  {favoriteTeamCode && anyTeamsCatalog[favoriteTeamCode]
-                    ? `Tu equipo favorito: ${anyTeamsCatalog[favoriteTeamCode].name} (fijado de 1° en pizarra)`
-                    : "Elige tu equipo favorito para fijar sus juegos de primero:"}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 no-scrollbar max-w-full">
-                {Object.values(activeTeamsCatalog).map((t) => {
-                  const active = favoriteTeamCode === t.code;
-                  return (
-                    <button
-                      key={t.code}
-                      type="button"
-                      onClick={() => toggleFavoriteTeam(t.code)}
-                      className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-extrabold border transition cursor-pointer shrink-0 ${
-                        active
-                          ? "bg-amber-400 text-slate-950 border-amber-400 shadow-2xs"
-                          : "bg-slate-50 text-slate-700 border-slate-200 hover:border-amber-400"
-                      }`}
-                    >
-                      <img src={t.logoSvg} alt="" className="w-4 h-4 object-contain" />
-                      <span>{t.shortName}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 1. Pizarra de Juegos de la Jornada */}
-            <section className="space-y-4">
-              <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="space-y-6">
+            {/* 1. PIZARRA DE BÉISBOL EN VIVO (Structured Editorial Container matching Soccer) */}
+            <section className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-6 shadow-xs space-y-5">
+              {/* Section Header Row */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100">
                 <div>
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600 block">
+                  <span className="text-[11px] font-black uppercase tracking-widest text-amber-600 block">
                     {jornadaLeague === "mlb"
-                      ? "Pizarra de Juegos · Grandes Ligas (MLB) 2026"
-                      : `Pizarra de Juegos · Temporada ${currentLeague.shortName} 2026-2027`}
+                      ? "Béisbol Profesional · Grandes Ligas (MLB)"
+                      : `Béisbol Profesional · Temporada ${currentLeague.shortName}`}
                   </span>
-                  <h1 className="text-xl sm:text-2xl font-black text-slate-950 capitalize">
+                  <h1 className="text-lg sm:text-xl font-black text-slate-950 capitalize leading-tight">
                     {jornadaDayFormatted.fullLabel}
                   </h1>
                 </div>
@@ -2507,30 +2507,83 @@ export function EnJuegoPortal({
                     <button
                       type="button"
                       onClick={() => setShowHomeMlbBracket((v) => !v)}
-                      className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-extrabold transition cursor-pointer shadow-2xs ${
+                      className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-extrabold transition cursor-pointer ${
                         showHomeMlbBracket
-                          ? "bg-amber-400 text-slate-950 border-amber-400"
-                          : "bg-white hover:bg-slate-50 border-slate-200 text-slate-800"
+                          ? "dark-pill bg-slate-900 text-white border-slate-900"
+                          : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800"
                       }`}
                     >
                       <Trophy className="w-3.5 h-3.5 text-amber-600" />
-                      <span>{showHomeMlbBracket ? "Ocultar Postemporada" : "Cuadro Postemporada ›"}</span>
+                      <span>{showHomeMlbBracket ? "Ocultar Postemporada" : "Postemporada ›"}</span>
                     </button>
                   )}
                   <Link
                     href={`/posiciones?liga=${jornadaLeague}`}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 px-3.5 py-2 text-xs font-black transition cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                    className="dark-pill inline-flex items-center gap-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-2 text-xs font-black transition cursor-pointer shadow-2xs"
                   >
-                    <Trophy className="w-3.5 h-3.5 text-slate-950" />
-                    <span>Tabla de Posiciones ›</span>
+                    <Trophy className="w-3.5 h-3.5" />
+                    <span>Clasificación ›</span>
                   </Link>
                   <Link
                     href={`/calendario?liga=${jornadaLeague}`}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 px-3.5 py-2 text-xs font-extrabold transition cursor-pointer shadow-2xs"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 px-3.5 py-2 text-xs font-extrabold transition cursor-pointer"
                   >
-                    <Calendar className="w-3.5 h-3.5 text-amber-600" />{" "}
-                    {jornadaLeague === "mlb" ? "Calendario MLB ›" : "Calendario y TV ›"}
+                    <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                    <span>{jornadaLeague === "mlb" ? "Calendario MLB ›" : "Calendario y TV ›"}</span>
                   </Link>
+                </div>
+              </div>
+
+              {/* Integrated League Tabs + Compact Favorite Team Bar */}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                {/* 4 Baseball Leagues Selector */}
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                  {LEAGUES_LIST.map((lg) => {
+                    const isSel = currentJornadaLeague === lg.id;
+                    return (
+                      <button
+                        key={lg.id}
+                        type="button"
+                        onClick={() => {
+                          setJornadaLeague(lg.id);
+                          switchLeague(lg.id);
+                        }}
+                        className={`px-3.5 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer shrink-0 select-none ${
+                          isSel
+                            ? "dark-pill shadow-xs"
+                            : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/80"
+                        }`}
+                      >
+                        <span>{lg.shortName}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Compact Favorite Team Selector */}
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-full">
+                  <span className="text-[11px] font-bold text-slate-400 hidden sm:inline mr-1 shrink-0">
+                    Fijar club:
+                  </span>
+                  {Object.values(activeTeamsCatalog).map((t) => {
+                    const active = favoriteTeamCode === t.code;
+                    return (
+                      <button
+                        key={t.code}
+                        type="button"
+                        onClick={() => toggleFavoriteTeam(t.code)}
+                        title={`Fijar a ${t.name} de primero`}
+                        className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[11px] font-bold border transition cursor-pointer shrink-0 ${
+                          active
+                            ? "bg-amber-400 text-slate-950 border-amber-400 font-black shadow-2xs"
+                            : "bg-slate-50 text-slate-700 border-slate-200/80 hover:border-slate-300"
+                        }`}
+                      >
+                        <img src={t.logoSvg} alt="" className="w-3.5 h-3.5 object-contain" />
+                        <span>{t.shortName}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -2539,7 +2592,7 @@ export function EnJuegoPortal({
                   {[1, 2, 3, 4].map((n) => (
                     <div
                       key={n}
-                      className="h-52 rounded-2xl border border-slate-200 bg-white animate-pulse"
+                      className="h-52 rounded-2xl border border-slate-200 bg-slate-50 animate-pulse"
                     />
                   ))}
                 </div>
@@ -2549,62 +2602,8 @@ export function EnJuegoPortal({
                 </div>
               )}
 
-              <AadsSkyscraperBanner />
-
-              {latestRecaps.length > 0 && (
-                <div>
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <h2 className="text-lg font-black text-slate-950 flex items-center gap-2">
-                      <span>Noticias y <em className="text-amber-600 not-italic">Highlights</em></span>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white shadow-2xs">
-                        <Play className="w-2.5 h-2.5 fill-white" />
-                        <span>Video</span>
-                      </span>
-                    </h2>
-                    <Link href="/noticias" className="text-xs font-extrabold text-rose-700 hover:text-rose-800">
-                      Ver todos con video ›
-                    </Link>
-                  </div>
-                  <div className="grid gap-3 md:grid-cols-3">
-                    {latestRecaps.map((recap) => (
-                      <Link
-                        key={recap.id}
-                        href={`/noticias/${recap.id}`}
-                        className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-xs hover:border-rose-400 hover:shadow-sm transition group flex flex-col justify-between"
-                      >
-                        <div>
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="flex items-center gap-1.5 min-w-0">
-                              <img src={recap.away.logo} alt="" className="w-6 h-6 object-contain" />
-                              <b className="text-sm tabular-nums">{recap.away.score}</b>
-                            </span>
-                            <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
-                              <Play className="w-2.5 h-2.5 fill-rose-600" />
-                              <span>Resumen</span>
-                            </span>
-                            <span className="flex items-center gap-1.5 min-w-0">
-                              <b className="text-sm tabular-nums">{recap.home.score}</b>
-                              <img src={recap.home.logo} alt="" className="w-6 h-6 object-contain" />
-                            </span>
-                          </div>
-                          <p className="mt-2.5 text-sm font-black text-slate-950 group-hover:text-rose-700 transition leading-snug line-clamp-2">
-                            {recap.headline}
-                          </p>
-                        </div>
-                        <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] font-bold text-slate-500">
-                          <span>BeisbolPlay</span>
-                          <span className="text-rose-600 font-extrabold group-hover:underline flex items-center gap-0.5">
-                            Ver video ›
-                          </span>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {jornadaLeague === "mlb" && showHomeMlbBracket && (
-                <div className="pt-2 space-y-2">
+                <div className="pt-2 space-y-2 border-t border-slate-100">
                   <div className="flex items-center justify-between">
                     <h2 className="text-base sm:text-lg font-black text-slate-950 flex items-center gap-2">
                       <Trophy className="w-4 h-4 text-amber-600" />
@@ -2616,8 +2615,10 @@ export function EnJuegoPortal({
               )}
             </section>
 
-            {/* FÚTBOL EUROPEO SHOWCASE DIRECTLY ON /INICIO */}
+            {/* 2. FÚTBOL EUROPEO SHOWCASE DIRECTLY ON /INICIO */}
             <HomeSoccerShowcase />
+
+            <AadsSkyscraperBanner />
 
             {/* 2. LÍDERES Y POSICIONES */}
             <section className="space-y-4">
@@ -2996,23 +2997,23 @@ export function EnJuegoPortal({
                             <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
                               {(
                                 [
-                                  ["fuego", "🔥"],
-                                  ["aplauso", "👏"],
-                                  ["corazon", "❤️"],
-                                  ["sorpresa", "😮"],
+                                  ["fuego", "Destacado"],
+                                  ["aplauso", "Aplauso"],
+                                  ["corazon", "Me gusta"],
+                                  ["sorpresa", "Debate"],
                                 ] as const
-                              ).map(([rKey, emoji]) => (
+                              ).map(([rKey, label]) => (
                                 <button
                                   key={rKey}
                                   type="button"
                                   onClick={() => handleReactPost(post.id, rKey)}
-                                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold border transition cursor-pointer ${
+                                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold border transition cursor-pointer ${
                                     post.myReaction === rKey
-                                      ? "bg-amber-50 border-amber-400 text-amber-800 shadow-2xs"
+                                      ? "dark-pill bg-slate-900 border-slate-900 text-white shadow-2xs"
                                       : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
                                   }`}
                                 >
-                                  <span>{emoji}</span>
+                                  <span>{label}</span>
                                   <b>{post.reactions[rKey]}</b>
                                 </button>
                               ))}

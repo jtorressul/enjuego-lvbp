@@ -49,11 +49,14 @@ export function HomeSoccerShowcase() {
   const liveCount = matches.filter((m) => m.status === "IN_PROGRESS").length;
 
   return (
-    <section className="space-y-4 pt-2">
-      {/* Editorial Section Header (100% Consistent with Baseball Pizarra Header) */}
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <section
+      id="bloque-futbol-europeo"
+      className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-6 shadow-xs space-y-5"
+    >
+      {/* Editorial Section Header */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white border border-slate-200 p-1.5 shadow-2xs flex items-center justify-center shrink-0">
+          <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200/90 p-2 shadow-2xs flex items-center justify-center shrink-0">
             <img
               src={currentLeague.logo}
               alt={currentLeague.name}
@@ -62,7 +65,7 @@ export function HomeSoccerShowcase() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
+              <span className="text-[11px] font-black uppercase tracking-widest text-blue-700">
                 Fútbol Europeo · {currentLeague.country}
               </span>
               {liveCount > 0 && (
@@ -72,7 +75,7 @@ export function HomeSoccerShowcase() {
                 </span>
               )}
             </div>
-            <h2 className="text-xl sm:text-2xl font-black text-slate-950">
+            <h2 className="text-lg sm:text-xl font-black text-slate-950 leading-tight">
               {currentLeague.name}
             </h2>
           </div>
@@ -81,23 +84,23 @@ export function HomeSoccerShowcase() {
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href={`/futbol?liga=${selectedLeague}#tabla-clasificacion`}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 px-3.5 py-2 text-xs font-black transition cursor-pointer shadow-2xs"
+            className="dark-pill inline-flex items-center gap-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-2 text-xs font-black transition cursor-pointer shadow-2xs"
           >
-            <Trophy className="w-3.5 h-3.5 text-slate-950" />
-            <span>Tabla de Posiciones ›</span>
+            <Trophy className="w-3.5 h-3.5" />
+            <span>Clasificación ›</span>
           </Link>
           <Link
             href={`/futbol?liga=${selectedLeague}`}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 px-3.5 py-2 text-xs font-extrabold transition cursor-pointer shadow-2xs"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 px-3.5 py-2 text-xs font-extrabold transition cursor-pointer"
           >
-            <Calendar className="w-3.5 h-3.5 text-amber-600" />
-            <span>Jornada Completa ›</span>
+            <Calendar className="w-3.5 h-3.5 text-blue-600" />
+            <span>Todos los Partidos ›</span>
           </Link>
         </div>
       </div>
 
       {/* Competition Selector Strip (Official Logos, Zero Emojis) */}
-      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar p-1.5 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
         {SOCCER_LEAGUES_LIST.map((lg) => {
           const isSel = selectedLeague === lg.id;
           return (
@@ -108,7 +111,7 @@ export function HomeSoccerShowcase() {
               className={`px-3.5 py-2 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer shrink-0 select-none ${
                 isSel
                   ? "dark-pill shadow-xs"
-                  : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/70"
+                  : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/80"
               }`}
             >
               <span className="w-4 h-4 rounded-xs bg-white p-0.5 flex items-center justify-center shrink-0">

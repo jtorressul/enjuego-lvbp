@@ -183,9 +183,9 @@ export function SoccerPortal({
             </Link>
           </div>
 
-          {/* Center Column: Desktop Main Navigation (Centered, Flat, Zero Dropdowns, Zero Emojis) */}
+          {/* Center Column: Desktop Main Navigation (Structured Segmented Dock, True Center, Zero Dropdowns) */}
           <nav
-            className="hidden lg:flex items-center justify-center h-15 sm:h-16 gap-5 xl:gap-6"
+            className="hidden lg:flex items-center justify-center p-1 rounded-xl bg-slate-900/90 border border-slate-800/90 gap-0.5 shadow-inner"
             aria-label="Navegación Principal"
           >
             {[
@@ -203,14 +203,13 @@ export function SoccerPortal({
                 <Link
                   key={item.key}
                   href={item.href}
-                  className={`h-full flex items-center relative text-xs font-black tracking-wider uppercase transition-colors select-none px-1 cursor-pointer ${
-                    isActive ? "text-white" : "text-slate-300 hover:text-white"
+                  className={`px-3 xl:px-3.5 py-1.5 rounded-lg text-xs font-extrabold tracking-wide transition-all select-none cursor-pointer ${
+                    isActive
+                      ? "bg-rose-600 text-white shadow-xs"
+                      : "text-slate-300 hover:text-white hover:bg-white/[0.06]"
                   }`}
                 >
                   <span>{item.label}</span>
-                  {isActive && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.75 bg-rose-600 rounded-full" />
-                  )}
                 </Link>
               );
             })}
@@ -281,6 +280,37 @@ export function SoccerPortal({
               <Menu className="w-4 h-4 sm:w-4.5 sm:h-4.5 shrink-0 stroke-[2.5]" />
               <span>Menú</span>
             </button>
+          </div>
+        </div>
+
+        {/* Mobile & Tablet Horizontal Quick Navigation Strip (<1024px) */}
+        <div className="lg:hidden border-t border-slate-800/80 bg-[#090f1d] px-3 py-1.5 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-1.5 min-w-max">
+            {[
+              { key: "home", label: "Inicio", href: "/inicio" },
+              { key: "futbol", label: "Fútbol Europeo", href: "/futbol" },
+              { key: "resultados", label: "Resultados", href: "/resultados?liga=lvbp" },
+              { key: "posiciones", label: "Posiciones", href: "/posiciones?liga=lvbp" },
+              { key: "calendario", label: "Calendario", href: "/calendario?liga=lvbp" },
+              { key: "lideres", label: "Líderes", href: "/lideres?liga=lvbp" },
+              { key: "equipos", label: "Equipos", href: "/teams?team=leones&liga=lvbp" },
+              { key: "noticias", label: "Noticias", href: "/noticias" },
+            ].map((item) => {
+              const isActive = item.key === "futbol";
+              return (
+                <Link
+                  key={item.key}
+                  href={item.href}
+                  className={`px-3 py-1 rounded-lg text-[11px] font-extrabold tracking-wide transition shrink-0 ${
+                    isActive
+                      ? "bg-rose-600 text-white"
+                      : "text-slate-300 hover:text-white bg-slate-900/80 border border-slate-800"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
           </div>
         </div>
       </header>

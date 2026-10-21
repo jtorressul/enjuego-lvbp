@@ -66,9 +66,70 @@ export interface SoccerStatRow {
 export interface SoccerLineupPlayer {
   id: string;
   name: string;
+  shortName: string;
   jersey: string;
   position: string;
+  positionNameSpanish: string;
+  formationPlace: number;
   starter: boolean;
+  goals: number;
+  assists: number;
+  yellowCards: number;
+  redCards: number;
+  shots: number;
+  shotsOnTarget: number;
+  subbedOut: boolean;
+  subbedIn: boolean;
+}
+
+export interface SoccerShotEvent {
+  id: string;
+  minute: string;
+  clockSeconds: number;
+  period: number;
+  isHome: boolean;
+  teamName: string;
+  teamAbbr: string;
+  playerName: string;
+  playerShortName: string;
+  jersey?: string;
+  positionLabel: string;
+  outcome: "goal" | "saved" | "off_target" | "blocked";
+  x: number;
+  y: number;
+  endX: number;
+  endY: number;
+  goalY: number;
+  goalZ: number;
+  shotType: string;
+  situation: string;
+  goalZone: string;
+  distanceMeters: number;
+  xg: string;
+  xgot: string;
+  textSpanish: string;
+}
+
+export interface SoccerMomentumBin {
+  binIndex: number;
+  minuteStart: number;
+  minuteLabel: string;
+  homePressure: number; // 0..100
+  awayPressure: number; // 0..100
+  markers: {
+    type: "goal" | "yellow-card" | "red-card";
+    isHome: boolean;
+    minute: string;
+    player?: string;
+  }[];
+}
+
+export interface SoccerCommentaryItem {
+  id: string;
+  minute: string;
+  textSpanish: string;
+  type: "goal" | "shot" | "card" | "sub" | "corner" | "foul" | "whistle" | "info";
+  isHome?: boolean;
 }
 
 export interface SoccerMatchDetail {
@@ -89,14 +150,32 @@ export interface SoccerMatchDetail {
   lineups?: {
     home: {
       formation?: string;
+      uniformColor: string;
+      uniformTextColor: string;
+      gkColor: string;
       starters: SoccerLineupPlayer[];
       bench: SoccerLineupPlayer[];
     };
     away: {
       formation?: string;
+      uniformColor: string;
+      uniformTextColor: string;
+      gkColor: string;
       starters: SoccerLineupPlayer[];
       bench: SoccerLineupPlayer[];
     };
+  };
+  shots: SoccerShotEvent[];
+  momentum: SoccerMomentumBin[];
+  commentary: SoccerCommentaryItem[];
+  latestPlay?: {
+    minute: string;
+    bannerTitle: string;
+    headlineSpanish: string;
+    detailSpanish: string;
+    isHome?: boolean;
+    x?: number;
+    y?: number;
   };
 }
 
@@ -547,42 +626,430 @@ export async function fetchSoccerMatchDetail(
       }
     }
 
+    // Helper: Translate position code to Spanish
+    const translatePositionSpanish = (abbr?: string): string => {
+      const code = (abbr || "").toUpperCase();
+      if (code === "G" || code === "GK") return "Portero";
+      if (code.startsWith("CD") || code === "CB" || code === "D") return "Defensa central";
+      if (code === "LB" || code === "LWB") return "Lateral izquierdo";
+      if (code === "RB" || code === "RWB") return "Lateral derecho";
+      if (code.startsWith("DM") || code === "CDM") return "Mediocampista defensivo";
+      if (code === "AM-L" || code === "LM" || code === "LW") return "Mediocampista ofensivo izq.";
+      if (code === "AM-R" || code === "RM" || code === "RW") return "Mediocampista ofensivo der.";
+      if (code.startsWith("AM") || code === "CAM") return "Mediocampista ofensivo";
+      if (code.startsWith("CM") || code === "M") return "Mediocampista central";
+      if (code.startsWith("F") || code === "ST" || code === "CF") return "Delantero centro";
+      return "Jugador";
+    };
+
+    // Helper: Translate raw ESPN English commentary into Spanish
+    const translatePlayTextSpanish = (rawText: string): string => {
+      if (!rawText) return "";
+      let t = rawText.trim();
+      t = t.replace(/^Goal!\s*/i, "Gol. ");
+      t = t.replace(/^Attempt saved\.\s*/i, "Atajada. ");
+      t = t.replace(/^Attempt missed\.\s*/i, "Fuera de portería. ");
+      t = t.replace(/^Attempt blocked\.\s*/i, "Disparo bloqueado. ");
+      t = t.replace(/^First Half begins\./i, "Comienza el Primer Tiempo.");
+      t = t.replace(/^First Half ends,\s*/i, "Final del Primer Tiempo: ");
+      t = t.replace(/^Second Half begins\s*/i, "Comienza el Segundo Tiempo ");
+      t = t.replace(/^Second Half ends,\s*/i, "Final del Segundo Tiempo: ");
+      t = t.replace(/^Match ends,\s*/i, "Final del partido: ");
+      t = t.replace(/^Lineups are announced and players are warming up\./i, "Alineaciones confirmadas y equipos realizando el calentamiento.");
+      t = t.replace(/^Corner,\s*/i, "Tiro de esquina para ");
+      t = t.replace(/Conceded by\s+([^.]+)\./gi, "Cedido por $1.");
+      t = t.replace(/^Foul by\s+([^(]+)\(([^)]+)\)\./i, "Falta cometida por $1 ($2).");
+      t = t.replace(/wins a free kick in the defensive half\./gi, "recibe falta en zona defensiva.");
+      t = t.replace(/wins a free kick in the attacking half\./gi, "recibe falta en zona de ataque.");
+      t = t.replace(/wins a free kick on the left wing\./gi, "recibe falta por la banda izquierda.");
+      t = t.replace(/wins a free kick on the right wing\./gi, "recibe falta por la banda derecha.");
+      t = t.replace(/^Offside,\s*([^.]+)\./i, "Fuera de juego de $1.");
+      t = t.replace(/^Delay in match\s+because of an injury\s*/i, "Partido detenido por atención médica ");
+      t = t.replace(/^Delay over\.\s*They are ready to continue\./i, "Se reanuda el encuentro.");
+      t = t.replace(/right footed shot/gi, "remate con la derecha");
+      t = t.replace(/left footed shot/gi, "remate con la izquierda");
+      t = t.replace(/header/gi, "remate de cabeza");
+      t = t.replace(/from the centre of the box/gi, "desde el centro del área");
+      t = t.replace(/from the left side of the box/gi, "desde la izquierda del área");
+      t = t.replace(/from the right side of the box/gi, "desde la derecha del área");
+      t = t.replace(/from outside the box/gi, "desde fuera del área");
+      t = t.replace(/from very close range/gi, "a quemarropa");
+      t = t.replace(/is saved in the bottom left corner by/gi, "es atajado abajo a la izquierda por");
+      t = t.replace(/is saved in the bottom right corner by/gi, "es atajado abajo a la derecha por");
+      t = t.replace(/is saved in the centre of the goal by/gi, "es contenido en el centro del arco por");
+      t = t.replace(/is saved in the top centre of the goal by/gi, "es desviado arriba al centro por");
+      t = t.replace(/is saved in the top left corner by/gi, "es atajado en el ángulo izquierdo por");
+      t = t.replace(/is saved in the top right corner by/gi, "es atajado en el ángulo derecho por");
+      t = t.replace(/to the bottom left corner\./gi, "junto al poste izquierdo.");
+      t = t.replace(/to the bottom right corner\./gi, "junto al poste derecho.");
+      t = t.replace(/to the top left corner\./gi, "al ángulo superior izquierdo.");
+      t = t.replace(/to the top right corner\./gi, "al ángulo superior derecho.");
+      t = t.replace(/to the centre of the goal\./gi, "al centro de la portería.");
+      t = t.replace(/is blocked\./gi, "es bloqueado por la defensa.");
+      t = t.replace(/misses to the left\./gi, "se marcha desviado por la izquierda.");
+      t = t.replace(/misses to the right\./gi, "se marcha desviado por la derecha.");
+      t = t.replace(/is high and wide to the left\./gi, "se va alto y desviado a la izquierda.");
+      t = t.replace(/is high and wide to the right\./gi, "se va alto y desviado a la derecha.");
+      t = t.replace(/is too high\./gi, "se marcha por encima del travesaño.");
+      t = t.replace(/is close, but misses to the left\./gi, "pasa muy cerca del poste izquierdo.");
+      t = t.replace(/is close, but misses to the right\./gi, "pasa muy cerca del poste derecho.");
+      t = t.replace(/Assisted by\s+([^.]+)\./gi, "Asistencia: $1.");
+      t = t.replace(/is shown the yellow card for a bad foul\./gi, "recibe tarjeta amarilla por falta.");
+      t = t.replace(/is shown the yellow card\./gi, "recibe tarjeta amarilla.");
+      t = t.replace(/is shown the red card\./gi, "recibe tarjeta roja.");
+      t = t.replace(/Substitution,\s*([^.]+)\.\s*([^I]+)\s+replaces\s+([^.]+)\./gi, "Cambio en $1: entra $2 por $3.");
+      return t;
+    };
+
+    // Map player metadata by displayName for quick lookup in shots
+    const playerMetaMap = new Map<string, { jersey: string; posLabel: string; shortName: string }>();
+
     // Lineups (Rosters)
     const rawRosters: any[] = json.rosters || [];
     let lineups: SoccerMatchDetail["lineups"] = undefined;
     if (rawRosters.length >= 2) {
-      const parseRoster = (r: any) => {
-        const formation = r.formation || undefined;
-        const all: any[] = r.roster || [];
+      const normalizeHex = (rawHex: string | undefined, fallback: string): { bg: string; text: string } => {
+        const clean = (rawHex || "").replace("#", "").trim();
+        if (!clean || clean.length !== 6) return { bg: fallback, text: "#ffffff" };
+        // If uniform is white/very light, use dark text or team fallback so jersey stands out on green pitch
+        const r = parseInt(clean.slice(0, 2), 16);
+        const g = parseInt(clean.slice(2, 4), 16);
+        const b = parseInt(clean.slice(4, 6), 16);
+        const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        if (lum > 0.82) {
+          return { bg: "#1e293b", text: "#ffffff" };
+        }
+        return { bg: `#${clean}`, text: "#ffffff" };
+      };
+
+      const parseRoster = (r: any, isHomeRoster: boolean) => {
+        const formation = r?.formation || "4-2-3-1";
+        const uniformInfo = normalizeHex(r?.uniform?.color, isHomeRoster ? "#2563eb" : "#dc2626");
+        const all: any[] = r?.roster || [];
+
+        const mapPlayer = (p: any, isStarter: boolean): SoccerLineupPlayer => {
+          const fullName = p.athlete?.displayName || p.athlete?.fullName || "Jugador";
+          const shortName = p.athlete?.lastName || p.athlete?.shortName || fullName.split(" ").pop() || fullName;
+          const posAbbr = p.position?.abbreviation || p.position?.name || "";
+          const posNameSpanish = translatePositionSpanish(posAbbr);
+          const jersey = String(p.jersey || "");
+
+          playerMetaMap.set(fullName.toLowerCase(), {
+            jersey,
+            posLabel: posNameSpanish,
+            shortName,
+          });
+
+          const getStatVal = (abbr: string): number => {
+            const st = (p.stats || []).find((s: any) => s.abbreviation === abbr);
+            return st?.value !== undefined ? Number(st.value) : parseInt(st?.displayValue || "0", 10) || 0;
+          };
+
+          return {
+            id: String(p.athlete?.id || p.jersey || Math.random()),
+            name: fullName,
+            shortName,
+            jersey,
+            position: posAbbr,
+            positionNameSpanish: posNameSpanish,
+            formationPlace: Number(p.formationPlace) || 0,
+            starter: isStarter,
+            goals: getStatVal("G"),
+            assists: getStatVal("A"),
+            yellowCards: getStatVal("YC"),
+            redCards: getStatVal("RC"),
+            shots: getStatVal("SHOT"),
+            shotsOnTarget: getStatVal("SOG"),
+            subbedOut: Boolean(p.subbedOut),
+            subbedIn: Boolean(p.subbedIn),
+          };
+        };
+
         const starters: SoccerLineupPlayer[] = all
           .filter((p) => p.starter === true)
-          .map((p) => ({
-            id: String(p.athlete?.id || p.jersey || Math.random()),
-            name: p.athlete?.displayName || p.athlete?.shortName || "Jugador",
-            jersey: p.jersey || "",
-            position: p.position?.abbreviation || p.position?.name || "",
-            starter: true,
-          }));
+          .map((p) => mapPlayer(p, true));
         const bench: SoccerLineupPlayer[] = all
           .filter((p) => p.starter === false)
-          .map((p) => ({
-            id: String(p.athlete?.id || p.jersey || Math.random()),
-            name: p.athlete?.displayName || p.athlete?.shortName || "Jugador",
-            jersey: p.jersey || "",
-            position: p.position?.abbreviation || p.position?.name || "",
-            starter: false,
-          }));
-        return { formation, starters, bench };
+          .map((p) => mapPlayer(p, false));
+
+        return {
+          formation,
+          uniformColor: uniformInfo.bg,
+          uniformTextColor: uniformInfo.text,
+          gkColor: "#3f3f46",
+          starters,
+          bench,
+        };
       };
 
       const homeRosterRaw = rawRosters.find((r) => String(r.team?.id) === homeTeam.id || r.homeAway === "home") || rawRosters[0];
       const awayRosterRaw = rawRosters.find((r) => String(r.team?.id) === awayTeam.id || r.homeAway === "away") || rawRosters[1];
 
       lineups = {
-        home: parseRoster(homeRosterRaw),
-        away: parseRoster(awayRosterRaw),
+        home: parseRoster(homeRosterRaw, true),
+        away: parseRoster(awayRosterRaw, false),
       };
     }
+
+    // Parse Commentary, Shots (with pitch/goal coordinates), Momentum (45 bins of 2 mins), and Latest Play
+    const rawComm: any[] = Array.isArray(json.commentary) ? json.commentary : [];
+    const shots: SoccerShotEvent[] = [];
+    const commentary: SoccerCommentaryItem[] = [];
+
+    // Initialize 46 bins (0' to 90' in 2-minute intervals)
+    const momentumBins: SoccerMomentumBin[] = Array.from({ length: 46 }, (_, i) => ({
+      binIndex: i,
+      minuteStart: i * 2,
+      minuteLabel: `${i * 2}'`,
+      homePressure: 0,
+      awayPressure: 0,
+      markers: [],
+    }));
+
+    const addMomentumImpulse = (minuteNum: number, isHomeImpulse: boolean, amount: number) => {
+      const idx = Math.max(0, Math.min(45, Math.floor(minuteNum / 2)));
+      if (isHomeImpulse) {
+        momentumBins[idx].homePressure += amount;
+        if (idx > 0) momentumBins[idx - 1].homePressure += Math.round(amount * 0.35);
+        if (idx < 45) momentumBins[idx + 1].homePressure += Math.round(amount * 0.35);
+      } else {
+        momentumBins[idx].awayPressure += amount;
+        if (idx > 0) momentumBins[idx - 1].awayPressure += Math.round(amount * 0.35);
+        if (idx < 45) momentumBins[idx + 1].awayPressure += Math.round(amount * 0.35);
+      }
+    };
+
+    // Place keyEvent markers onto momentum timeline
+    for (const ev of events) {
+      const minNum = parseInt(ev.minute.replace(/[^0-9]/g, ""), 10) || 1;
+      const idx = Math.max(0, Math.min(45, Math.floor(minNum / 2)));
+      if (ev.type === "goal" || ev.type === "yellow-card" || ev.type === "red-card") {
+        momentumBins[idx].markers.push({
+          type: ev.type,
+          isHome: ev.isHome,
+          minute: ev.minute,
+          player: ev.player,
+        });
+      }
+      if (ev.type === "goal") {
+        addMomentumImpulse(minNum, ev.isHome, 48);
+      }
+    }
+
+    let latestPlay: SoccerMatchDetail["latestPlay"] = undefined;
+
+    for (let i = 0; i < rawComm.length; i++) {
+      const item = rawComm[i];
+      const play = item.play || {};
+      const rawText = String(item.text || play.text || "");
+      const minuteDisplay = String(item.time?.displayValue || play.clock?.displayValue || "");
+      const clockSec = Number(item.time?.value ?? play.clock?.value ?? 0);
+      const minuteNum = Math.max(0, Math.min(90, Math.floor(clockSec / 60)));
+      const playType = String(play.type?.type || "").toLowerCase();
+      const playTypeText = String(play.type?.text || "").toLowerCase();
+
+      const teamDisplayName = String(play.team?.displayName || "");
+      const isHomePlay =
+        teamDisplayName
+          ? teamDisplayName.toLowerCase() === homeTeam.name.toLowerCase() ||
+            teamDisplayName.toLowerCase().includes(homeTeam.shortName.toLowerCase())
+          : rawText.includes(`(${homeTeam.name})`) || rawText.includes(`(${homeTeam.shortName})`);
+
+      // Momentum impulses from commentary plays
+      if (playType.includes("goal") || play.scoringPlay) {
+        addMomentumImpulse(minuteNum, isHomePlay, 45);
+      } else if (playType.includes("shot-on-target") || rawText.startsWith("Attempt saved")) {
+        addMomentumImpulse(minuteNum, isHomePlay, 30);
+      } else if (playType.includes("shot") || rawText.startsWith("Attempt ")) {
+        addMomentumImpulse(minuteNum, isHomePlay, 20);
+      } else if (playType.includes("corner") || rawText.startsWith("Corner")) {
+        addMomentumImpulse(minuteNum, isHomePlay, 15);
+      } else if (rawText.includes("free kick in the attacking half")) {
+        addMomentumImpulse(minuteNum, isHomePlay, 10);
+      } else if (teamDisplayName) {
+        addMomentumImpulse(minuteNum, isHomePlay, 5);
+      }
+
+      const textSpanish = translatePlayTextSpanish(rawText);
+
+      // Classify commentary item
+      let commType: SoccerCommentaryItem["type"] = "info";
+      if (play.scoringPlay || playType.includes("goal") || rawText.startsWith("Goal!")) commType = "goal";
+      else if (playType.includes("shot") || rawText.startsWith("Attempt ")) commType = "shot";
+      else if (playType.includes("card") || rawText.includes("card")) commType = "card";
+      else if (playType.includes("substitution") || rawText.startsWith("Substitution")) commType = "sub";
+      else if (playType.includes("corner") || rawText.startsWith("Corner")) commType = "corner";
+      else if (playType.includes("foul") || rawText.startsWith("Foul")) commType = "foul";
+      else if (rawText.includes("Half") || rawText.includes("Match ends")) commType = "whistle";
+
+      if (textSpanish) {
+        commentary.push({
+          id: String(play.id || item.sequence || i),
+          minute: minuteDisplay,
+          textSpanish,
+          type: commType,
+          isHome: teamDisplayName ? isHomePlay : undefined,
+        });
+      }
+
+      // Check if this is a shot event with coordinates
+      const isShot =
+        commType === "goal" ||
+        commType === "shot" ||
+        playType.includes("shot") ||
+        playTypeText.includes("shot") ||
+        (play.fieldPositionX !== undefined && (rawText.startsWith("Attempt ") || rawText.startsWith("Goal!")));
+
+      if (isShot) {
+        const playerFull =
+          play.participants?.[0]?.athlete?.displayName ||
+          (rawText.match(/\.\s*([^(]+)\s*\(/)?.[1]?.trim()) ||
+          "Jugador";
+        const meta = playerMetaMap.get(playerFull.toLowerCase());
+        const shortPlayer =
+          meta?.shortName ||
+          (playerFull.includes(" ")
+            ? `${playerFull.split(" ")[0][0]}. ${playerFull.split(" ").slice(1).join(" ")}`
+            : playerFull);
+
+        let outcome: SoccerShotEvent["outcome"] = "off_target";
+        if (commType === "goal" || play.scoringPlay) outcome = "goal";
+        else if (playType.includes("on-target") || rawText.startsWith("Attempt saved")) outcome = "saved";
+        else if (playType.includes("blocked") || rawText.startsWith("Attempt blocked")) outcome = "blocked";
+        else outcome = "off_target";
+
+        const rawX = typeof play.fieldPositionX === "number" ? play.fieldPositionX : 86;
+        const rawY = typeof play.fieldPositionY === "number" ? play.fieldPositionY : 50;
+        const rawEndX = typeof play.fieldPosition2X === "number" ? play.fieldPosition2X : 100;
+        const rawEndY = typeof play.fieldPosition2Y === "number" ? play.fieldPosition2Y : 50;
+        const goalY = typeof play.goalPositionY === "number" ? play.goalPositionY : rawEndY;
+
+        // Derive goalZ (height in goal mouth: 0 = ground, 100 = above crossbar)
+        let goalZ = 32;
+        if (rawText.includes("top left") || rawText.includes("top right") || rawText.includes("top centre")) {
+          goalZ = 72;
+        } else if (rawText.includes("too high") || rawText.includes("high and wide")) {
+          goalZ = 92;
+        } else if (rawText.includes("bottom")) {
+          goalZ = 18;
+        } else if (outcome === "off_target") {
+          goalZ = 65;
+        }
+
+        const shotType = rawText.toLowerCase().includes("left footed")
+          ? "Pie izquierdo"
+          : rawText.toLowerCase().includes("header")
+          ? "Cabeza"
+          : "Pie derecho";
+
+        const situation = rawText.toLowerCase().includes("penalty")
+          ? "Penal"
+          : rawText.toLowerCase().includes("free kick")
+          ? "Tiro libre"
+          : rawText.toLowerCase().includes("corner")
+          ? "Tras córner"
+          : rawText.toLowerCase().includes("fast break")
+          ? "Contraataque"
+          : "Jugada en curso";
+
+        let goalZone = "-";
+        if (rawText.includes("bottom left")) goalZone = "Abajo a la izquierda";
+        else if (rawText.includes("bottom right")) goalZone = "Abajo a la derecha";
+        else if (rawText.includes("top left")) goalZone = "Ángulo superior izq.";
+        else if (rawText.includes("top right")) goalZone = "Ángulo superior der.";
+        else if (rawText.includes("centre of the goal")) goalZone = "Centro de la portería";
+
+        // Distance to goal center (x=100, y=50) on a 105m x 68m FIFA pitch
+        const dxMeters = ((100 - rawX) / 100) * 105;
+        const dyMeters = ((rawY - 50) / 100) * 68;
+        const distMeters = Math.max(2, Math.round(Math.hypot(dxMeters, dyMeters)));
+
+        // Realistic xG estimation from distance & angle
+        let xgVal = 0.04;
+        if (situation === "Penal") {
+          xgVal = 0.79;
+        } else {
+          const distFactor = Math.exp(-distMeters / 9.5);
+          const angleFactor = Math.max(0.25, 1 - Math.abs(rawY - 50) / 55);
+          const headPenalty = shotType === "Cabeza" ? 0.65 : 1.0;
+          xgVal = Math.min(0.85, Math.max(0.02, distFactor * angleFactor * headPenalty * 1.15));
+        }
+        const xgotVal =
+          outcome === "goal"
+            ? Math.min(0.96, xgVal * 1.65 + 0.12)
+            : outcome === "saved"
+            ? Math.min(0.75, xgVal * 1.15)
+            : 0;
+
+        shots.push({
+          id: String(play.id || `shot-${i}`),
+          minute: minuteDisplay || `${minuteNum}'`,
+          clockSeconds: clockSec,
+          period: play.period?.number || 1,
+          isHome: isHomePlay,
+          teamName: isHomePlay ? homeTeam.name : awayTeam.name,
+          teamAbbr: isHomePlay ? homeTeam.abbreviation : awayTeam.abbreviation,
+          playerName: playerFull,
+          playerShortName: shortPlayer,
+          jersey: meta?.jersey,
+          positionLabel: meta?.posLabel || "Jugador",
+          outcome,
+          x: rawX,
+          y: rawY,
+          endX: rawEndX,
+          endY: rawEndY,
+          goalY,
+          goalZ,
+          shotType,
+          situation,
+          goalZone,
+          distanceMeters: distMeters,
+          xg: xgVal.toFixed(2),
+          xgot: xgotVal.toFixed(2),
+          textSpanish,
+        });
+      }
+    }
+
+    // Normalize momentum bars to 0..100
+    for (const bin of momentumBins) {
+      bin.homePressure = Math.min(100, bin.homePressure);
+      bin.awayPressure = Math.min(100, bin.awayPressure);
+    }
+
+    // Build latestPlay for the 2.5D Stadium widget
+    const lastComm = commentary[commentary.length - 1];
+    const lastShot = shots[shots.length - 1];
+    const shortDetailRaw = String(comp.status?.type?.shortDetail || "");
+    const bannerTitle =
+      status === "FINISHED"
+        ? "FINAL DEL PARTIDO"
+        : shortDetailRaw === "HT" || shortDetailRaw === "Halftime" || statusText.includes("ET")
+        ? "MEDIO TIEMPO"
+        : status === "IN_PROGRESS"
+        ? lastComm?.type === "goal"
+          ? "¡GOL!"
+          : "EN JUEGO"
+        : "PREVIA DEL PARTIDO";
+
+    latestPlay = {
+      minute: lastComm?.minute || statusText || "90'",
+      bannerTitle,
+      headlineSpanish:
+        bannerTitle === "MEDIO TIEMPO"
+          ? "Medio tiempo"
+          : status === "FINISHED"
+          ? "Partido finalizado"
+          : lastComm?.type === "goal"
+          ? "¡Gol en el partido!"
+          : "Última acción registrada",
+      detailSpanish:
+        lastComm?.textSpanish ||
+        `Encuentro entre ${homeTeam.name} y ${awayTeam.name} en ${venueName || "el estadio"}.`,
+      isHome: lastComm?.isHome,
+      x: lastShot?.x ?? 50,
+      y: lastShot?.y ?? 50,
+    };
 
     const detail: SoccerMatchDetail = {
       id: String(matchId),
@@ -600,6 +1067,10 @@ export async function fetchSoccerMatchDetail(
       events,
       stats,
       lineups,
+      shots,
+      momentum: momentumBins,
+      commentary: commentary.slice().reverse(),
+      latestPlay,
     };
 
     const ttl = isLive ? 20 * 1000 : isCompleted ? 60 * 60 * 1000 : 5 * 60 * 1000;

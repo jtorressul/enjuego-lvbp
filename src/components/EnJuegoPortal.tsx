@@ -272,6 +272,10 @@ export function EnJuegoPortal({
     }
   }, [activeLeague]);
 
+  const currentLeague = useMemo(() => {
+    return LEAGUES[activeLeague] || LEAGUES.lvbp;
+  }, [activeLeague]);
+
   const anyTeamsCatalog = useMemo(
     () => ({ ...LVBP_TEAMS, ...LIDOM_TEAMS, ...LMP_TEAMS, ...MLB_TEAMS }),
     []
@@ -281,7 +285,7 @@ export function EnJuegoPortal({
     if (resolvedUrlTeam?.code) return resolvedUrlTeam.code;
     const rawLeague = searchParams?.get("liga") || searchParams?.get("league");
     const qLeague = parseLeague(rawLeague);
-    return LEAGUES[qLeague].defaultTeamCode;
+    return (LEAGUES[qLeague] || LEAGUES.lvbp).defaultTeamCode;
   });
   const [teamFilter, setTeamFilter] = useState<string>(
     section === "calendario" && resolvedUrlTeam ? resolvedUrlTeam.code : ""
@@ -342,8 +346,8 @@ export function EnJuegoPortal({
           : nextLeague === "mlb"
           ? MLB_TEAMS
           : LVBP_TEAMS;
-      if (targetCatalog[prev]) return prev;
-      return LEAGUES[nextLeague].defaultTeamCode;
+      if (targetCatalog && targetCatalog[prev]) return prev;
+      return (LEAGUES[nextLeague] || LEAGUES.lvbp).defaultTeamCode;
     });
   };
 
@@ -372,31 +376,20 @@ export function EnJuegoPortal({
       }
     }
     setMobileDrawerOpen(false);
-    setTeamsDropdownOpen(false);
-    setOpenNavDropdown(null);
   }, [pathname, searchParams, resolvedUrlTeam]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       const target = e.target as Node;
-      const inDesktop = teamsDropdownRef.current?.contains(target);
-      const inNavMenu = navMenuRef.current?.contains(target);
+      if (!target) return;
       const inLeagueMenu = leagueMenuRef.current?.contains(target);
-      if (!inDesktop) {
-        setTeamsDropdownOpen(false);
-      }
-      if (!inNavMenu) {
-        setOpenNavDropdown(null);
-      }
       if (!inLeagueMenu) {
         setLeagueMenuOpen(false);
       }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setTeamsDropdownOpen(false);
         setMobileDrawerOpen(false);
-        setOpenNavDropdown(null);
         setLeagueMenuOpen(false);
       }
     };
@@ -688,7 +681,7 @@ export function EnJuegoPortal({
           setMlbJornadaGames(loadedGames);
         } else if (Array.isArray(mlbData?.games)) {
           const cleanMlbGames = (mlbData.games as ScheduleGame[]).filter((g) =>
-            Boolean(MLB_TEAMS[g.homeTeam.code] || MLB_TEAMS[g.awayTeam.code])
+            Boolean(MLB_TEAMS[g.homeTeam?.code] || MLB_TEAMS[g.awayTeam?.code])
           );
           setMlbJornadaGames(cleanMlbGames);
           const uniqueMlbDates = [...new Set(cleanMlbGames.map((g) => g.date))].sort();
@@ -1541,7 +1534,7 @@ export function EnJuegoPortal({
               { key: "calendario", label: "Calendario", href: `/calendario?liga=${activeLeague}` },
               { key: "posiciones", label: "Posiciones", href: `/posiciones?liga=${activeLeague}` },
               { key: "lideres", label: "Líderes", href: `/lideres?liga=${activeLeague}` },
-              { key: "equipos", label: "Equipos", href: `/teams?team=${activeTeamsCatalog[selectedTeamCode]?.slug || LEAGUES[activeLeague].defaultTeamCode}&liga=${activeLeague}` },
+              { key: "equipos", label: "Equipos", href: `/teams?team=${activeTeamsCatalog?.[selectedTeamCode]?.slug || currentLeague.defaultTeamCode}&liga=${activeLeague || "lvbp"}` },
             ].map((item) => {
               const isActive = section === item.key;
               return (
@@ -1582,141 +1575,8 @@ export function EnJuegoPortal({
             </Link>
           </nav>
 
-          {/* Desktop Right Quick Bar: Equipos Dropdown + Quick Icon Strip */}
-          <div className="hidden lg:flex items-center gap-2 shrink-0" ref={teamsDropdownRef}>
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setTeamsDropdownOpen((prev) => !prev)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition border cursor-pointer ${
-                  teamsDropdownOpen
-                    ? "bg-amber-400 text-slate-950 border-amber-400 shadow-2xs font-black"
-                    : "text-slate-200 hover:text-white"
-                }`}
-                style={
-                  teamsDropdownOpen
-                    ? undefined
-                    : { backgroundColor: "#0f172a", borderColor: "#1e293b", color: "#f8fafc" }
-                }
-                aria-expanded={teamsDropdownOpen}
-                aria-label="Desplegable de equipos"
-              >
-                <img
-                  src={activeTeamsCatalog[selectedTeamCode]?.logoSvg || anyTeamsCatalog[selectedTeamCode]?.logoSvg || LVBP_OFFICIAL_LOGO}
-                  alt=""
-                  className="w-4.5 h-4.5 object-contain"
-                />
-                <span>{activeTeamsCatalog[selectedTeamCode]?.nick || "Equipos"}</span>
-                <ChevronDown
-                  className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                    teamsDropdownOpen ? "rotate-180 text-slate-950" : "text-slate-400"
-                  }`}
-                />
-              </button>
-
-              {/* DESKTOP TEAMS DROPDOWN */}
-              {teamsDropdownOpen && (
-                <div
-                  className="absolute right-0 top-full mt-2 w-88 max-h-[75vh] overflow-y-auto rounded-2xl bg-white border border-slate-200 shadow-2xl p-3 z-50 text-slate-900 animate-in fade-in slide-in-from-top-2 duration-150"
-                  style={{ backgroundColor: "#ffffff", color: "#0f172a" }}
-                >
-                  <div className="flex items-center justify-between px-1 pb-2 mb-2 border-b border-slate-100">
-                    <div>
-                      <div
-                        className="text-xs font-black flex items-center gap-1.5"
-                        style={{ color: "#0f172a" }}
-                      >
-                        <Users className="w-3.5 h-3.5 text-amber-600" />{" "}
-                        Equipos {LEAGUES[activeLeague].shortName}
-                      </div>
-                      <p className="text-[10px]" style={{ color: "#64748b" }}>
-                        {LEAGUES[activeLeague].tagline}
-                      </p>
-                    </div>
-                    <Link
-                      href={`/teams?team=${activeTeamsCatalog[selectedTeamCode]?.slug || LEAGUES[activeLeague].defaultTeamCode}&liga=${activeLeague}`}
-                      onClick={() => setTeamsDropdownOpen(false)}
-                      className="text-[11px] font-extrabold hover:underline"
-                      style={{ color: "#d97706" }}
-                    >
-                      Directorio ›
-                    </Link>
-                  </div>
-
-                  {/* Quick League Switcher inside Teams Dropdown */}
-                  <div className="grid grid-cols-4 gap-1 p-1 mb-2.5 rounded-xl bg-slate-100 border border-slate-200">
-                    {LEAGUES_LIST.map((lg) => (
-                      <button
-                        key={lg.id}
-                        type="button"
-                        onClick={() => switchLeague(lg.id)}
-                        className={`py-1.5 px-1 rounded-lg text-[10px] font-black transition cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
-                          activeLeague === lg.id
-                            ? "bg-amber-400 text-slate-950 shadow-2xs"
-                            : "text-slate-600 hover:text-slate-950"
-                        }`}
-                      >
-                        <span className="text-xs">{lg.flag}</span>
-                        <span>{lg.shortName}</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    {Object.values(activeTeamsCatalog).map((team) => {
-                      const isSelected = selectedTeamCode === team.code;
-                      const isFav = favoriteTeamCode === team.code;
-                      return (
-                        <Link
-                          key={team.code}
-                          href={`/teams?team=${team.slug}&liga=${activeLeague}`}
-                          onClick={() => {
-                            setSelectedTeamCode(team.code);
-                            setTeamsDropdownOpen(false);
-                          }}
-                          className={`flex items-center gap-2 p-2 rounded-xl border text-xs transition cursor-pointer group ${
-                            isSelected
-                              ? "bg-amber-50 border-amber-400 ring-1 ring-amber-400/40 font-black shadow-2xs"
-                              : "bg-slate-50 hover:bg-slate-100 border-slate-200 font-bold"
-                          }`}
-                          style={{ color: "#0f172a" }}
-                        >
-                          <div
-                            className="w-7 h-7 rounded-full p-1 bg-white border border-slate-200 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition"
-                            style={{ borderColor: isSelected ? team.color : undefined }}
-                          >
-                            <img
-                              src={team.logoSvg}
-                              alt={team.nick}
-                              className="w-full h-full object-contain"
-                            />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div
-                              className="truncate leading-tight text-xs font-extrabold"
-                              style={{ color: "#0f172a" }}
-                            >
-                              {team.nick}
-                            </div>
-                            <div
-                              className="text-[10px] truncate font-medium"
-                              style={{ color: "#64748b" }}
-                            >
-                              {team.city}
-                            </div>
-                          </div>
-                          {isFav && (
-                            <Star className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
-                          )}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Desktop User Profile / Login */}
+          {/* Desktop Right: Structured Fan Profile / Iniciar Sesión */}
+          <div className="hidden lg:flex items-center gap-2 shrink-0">
             {currentUser ? (
               <button
                 type="button"
@@ -1724,25 +1584,35 @@ export function EnJuegoPortal({
                   setAuthModalTab("profile");
                   setAuthModalOpen(true);
                 }}
-                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-white border text-xs font-bold transition cursor-pointer shadow-2xs hover:border-amber-400"
-                style={{ backgroundColor: "#0f172a", borderColor: "#1e293b", color: "#ffffff" }}
+                className="group flex items-center gap-2.5 pl-2 pr-3.5 py-1.5 rounded-xl border transition-all cursor-pointer shadow-sm hover:border-amber-400 active:scale-95 shrink-0"
+                style={{ backgroundColor: "#0b1220", borderColor: "#1e293b" }}
                 title="Ver tu perfil de fanático y equipo favorito"
               >
                 <div
-                  className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black text-white shrink-0"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white shrink-0 shadow-xs border border-white/10"
                   style={{
                     backgroundColor:
-                      anyTeamsCatalog[currentUser.favoriteTeam]?.color || "#d97706",
+                      (currentUser.favoriteTeam && anyTeamsCatalog[currentUser.favoriteTeam]?.color) || "#d97706",
                   }}
                 >
-                  {currentUser.name.slice(0, 1).toUpperCase()}
+                  {(currentUser.name || "Fan").slice(0, 1).toUpperCase()}
                 </div>
-                <span className="max-w-[110px] truncate font-extrabold">{currentUser.name}</span>
+                <div className="text-left min-w-0">
+                  <div className="flex items-center gap-1 leading-none">
+                    <span className="text-[9px] font-black uppercase tracking-wider text-amber-400">
+                      Mi Fan
+                    </span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 animate-pulse" />
+                  </div>
+                  <div className="text-xs font-black text-white truncate max-w-[120px] mt-0.5 leading-tight">
+                    {currentUser.name || "Fanático"}
+                  </div>
+                </div>
                 {currentUser.favoriteTeam && anyTeamsCatalog[currentUser.favoriteTeam] && (
                   <img
                     src={anyTeamsCatalog[currentUser.favoriteTeam].logoSvg}
                     alt=""
-                    className="w-4 h-4 object-contain shrink-0"
+                    className="w-4.5 h-4.5 object-contain shrink-0 ml-0.5"
                   />
                 )}
               </button>
@@ -1753,10 +1623,22 @@ export function EnJuegoPortal({
                   setAuthModalTab("login");
                   setAuthModalOpen(true);
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition cursor-pointer shadow-2xs hover:scale-102 active:scale-95 shrink-0"
+                className="group flex items-center gap-2.5 pl-2.5 pr-3.5 py-1.5 rounded-xl border transition-all cursor-pointer shadow-sm hover:shadow-amber-500/10 hover:border-amber-400 active:scale-95 shrink-0"
+                style={{ backgroundColor: "#0b1220", borderColor: "#1e293b" }}
+                title="Iniciar sesión en En Juego"
               >
-                <User className="w-3.5 h-3.5" />
-                <span>Iniciar Sesión</span>
+                <div className="w-7 h-7 rounded-lg bg-amber-400/15 border border-amber-400/35 flex items-center justify-center text-amber-400 group-hover:bg-amber-400 group-hover:text-slate-950 transition-colors shrink-0">
+                  <User className="w-3.5 h-3.5 stroke-[2.2]" />
+                </div>
+                <div className="text-left min-w-0">
+                  <span className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-400 group-hover:text-amber-400/90 transition-colors leading-none">
+                    Zona Fan
+                  </span>
+                  <span className="block text-xs font-black text-white group-hover:text-amber-300 transition-colors leading-tight mt-0.5">
+                    Iniciar Sesión
+                  </span>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all ml-0.5" />
               </button>
             )}
           </div>
@@ -1784,12 +1666,12 @@ export function EnJuegoPortal({
                 className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-white font-black text-xs sm:text-sm shrink-0 shadow-2xs border border-slate-700 cursor-pointer active:scale-95"
                 style={{
                   backgroundColor:
-                    anyTeamsCatalog[currentUser.favoriteTeam]?.color || "#d97706",
+                    (currentUser.favoriteTeam && anyTeamsCatalog[currentUser.favoriteTeam]?.color) || "#d97706",
                 }}
-                title={`Perfil de ${currentUser.name}`}
+                title={`Perfil de ${currentUser.name || "Fan"}`}
                 aria-label="Ver perfil de usuario"
               >
-                {currentUser.name.slice(0, 1).toUpperCase()}
+                {(currentUser.name || "Fan").slice(0, 1).toUpperCase()}
               </button>
             )}
 
@@ -1912,19 +1794,19 @@ export function EnJuegoPortal({
                       className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-black text-base shadow-inner shrink-0"
                       style={{
                         backgroundColor:
-                          anyTeamsCatalog[currentUser.favoriteTeam]?.color || "#d97706",
+                          (currentUser.favoriteTeam && anyTeamsCatalog[currentUser.favoriteTeam]?.color) || "#d97706",
                       }}
                     >
-                      {currentUser.name.slice(0, 2).toUpperCase()}
+                      {(currentUser.name || "Fan").slice(0, 2).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-black text-slate-900 truncate">
-                        {currentUser.name}
+                        {currentUser.name || "Fanático"}
                       </div>
-                      <div className="text-xs text-slate-400 truncate">{currentUser.handle}</div>
+                      <div className="text-xs text-slate-400 truncate">{currentUser.handle || "@fanatico"}</div>
                       <div className="text-xs text-amber-600 font-extrabold flex items-center gap-1 mt-0.5">
                         <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
-                        {anyTeamsCatalog[currentUser.favoriteTeam]?.name || "Fanático"}
+                        {(currentUser.favoriteTeam && anyTeamsCatalog[currentUser.favoriteTeam]?.name) || "Fanático"}
                       </div>
                     </div>
                   </div>
@@ -2191,7 +2073,7 @@ export function EnJuegoPortal({
             <div className="p-4 flex-1">
               <div className="flex items-center justify-between px-1 mb-2.5">
                 <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
-                  Equipos de la {LEAGUES[activeLeague].shortName}
+                  Equipos de la {currentLeague.shortName}
                 </span>
                 <span className="text-xs font-bold text-amber-600">
                   {Object.keys(activeTeamsCatalog).length} Clubes
@@ -2744,7 +2626,7 @@ export function EnJuegoPortal({
                   <div>
                     <header className="flex items-center justify-between pb-3 border-b border-slate-200">
                       <h3 className="text-sm font-black text-slate-950">
-                        Tabla de posiciones ({LEAGUES[activeLeague].shortName})
+                        Tabla de posiciones ({currentLeague.shortName})
                       </h3>
                       <div className="flex items-center gap-1.5">
                         <button
@@ -2945,21 +2827,21 @@ export function EnJuegoPortal({
                             className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-black text-xs shrink-0 shadow-inner"
                             style={{
                               backgroundColor:
-                                anyTeamsCatalog[currentUser.favoriteTeam]?.color || "#d97706",
+                                (currentUser.favoriteTeam && anyTeamsCatalog[currentUser.favoriteTeam]?.color) || "#d97706",
                             }}
                           >
-                            {currentUser.name.slice(0, 2).toUpperCase()}
+                            {(currentUser.name || "Fan").slice(0, 2).toUpperCase()}
                           </div>
                           <div className="min-w-0">
                             <div className="text-xs font-black truncate" style={{ color: "#ffffff" }}>
-                              {currentUser.name}
+                              {currentUser.name || "Fanático"}
                             </div>
                             <div
                               className="text-[10px] font-bold truncate flex items-center gap-1"
                               style={{ color: "#fbbf24" }}
                             >
                               <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-                              Fan de {anyTeamsCatalog[currentUser.favoriteTeam]?.nick || "LVBP"}
+                              Fan de {(currentUser.favoriteTeam && anyTeamsCatalog[currentUser.favoriteTeam]?.nick) || "LVBP"}
                             </div>
                           </div>
                         </div>
@@ -3141,9 +3023,9 @@ export function EnJuegoPortal({
               {LEAGUES_LIST.map((lg) => {
                 const isSel = activeLeague === lg.id;
                 return (
-                  <button
+                  <Link
                     key={lg.id}
-                    type="button"
+                    href={`/resultados?liga=${lg.id}`}
                     onClick={() => switchLeague(lg.id)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0 ${
                       isSel
@@ -3153,7 +3035,7 @@ export function EnJuegoPortal({
                   >
                     <span>{lg.flag}</span>
                     <span>{lg.shortName}</span>
-                  </button>
+                  </Link>
                 );
               })}
             </div>
@@ -3161,10 +3043,10 @@ export function EnJuegoPortal({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
-                  {LEAGUES[activeLeague].flag} {LEAGUES[activeLeague].name} · Pizarras C · H · E
+                  {currentLeague.flag} {currentLeague.name} · Pizarras C · H · E
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-950">
-                  Resultados de la {LEAGUES[activeLeague].shortName}
+                  Resultados de la {currentLeague.shortName}
                 </h1>
               </div>
 
@@ -3242,9 +3124,9 @@ export function EnJuegoPortal({
               {LEAGUES_LIST.map((lg) => {
                 const isSel = activeLeague === lg.id;
                 return (
-                  <button
+                  <Link
                     key={lg.id}
-                    type="button"
+                    href={`/calendario?liga=${lg.id}`}
                     onClick={() => switchLeague(lg.id)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0 ${
                       isSel
@@ -3254,7 +3136,7 @@ export function EnJuegoPortal({
                   >
                     <span>{lg.flag}</span>
                     <span>{lg.shortName}</span>
-                  </button>
+                  </Link>
                 );
               })}
             </div>
@@ -3262,10 +3144,10 @@ export function EnJuegoPortal({
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
               <div>
                 <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
-                  {LEAGUES[activeLeague].flag} {LEAGUES[activeLeague].name} · Señales de TV y Estadios
+                  {currentLeague.flag} {currentLeague.name} · Señales de TV y Estadios
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-950">
-                  Calendario de Juegos ({LEAGUES[activeLeague].shortName})
+                  Calendario de Juegos ({currentLeague.shortName})
                 </h1>
               </div>
 
@@ -3643,9 +3525,9 @@ export function EnJuegoPortal({
               {LEAGUES_LIST.map((lg) => {
                 const isSel = activeLeague === lg.id;
                 return (
-                  <button
+                  <Link
                     key={lg.id}
-                    type="button"
+                    href={`/posiciones?liga=${lg.id}`}
                     onClick={() => switchLeague(lg.id)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0 ${
                       isSel
@@ -3655,7 +3537,7 @@ export function EnJuegoPortal({
                   >
                     <span>{lg.flag}</span>
                     <span>{lg.shortName}</span>
-                  </button>
+                  </Link>
                 );
               })}
             </div>
@@ -3672,7 +3554,7 @@ export function EnJuegoPortal({
                     : "🇻🇪 Tabla de Clasificación LVBP · Rumbo al Round Robin"}
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-950">
-                  Tabla de Posiciones ({LEAGUES[activeLeague].shortName})
+                  Tabla de Posiciones ({currentLeague.shortName})
                 </h1>
               </div>
 
@@ -3937,7 +3819,7 @@ export function EnJuegoPortal({
                   Esta fase aún no ha comenzado
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Actualmente se disputa la Temporada Regular de {LEAGUES[activeLeague].name}.
+                  Actualmente se disputa la Temporada Regular de {currentLeague.name}.
                 </p>
               </div>
             ) : (
@@ -4109,9 +3991,9 @@ export function EnJuegoPortal({
               {LEAGUES_LIST.map((lg) => {
                 const isSel = activeLeague === lg.id;
                 return (
-                  <button
+                  <Link
                     key={lg.id}
-                    type="button"
+                    href={`/lideres?liga=${lg.id}`}
                     onClick={() => switchLeague(lg.id)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0 ${
                       isSel
@@ -4121,7 +4003,7 @@ export function EnJuegoPortal({
                   >
                     <span>{lg.flag}</span>
                     <span>{lg.shortName}</span>
-                  </button>
+                  </Link>
                 );
               })}
             </div>
@@ -4129,10 +4011,10 @@ export function EnJuegoPortal({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
-                  {LEAGUES[activeLeague].flag} Estadísticas de la {LEAGUES[activeLeague].shortName}
+                  {currentLeague.flag} Estadísticas de la {currentLeague.shortName}
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-950">
-                  Líderes Individuales de Bateo y Pitcheo ({LEAGUES[activeLeague].shortName})
+                  Líderes Individuales de Bateo y Pitcheo ({currentLeague.shortName})
                 </h1>
               </div>
               <Link

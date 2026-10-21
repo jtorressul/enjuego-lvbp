@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     try {
       const { searchParams } = new URL(request.url);
       const league = parseLeague(searchParams.get("league") ?? searchParams.get("liga"));
-      const team = searchParams.get("team") || LEAGUES[league].defaultTeamCode;
+      const team = searchParams.get("team") || (LEAGUES[league] || LEAGUES.lvbp).defaultTeamCode;
       const data = isWinterLeague(league)
         ? await fetchWinterRoster(league, team)
         : await fetchLvbpRoster(team, league === "mlb" ? "mlb" : "lvbp");

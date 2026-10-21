@@ -36,20 +36,29 @@ function dateIndexFor(games: ScheduleGame[]): number {
   return index;
 }
 
-/** Season tables and the day's card, ready before the browser runs. */
+let cachedSeed: { data: PortalSeed; expiresAt: number } | null = null;
+
+/** Season tables and the day's card, ready before the browser runs (cached 30s in memory for instant SSR). */
 export async function loadLvbpPortalSeed(): Promise<PortalSeed> {
+  const now = Date.now();
+  if (cachedSeed && now < cachedSeed.expiresAt && cachedSeed.data.schedule.length > 0) {
+    return cachedSeed.data;
+  }
   try {
     const [schedule, table] = await Promise.all([
       fetchLvbpSchedule("2026"),
       fetchLvbpStandingsAndLeaders("2026"),
     ]);
-    return {
+    const data: PortalSeed = {
       schedule,
       standings: table.standings || [],
       leaders: table.leaders || EMPTY_LEADERS,
       dateIndex: dateIndexFor(schedule),
     };
+    cachedSeed = { data, expiresAt: now + 30_000 };
+    return data;
   } catch {
+    if (cachedSeed) return cachedSeed.data;
     return {
       schedule: [],
       standings: [],

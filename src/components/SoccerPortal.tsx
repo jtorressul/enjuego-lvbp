@@ -146,11 +146,11 @@ export function SoccerPortal({
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f3f6fb] text-slate-900 pb-16">
-      {/* 1. UNIFIED GLOBAL HEADER BAR (True Mathematical 3-Column Centering) */}
+      {/* 1. UNIFIED GLOBAL HEADER BAR (#0A1120 Navy · 60-30-10 Color System · Zero Grey Boxes) */}
       <header
-        className="portal-header sticky top-0 z-40 border-b text-white shadow-md transition-all"
+        className="portal-header keep-dark sticky top-0 z-40 border-b text-white shadow-sm transition-all"
         style={{
-          backgroundColor: "#060a12",
+          backgroundColor: "#0a1120",
           borderColor: "#1e293b",
           color: "#ffffff",
           paddingTop: "env(safe-area-inset-top, 0px)",
@@ -158,7 +158,7 @@ export function SoccerPortal({
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-15 sm:h-16 flex items-center justify-between lg:grid lg:grid-cols-[1fr_auto_1fr] gap-4">
           {/* Left Column: Brand Horizontal Logo */}
-          <div className="flex items-center justify-start gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center justify-start gap-2 shrink-0">
             <Link
               href="/inicio"
               className="flex items-center gap-1.5 sm:gap-2 py-1 group cursor-pointer select-none"
@@ -166,26 +166,26 @@ export function SoccerPortal({
             >
               <img
                 src="/logo.png"
-                alt="En Juego · Béisbol y Fútbol"
-                className="h-8 sm:h-9 md:h-10 w-auto object-contain transition-transform group-hover:scale-102 shrink-0"
+                alt="En Juego · Deportes en Vivo"
+                className="h-8 sm:h-9 md:h-9.5 w-auto object-contain transition-transform group-hover:scale-102 shrink-0"
               />
               <span
-                className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md text-[10px] sm:text-xs font-black italic tracking-tight shadow-sm transition-transform group-hover:scale-105 shrink-0 -ml-0.5"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-black tracking-tight shrink-0"
                 style={{
-                  background: "linear-gradient(135deg, #e11d48 0%, #be123c 100%)",
-                  color: "#ffffff",
-                  border: "1px solid rgba(251, 113, 133, 0.45)",
+                  backgroundColor: "#1e293b",
+                  color: "#fbbf24",
+                  border: "1px solid rgba(251, 191, 36, 0.35)",
                 }}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse shrink-0" />
-                <span style={{ color: "#ffffff" }}>.online</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                <span>.online</span>
               </span>
             </Link>
           </div>
 
-          {/* Center Column: Desktop Main Navigation (Structured Segmented Dock, True Center, Zero Dropdowns) */}
+          {/* Center Column: Desktop Main Navigation (True Center, Clean Editorial Links, 3px Gold Active Bar) */}
           <nav
-            className="hidden lg:flex items-center justify-center p-1 rounded-xl bg-slate-900/90 border border-slate-800/90 gap-0.5 shadow-inner"
+            className="hidden lg:flex items-center justify-center h-15 sm:h-16 gap-6 xl:gap-7"
             aria-label="Navegación Principal"
           >
             {[
@@ -203,20 +203,26 @@ export function SoccerPortal({
                 <Link
                   key={item.key}
                   href={item.href}
-                  className={`px-3 xl:px-3.5 py-1.5 rounded-lg text-xs font-extrabold tracking-wide transition-all select-none cursor-pointer ${
+                  className={`h-full flex items-center relative text-[13px] font-bold tracking-wide transition-colors select-none px-0.5 cursor-pointer ${
                     isActive
-                      ? "bg-rose-600 text-white shadow-xs"
-                      : "text-slate-300 hover:text-white hover:bg-white/[0.06]"
+                      ? "text-white font-black"
+                      : "text-slate-300 hover:text-white"
                   }`}
                 >
                   <span>{item.label}</span>
+                  {isActive && (
+                    <span
+                      className="absolute bottom-0 left-0 right-0 h-[3px] rounded-t-full"
+                      style={{ backgroundColor: "#f59e0b" }}
+                    />
+                  )}
                 </Link>
               );
             })}
           </nav>
 
           {/* Right Column: Auth Buttons / Fan Profile */}
-          <div className="hidden lg:flex items-center justify-end gap-2 xl:gap-2.5 shrink-0">
+          <div className="hidden lg:flex items-center justify-end gap-2.5 shrink-0">
             {currentUser ? (
               <button
                 type="button"
@@ -224,9 +230,9 @@ export function SoccerPortal({
                   setAuthModalTab("profile");
                   setAuthModalOpen(true);
                 }}
-                className="rounded-full border border-slate-700 bg-slate-900/90 hover:border-amber-400 text-white pl-1.5 pr-3.5 py-1 text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-xs active:scale-95"
+                className="rounded-xl border border-slate-700 bg-slate-900 hover:border-amber-400 text-white pl-2 pr-3.5 py-1.5 text-xs font-bold transition flex items-center gap-2 cursor-pointer"
               >
-                <div className="w-6 h-6 rounded-full bg-amber-600 flex items-center justify-center text-[10px] font-black text-white shrink-0 shadow-xs border border-white/10">
+                <div className="w-6 h-6 rounded-lg bg-amber-600 flex items-center justify-center text-[10px] font-black text-white shrink-0">
                   {(currentUser.name || "Fan").slice(0, 1).toUpperCase()}
                 </div>
                 <span className="text-xs font-black text-white truncate max-w-[110px]">
@@ -241,7 +247,7 @@ export function SoccerPortal({
                     setAuthModalTab("login");
                     setAuthModalOpen(true);
                   }}
-                  className="rounded-full border border-slate-700 bg-slate-900/70 hover:bg-slate-800 hover:border-slate-500 text-slate-100 hover:text-white px-4 py-1.5 text-xs font-black tracking-wide transition cursor-pointer select-none active:scale-95"
+                  className="rounded-xl border border-slate-700 bg-slate-900/80 hover:bg-slate-800 text-slate-200 hover:text-white px-3.5 py-1.5 text-xs font-bold transition cursor-pointer select-none"
                 >
                   Entrar
                 </button>
@@ -251,9 +257,9 @@ export function SoccerPortal({
                     setAuthModalTab("quick");
                     setAuthModalOpen(true);
                   }}
-                  className="rounded-full bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white px-4 py-1.5 text-xs font-black tracking-wide transition shadow-sm hover:shadow-rose-600/30 active:scale-95 cursor-pointer select-none"
+                  className="rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 px-3.5 py-1.5 text-xs font-black transition cursor-pointer select-none shadow-2xs"
                 >
-                  Suscríbete
+                  Crear Cuenta
                 </button>
               </>
             )}
@@ -261,30 +267,20 @@ export function SoccerPortal({
 
           {/* Mobile Right Controls (<1024px) */}
           <div className="flex lg:hidden items-center gap-2 shrink-0">
-            <Link
-              href="/noticias"
-              className="inline-flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 text-xs font-black transition cursor-pointer active:scale-95 shrink-0"
-              title="Ver Noticias y Highlights en video"
-            >
-              <Play className="w-3.5 h-3.5 fill-rose-400 text-rose-400" />
-              <span className="hidden sm:inline">Highlights</span>
-              <span className="sm:hidden">Videos</span>
-            </Link>
-
             <button
               type="button"
               onClick={() => setMobileDrawerOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs sm:text-sm font-black transition cursor-pointer shadow-xs active:scale-95 shrink-0"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-xs font-bold transition cursor-pointer shrink-0"
               aria-label="Abrir Menú Principal"
             >
-              <Menu className="w-4 h-4 sm:w-4.5 sm:h-4.5 shrink-0 stroke-[2.5]" />
+              <Menu className="w-4 h-4 shrink-0" />
               <span>Menú</span>
             </button>
           </div>
         </div>
 
         {/* Mobile & Tablet Horizontal Quick Navigation Strip (<1024px) */}
-        <div className="lg:hidden border-t border-slate-800/80 bg-[#090f1d] px-3 py-1.5 overflow-x-auto no-scrollbar">
+        <div className="lg:hidden border-t border-slate-800/80 bg-[#0d1526] px-3 py-1.5 overflow-x-auto no-scrollbar">
           <div className="flex items-center gap-1.5 min-w-max">
             {[
               { key: "home", label: "Inicio", href: "/inicio" },
@@ -301,10 +297,10 @@ export function SoccerPortal({
                 <Link
                   key={item.key}
                   href={item.href}
-                  className={`px-3 py-1 rounded-lg text-[11px] font-extrabold tracking-wide transition shrink-0 ${
+                  className={`px-3 py-1 rounded-lg text-[11px] font-bold tracking-wide transition shrink-0 ${
                     isActive
-                      ? "bg-rose-600 text-white"
-                      : "text-slate-300 hover:text-white bg-slate-900/80 border border-slate-800"
+                      ? "bg-amber-400 text-slate-950 font-black"
+                      : "text-slate-300 hover:text-white bg-slate-900/90 border border-slate-800"
                   }`}
                 >
                   {item.label}

@@ -44,6 +44,10 @@ export async function savePushSubscription(sub: PushSubscriptionData): Promise<v
 
   if (!kv) {
     memSubscriptions.set(id, sub);
+    try {
+      const { sqlitePut } = await import("@/lib/sqlite-store");
+      sqlitePut(INDEX_KEY, JSON.stringify(Array.from(memSubscriptions.values())));
+    } catch {}
     return;
   }
 
@@ -72,6 +76,10 @@ export async function removePushSubscription(endpoint: string): Promise<void> {
 
   if (!kv) {
     memSubscriptions.delete(id);
+    try {
+      const { sqlitePut } = await import("@/lib/sqlite-store");
+      sqlitePut(INDEX_KEY, JSON.stringify(Array.from(memSubscriptions.values())));
+    } catch {}
     return;
   }
 
@@ -91,6 +99,18 @@ export async function getAllPushSubscriptions(): Promise<PushSubscriptionData[]>
   const kv = await getKV();
 
   if (!kv) {
+    if (memSubscriptions.size === 0) {
+      try {
+        const { sqliteGet } = await import("@/lib/sqlite-store");
+        const raw = sqliteGet(INDEX_KEY);
+        if (raw) {
+          const list: PushSubscriptionData[] = JSON.parse(raw);
+          for (const s of list) {
+            memSubscriptions.set(endpointHash(s.endpoint), s);
+          }
+        }
+      } catch {}
+    }
     return Array.from(memSubscriptions.values());
   }
 

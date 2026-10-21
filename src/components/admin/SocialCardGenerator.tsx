@@ -26,7 +26,7 @@ import {
 import { LVBP_TEAMS } from "@/lib/lvbp-teams";
 import { MLB_TEAMS } from "@/lib/mlb-teams";
 import type { ScheduleGame, StandingRow } from "@/lib/types";
-import type { AdCampaign } from "@/lib/admin-store";
+import type { AdCampaign } from "@/lib/admin-types";
 
 import {
   renderSocialCard,

@@ -1,7 +1,12 @@
 import type { NextConfig } from "next";
-import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
-initOpenNextCloudflareForDev();
+if (process.env.CF_PAGES || process.env.CF_DEV) {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { initOpenNextCloudflareForDev } = require("@opennextjs/cloudflare");
+    initOpenNextCloudflareForDev();
+  } catch {}
+}
 
 const nextConfig: NextConfig = {
   images: {

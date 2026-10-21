@@ -47,7 +47,7 @@ import {
   type LiveSession,
   type TrafficDaySummary,
   type MonthlyTrafficSummary,
-} from "@/lib/admin-store";
+} from "@/lib/admin-types";
 
 function formatSessionDeviceLabel(s: LiveSession): string {
   const hardware =

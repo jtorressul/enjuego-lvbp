@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import type { AdSlotType, ServedSlotAd } from "@/lib/admin-store";
+import type { AdSlotType, ServedSlotAd } from "@/lib/admin-types";
 
 export interface AdBannerProps {
   slot?: AdSlotType;

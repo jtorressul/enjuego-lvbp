@@ -687,34 +687,25 @@ export default function AdminDashboardPage() {
   // ============================================================================
   if (!authenticated) {
     return (
-      <div className="min-h-dvh bg-slate-950 flex flex-col justify-center items-center p-4">
-        <div className="w-full max-w-md rounded-3xl bg-white border border-slate-200 shadow-2xl overflow-hidden">
-          <div
-            className="keep-dark p-6 text-center border-b border-slate-800"
-            style={{ backgroundColor: "#060a12", color: "#ffffff" }}
-          >
-            <div className="inline-flex items-center justify-center gap-2 mb-2">
+      <div className="min-h-dvh bg-[#f3f6fb] flex flex-col justify-center items-center p-4">
+        <div className="w-full max-w-md rounded-3xl bg-white border border-slate-200/90 shadow-xl overflow-hidden">
+          <div className="keep-dark bg-[#0a1120] p-6 text-center border-b border-slate-800">
+            <div className="inline-flex items-center justify-center gap-2 mb-2.5">
               <img
                 src="/logo.png"
                 alt="EnJuego"
-                className="h-10 w-auto object-contain"
+                className="h-9 w-auto object-contain"
               />
-              <span
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-black italic tracking-tight"
-                style={{
-                  background: "linear-gradient(135deg, #e11d48 0%, #be123c 100%)",
-                  color: "#ffffff",
-                }}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+              <span className="inline-flex items-center gap-1 rounded-md border border-amber-400/35 bg-amber-400/15 px-1.5 py-0.5 text-[10px] font-black tracking-wide text-amber-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                 <span>.online</span>
               </span>
             </div>
-            <h1 className="text-lg font-black text-white">
+            <h1 className="text-base sm:text-lg font-extrabold text-white tracking-tight">
               Panel de Administración
             </h1>
             <p className="text-xs text-slate-400 mt-0.5">
-              Publicidad por espacios, usuarios en línea y estado del portal
+              Publicidad global, generador de artes, notificaciones y audiencia en vivo
             </p>
           </div>
 
@@ -729,8 +720,8 @@ export default function AdminDashboardPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Ingresa tu clave (ej. enjuego2026)"
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 text-sm font-bold text-slate-900 focus:outline-none focus:border-rose-600"
+                  placeholder="Ingresa tu clave maestra..."
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 bg-white text-sm font-bold text-slate-900 focus:outline-none focus:border-blue-600"
                   required
                 />
               </div>
@@ -739,7 +730,7 @@ export default function AdminDashboardPage() {
                 <code className="font-mono font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded">
                   enjuego2026
                 </code>{" "}
-                (puedes cambiarla adentro).
+                (puedes actualizarla dentro del panel).
               </p>
             </div>
 
@@ -752,13 +743,9 @@ export default function AdminDashboardPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 rounded-xl font-black text-sm text-white shadow-md transition cursor-pointer active:scale-98"
-              style={{
-                background: "linear-gradient(135deg, #e11d48 0%, #be123c 100%)",
-                color: "#ffffff",
-              }}
+              className="dark-pill w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 font-bold text-sm text-white shadow-md transition cursor-pointer active:scale-98"
             >
-              {loading ? "Verificando..." : "Entrar al Panel Admin →"}
+              {loading ? "Verificando acceso..." : "Entrar al Panel Admin"}
             </button>
 
             <div className="pt-2 text-center">
@@ -776,46 +763,47 @@ export default function AdminDashboardPage() {
   }
 
   // ============================================================================
-  // MAIN ADMIN DASHBOARD VIEW (JUGADAENVIVO.COM /PANEL WORKFLOW)
+  // MAIN ADMIN DASHBOARD VIEW
   // ============================================================================
   return (
-    <div className="min-h-dvh bg-slate-50/75 text-slate-900 pb-20">
+    <div className="min-h-dvh bg-[#f3f6fb] text-slate-900 pb-20">
       {/* EXECUTIVE TOP BAR */}
-      <header className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-2 sm:gap-4">
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+      <header className="portal-header keep-dark sticky top-0 z-40 bg-[#0a1120] border-b border-slate-800 text-white shadow-md">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <Link
               href="/inicio"
-              className="flex items-center gap-2 group transition opacity-95 hover:opacity-100"
+              className="flex items-center gap-1.5 sm:gap-2 group transition opacity-95 hover:opacity-100 shrink-0"
               title="Ir a la web pública"
             >
               <img
                 src="/logo.png"
                 alt="EnJuego"
-                className="h-7 w-auto object-contain shrink-0"
+                className="h-7 sm:h-8 w-auto object-contain shrink-0"
               />
-              <span className="text-xs font-semibold tracking-tight text-slate-300 hidden sm:inline">
-                Workspace
+              <span className="inline-flex items-center gap-1 rounded-md border border-amber-400/35 bg-amber-400/15 px-1.5 py-0.5 text-[10px] font-black tracking-wide text-amber-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                <span>.online</span>
               </span>
             </Link>
             <span className="text-slate-600 font-light hidden sm:inline">/</span>
             <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-xs font-semibold text-slate-100">
-                Dashboard
+              <span className="text-xs font-bold text-white hidden sm:inline">
+                Panel Ejecutivo
               </span>
-              <span className="text-[10px] font-medium tracking-wide uppercase px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+              <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-300 border border-blue-400/30">
                 Admin
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               type="button"
               onClick={() => setAutoRefresh((v) => !v)}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
                 autoRefresh
-                  ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+                  ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
                   : "bg-slate-900 text-slate-400 border-slate-800"
               }`}
               title="Activar o pausar actualización automática cada 10 segundos"
@@ -825,15 +813,15 @@ export default function AdminDashboardPage() {
                   autoRefresh ? "bg-emerald-400 animate-pulse" : "bg-slate-500"
                 }`}
               />
-              <span className="hidden sm:inline">
-                {autoRefresh ? "Sincronizado (10s)" : "Pausado"}
+              <span className="hidden md:inline">
+                {autoRefresh ? "En Vivo (10s)" : "Pausado"}
               </span>
             </button>
 
             <button
               type="button"
               onClick={() => fetchAdminData(password, false)}
-              className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition cursor-pointer"
+              className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 transition cursor-pointer"
               title="Refrescar datos ahora"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
@@ -841,7 +829,7 @@ export default function AdminDashboardPage() {
 
             <Link
               href="/inicio"
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-medium transition"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 text-xs font-semibold transition"
             >
               <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
               <span className="hidden sm:inline">Ver Portal</span>
@@ -850,7 +838,7 @@ export default function AdminDashboardPage() {
             <button
               type="button"
               onClick={handleLogout}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-rose-950/60 text-slate-400 hover:text-rose-300 border border-transparent hover:border-rose-900/40 text-xs font-medium transition cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-xs font-semibold transition cursor-pointer"
               title="Cerrar sesión"
             >
               <LogOut className="w-3.5 h-3.5" />
@@ -860,89 +848,88 @@ export default function AdminDashboardPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 py-5 sm:py-6 space-y-5 sm:space-y-6">
         {/* TOP KPI CARDS */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
-          <div className="rounded-xl bg-white border border-slate-200/80 p-4 sm:p-5 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                Usuarios en Línea
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-4">
+          <div className="rounded-2xl bg-white border border-slate-200/90 p-3.5 sm:p-5 shadow-xs">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">
+                En Línea Ahora
               </span>
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/70 shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 Live
               </span>
             </div>
-            <div className="mt-2.5 flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 tabular-nums">
+            <div className="mt-2 flex items-baseline gap-1.5">
+              <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tabular-nums">
                 {presence.onlineCount}
               </span>
-              <span className="text-xs text-slate-500 font-medium">
-                activos ahora
+              <span className="text-[11px] text-slate-500 font-medium">
+                activos
               </span>
             </div>
-            <div className="mt-3 flex items-center gap-3 text-xs text-slate-500 pt-2 border-t border-slate-100">
+            <div className="mt-2.5 flex items-center gap-2 text-[11px] text-slate-500 pt-2 border-t border-slate-100">
               <span className="inline-flex items-center gap-1 text-slate-600 font-medium">
-                <Smartphone className="w-3.5 h-3.5 text-slate-400" />
-                {presence.mobileCount} móvil
+                <Smartphone className="w-3 h-3 text-slate-400" />
+                {presence.mobileCount} móv
               </span>
               <span className="text-slate-300">·</span>
               <span className="inline-flex items-center gap-1 text-slate-600 font-medium">
-                <Monitor className="w-3.5 h-3.5 text-slate-400" />
+                <Monitor className="w-3 h-3 text-slate-400" />
                 {presence.desktopCount} PC
               </span>
             </div>
           </div>
 
-          <div className="rounded-xl bg-white border border-slate-200/80 p-4 sm:p-5 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                Visitantes de Hoy
+          <div className="rounded-2xl bg-white border border-slate-200/90 p-3.5 sm:p-5 shadow-xs">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">
+                Visitas de Hoy
               </span>
-              <Users className="w-4 h-4 text-slate-400" />
+              <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             </div>
-            <div className="mt-2.5 flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 tabular-nums">
+            <div className="mt-2 flex items-baseline gap-1.5">
+              <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tabular-nums">
                 {presence.todayUniqueVisitors}
               </span>
-              <span className="text-xs text-slate-500 font-medium">
-                únicos acumulados
+              <span className="text-[11px] text-slate-500 font-medium">
+                únicos
               </span>
             </div>
-            <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 pt-2 border-t border-slate-100">
-              <span className="font-medium text-slate-700">{presence.todayPageViews || 0}</span> vistas
+            <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-slate-500 pt-2 border-t border-slate-100">
+              <span className="font-semibold text-slate-700">{presence.todayPageViews || 0}</span> vistas
               <span className="text-slate-300">·</span>
-              <span>Pico: <strong className="font-medium text-slate-700">{presence.todayPeakOnline}</strong></span>
+              <span>Pico: <strong className="font-semibold text-slate-700">{presence.todayPeakOnline}</strong></span>
             </div>
           </div>
 
-          <div className="rounded-xl bg-white border border-indigo-200/80 p-4 sm:p-5 shadow-xs bg-gradient-to-b from-indigo-50/20 to-white">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-indigo-700">
+          <div className="rounded-2xl bg-white border border-blue-200/80 p-3.5 sm:p-5 shadow-xs">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-blue-700 truncate">
                 Visitas del Mes
               </span>
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-100/70 px-2 py-0.5 rounded-full">
-                <Calendar className="w-3 h-3 text-indigo-500" />
-                {presence.currentMonthLabel || "Este mes"}
+              <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200/60 px-1.5 py-0.5 rounded-full truncate max-w-[90px]">
+                {presence.currentMonthLabel || "Mes"}
               </span>
             </div>
-            <div className="mt-2.5 flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-bold tracking-tight text-indigo-600 tabular-nums">
+            <div className="mt-2 flex items-baseline gap-1.5">
+              <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-blue-600 tabular-nums">
                 {(presence.currentMonthVisitors || presence.todayUniqueVisitors || 0).toLocaleString("es-VE")}
               </span>
-              <span className="text-xs text-slate-500 font-medium">
+              <span className="text-[11px] text-slate-500 font-medium hidden sm:inline">
                 acumuladas
               </span>
             </div>
-            <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 pt-2 border-t border-slate-100">
-              <span className="font-medium text-slate-700">
+            <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-slate-500 pt-2 border-t border-slate-100">
+              <span className="font-semibold text-slate-700">
                 {(presence.currentMonthPageViews || presence.todayPageViews || 0).toLocaleString("es-VE")}
               </span>{" "}
               vistas
               <span className="text-slate-300">·</span>
               <span>
                 Prom:{" "}
-                <strong className="font-medium text-slate-700">
+                <strong className="font-semibold text-slate-700">
                   {(presence.currentMonthAvgDaily || presence.todayUniqueVisitors || 0).toLocaleString("es-VE")}
                 </strong>
                 /d
@@ -950,45 +937,45 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          <div className="rounded-xl bg-white border border-slate-200/80 p-4 sm:p-5 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                Anuncios en Rotación
+          <div className="rounded-2xl bg-white border border-slate-200/90 p-3.5 sm:p-5 shadow-xs">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">
+                Anuncios Activos
               </span>
-              <Megaphone className="w-4 h-4 text-slate-400" />
+              <Megaphone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             </div>
-            <div className="mt-2.5 flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 tabular-nums">
+            <div className="mt-2 flex items-baseline gap-1.5">
+              <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tabular-nums">
                 {liveAdsCount}
               </span>
-              <span className="text-xs text-slate-500 font-medium">
-                de {campaigns.length} activos
+              <span className="text-[11px] text-slate-500 font-medium">
+                de {campaigns.length}
               </span>
             </div>
-            <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-500 pt-2 border-t border-slate-100">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-              <span className="text-slate-600 font-medium">Rotativo global · Todo el sitio</span>
+            <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-slate-500 pt-2 border-t border-slate-100">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
+              <span className="text-slate-600 font-medium truncate">Rotativo en todo el sitio</span>
             </div>
           </div>
 
-          <div className="rounded-xl bg-white border border-slate-200/80 p-4 sm:p-5 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                Clicks Totales
+          <div className="col-span-2 lg:col-span-1 rounded-2xl bg-white border border-slate-200/90 p-3.5 sm:p-5 shadow-xs">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">
+                Clics Publicitarios
               </span>
-              <MousePointerClick className="w-4 h-4 text-slate-400" />
+              <MousePointerClick className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             </div>
-            <div className="mt-2.5 flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 tabular-nums">
+            <div className="mt-2 flex items-baseline gap-1.5">
+              <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tabular-nums">
                 {totalClicks}
               </span>
-              <span className="text-xs text-slate-500 font-medium">
+              <span className="text-[11px] text-slate-500 font-medium">
                 ({todayTotalClicks} hoy)
               </span>
             </div>
-            <div className="mt-3 flex items-center justify-between text-xs pt-2 border-t border-slate-100">
+            <div className="mt-2.5 flex items-center justify-between text-[11px] pt-2 border-t border-slate-100">
               <span className="text-slate-500">CTR Global:</span>
-              <span className="font-semibold text-emerald-600 tabular-nums">
+              <span className="font-bold text-emerald-600 tabular-nums">
                 {totalImpressions > 0
                   ? ((totalClicks / totalImpressions) * 100).toFixed(2)
                   : "0.00"}%
@@ -997,74 +984,53 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* MODERN SEGMENTED CONTROL TABS */}
-        <div className="border-b border-slate-200/80 pb-3">
-          <div className="bg-slate-200/70 p-1 rounded-xl border border-slate-200/80 inline-flex flex-wrap gap-1 shadow-2xs">
-            <button
-              type="button"
-              onClick={() => setActiveTab("ads")}
-              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                activeTab === "ads"
-                  ? "bg-white text-slate-900 shadow-2xs"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-white/40"
-              }`}
-            >
-              <Megaphone className="w-3.5 h-3.5 text-slate-500" />
-              <span>Publicidad ({campaigns.length})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("generator")}
-              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                activeTab === "generator"
-                  ? "bg-white text-slate-900 shadow-2xs"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-white/40"
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5 text-slate-500" />
-              <span>Generador de Artes</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("push")}
-              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                activeTab === "push"
-                  ? "bg-white text-slate-900 shadow-2xs"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-white/40"
-              }`}
-            >
-              <Bell className="w-3.5 h-3.5 text-slate-500" />
-              <span>Notificaciones Push</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("users")}
-              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                activeTab === "users"
-                  ? "bg-white text-slate-900 shadow-2xs"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-white/40"
-              }`}
-            >
-              <Users className="w-3.5 h-3.5 text-slate-500" />
-              <span>Audiencia & Geografía ({presence.onlineCount})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("system")}
-              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                activeTab === "system"
-                  ? "bg-white text-slate-900 shadow-2xs"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-white/40"
-              }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-slate-500" />
-              <span>Sistema & Seguridad</span>
-            </button>
-          </div>
+        {/* RESPONSIVE EXECUTIVE NAVIGATION TABS */}
+        <div className="bg-white p-1.5 rounded-2xl border border-slate-200/90 shadow-xs flex overflow-x-auto no-scrollbar sm:grid sm:grid-cols-5 gap-1.5">
+          {[
+            {
+              id: "ads" as const,
+              label: `Publicidad (${campaigns.length})`,
+              icon: Megaphone,
+            },
+            {
+              id: "generator" as const,
+              label: "Estudio de Artes",
+              icon: Sparkles,
+            },
+            {
+              id: "push" as const,
+              label: "Notificaciones Push",
+              icon: Bell,
+            },
+            {
+              id: "users" as const,
+              label: `Audiencia (${presence.onlineCount})`,
+              icon: Users,
+            },
+            {
+              id: "system" as const,
+              label: "Sistema y Clave",
+              icon: ShieldCheck,
+            },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap shrink-0 ${
+                  isActive
+                    ? "dark-pill bg-slate-900 text-white shadow-xs"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5 shrink-0" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
 
         {statusMessage && (
@@ -1229,7 +1195,7 @@ export default function AdminDashboardPage() {
                   <button
                     type="submit"
                     disabled={publishingNew}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-medium shadow-xs transition cursor-pointer disabled:opacity-50"
+                    className="dark-pill inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold shadow-xs transition cursor-pointer disabled:opacity-50"
                   >
                     <Plus className="w-4 h-4" />
                     <span>
@@ -1662,15 +1628,15 @@ export default function AdminDashboardPage() {
         {activeTab === "users" && (
           <div className="space-y-6">
             {/* Banner Destacado: Conteo Mensual de Visitas */}
-            <div className="rounded-xl bg-gradient-to-br from-indigo-950 via-slate-900 to-slate-900 border border-indigo-900/40 p-5 text-white shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+            <div className="keep-dark rounded-2xl bg-[#0a1120] border border-slate-800 p-5 text-white shadow-md">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-indigo-400" />
-                    <span className="text-xs font-semibold tracking-wider text-indigo-300 uppercase">
+                    <Calendar className="w-4 h-4 text-amber-400" />
+                    <span className="text-xs font-semibold tracking-wider text-amber-300 uppercase">
                       Contador de Visitas Mensuales
                     </span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30">
                       {presence.currentMonthLabel || "Mes en curso"}
                     </span>
                   </div>
@@ -1844,7 +1810,7 @@ export default function AdminDashboardPage() {
                             </td>
                             <td className="py-2.5 px-3">
                               <div className="flex items-center gap-1.5 text-slate-800 font-medium">
-                                <span className="text-sm">{s.flag || "🌐"}</span>
+                                <Globe className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                                 <span
                                   className="truncate max-w-[170px] text-xs"
                                   title={s.locationLabel || s.region || s.countryName || "Venezuela"}
@@ -1985,7 +1951,7 @@ export default function AdminDashboardPage() {
                         </div>
                         <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
                           <div
-                            className="h-full bg-slate-900 rounded-full transition-all"
+                            className="h-full bg-blue-600 rounded-full transition-all"
                             style={{ width: `${Math.max(4, item.pct)}%` }}
                           />
                         </div>
@@ -2077,7 +2043,7 @@ export default function AdminDashboardPage() {
                             </div>
                             <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
                               <div
-                                className="h-full bg-slate-900 rounded-full transition-all"
+                                className="h-full bg-blue-600 rounded-full transition-all"
                                 style={{ width: `${Math.max(4, pct)}%` }}
                               />
                             </div>
@@ -2327,7 +2293,7 @@ export default function AdminDashboardPage() {
                   <button
                     type="button"
                     onClick={handleExportUsersCsv}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium cursor-pointer transition shadow-2xs"
+                    className="dark-pill inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold cursor-pointer transition shadow-2xs"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Exportar CSV</span>
@@ -2475,7 +2441,7 @@ export default function AdminDashboardPage() {
 
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition cursor-pointer shadow-xs"
+                  className="dark-pill px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition cursor-pointer shadow-xs"
                 >
                   Actualizar Contraseña
                 </button>

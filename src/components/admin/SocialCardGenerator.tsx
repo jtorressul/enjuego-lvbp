@@ -563,7 +563,7 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
   const optionBtn = (active: boolean) =>
     `p-2.5 rounded-xl border text-center transition cursor-pointer ${
       active
-        ? "bg-slate-900 text-white border-slate-900 shadow-2xs"
+        ? "dark-pill bg-slate-900 text-white border-slate-900 shadow-2xs"
         : "bg-white hover:bg-slate-50 text-slate-700 border-slate-200"
     }`;
 
@@ -573,7 +573,7 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
       <div className="rounded-xl bg-white border border-slate-200/80 p-4 sm:p-5 shadow-xs space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
@@ -586,7 +586,7 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Genera publicaciones oficiales para Instagram, WhatsApp y Twitter con escudos, marcadores y canales en alta definición.
+                Genera publicaciones oficiales para Instagram, WhatsApp y X con escudos, marcadores y canales en alta definición.
               </p>
             </div>
           </div>
@@ -602,11 +602,11 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
               }}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                 cardLeague === "lvbp"
-                  ? "bg-white text-slate-900 shadow-2xs"
+                  ? "dark-pill bg-slate-900 text-white shadow-2xs"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              🇻🇪 LVBP
+              LVBP Venezuela
             </button>
             <button
               type="button"
@@ -617,11 +617,11 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
               }}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                 cardLeague === "mlb"
-                  ? "bg-white text-slate-900 shadow-2xs"
+                  ? "dark-pill bg-slate-900 text-white shadow-2xs"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              ⚾ MLB
+              MLB Grandes Ligas
             </button>
           </div>
         </div>
@@ -647,15 +647,15 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
                   onClick={() => handleModeChange(item.id as CardTemplateMode)}
                   className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
                     active
-                      ? "bg-slate-900 text-white border-slate-900 shadow-xs"
+                      ? "dark-pill bg-slate-900 text-white border-slate-900 shadow-xs"
                       : "bg-slate-50/70 hover:bg-slate-100 text-slate-700 border-slate-200/80"
                   }`}
                 >
                   <div className="text-xs font-semibold flex items-center justify-between">
                     <span>{item.label}</span>
-                    {active && <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />}
+                    {active && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
                   </div>
-                  <div className={`text-[10px] mt-0.5 ${active ? "text-slate-300" : "text-slate-500"}`}>
+                  <div className={`text-[10px] mt-0.5 ${active ? "text-slate-300 opacity-85" : "text-slate-500"}`}>
                     {item.desc}
                   </div>
                 </button>
@@ -778,15 +778,15 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
                             onClick={() => selectGame(g)}
                             className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer shadow-2xs ${
                               isSelected
-                                ? "bg-slate-900 text-white border-slate-900"
+                                ? "dark-pill bg-slate-900 text-white border-slate-900"
                                 : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200/80"
                             }`}
                           >
                             <span>{g.awayTeam.code}</span>
-                            <span className="mx-1 text-slate-400">vs</span>
+                            <span className="mx-1 opacity-60">vs</span>
                             <span>{g.homeTeam.code}</span>
                             {(g.awayScore !== undefined || g.homeScore !== undefined) && (
-                              <span className={`ml-1.5 font-bold tabular-nums ${isSelected ? "text-rose-300" : "text-rose-600"}`}>
+                              <span className={`ml-1.5 font-bold tabular-nums ${isSelected ? "text-amber-300" : "text-rose-600"}`}>
                                 {g.awayScore ?? 0}-{g.homeScore ?? 0}
                               </span>
                             )}
@@ -982,7 +982,7 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
                             onClick={() => toggleTvChannelChip(ch)}
                             className={`px-2 py-0.5 rounded-md text-[11px] font-medium border transition cursor-pointer shadow-2xs ${
                               active
-                                ? "bg-slate-900 text-white border-slate-900"
+                                ? "dark-pill bg-slate-900 text-white border-slate-900"
                                 : "bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200/80"
                             }`}
                           >
@@ -1089,9 +1089,9 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
                           {/* Quick Status Buttons */}
                           <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-slate-200">
                             {[
-                              { id: "SCHEDULED", label: "⏰ Programado" },
-                              { id: "IN_PROGRESS", label: "🔴 En Vivo" },
-                              { id: "FINISHED", label: "🏁 Final" },
+                              { id: "SCHEDULED", label: "Programado" },
+                              { id: "IN_PROGRESS", label: "En Vivo" },
+                              { id: "FINISHED", label: "Final" },
                             ].map((st) => (
                               <button
                                 key={st.id}
@@ -1113,7 +1113,7 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
                                 }
                                 className={`px-2 py-1 text-[10px] font-semibold rounded-md transition cursor-pointer ${
                                   valStatus === st.id
-                                    ? "bg-slate-900 text-white shadow-xs"
+                                    ? "dark-pill bg-slate-900 text-white shadow-xs"
                                     : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                                 }`}
                               >
@@ -1537,7 +1537,7 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
               {sponsorMode === "custom" && (
                 <div className="border-t border-slate-100 pt-3 space-y-3">
                   <div className="flex flex-wrap items-center gap-3">
-                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium cursor-pointer transition shadow-2xs">
+                    <label className="dark-pill inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium cursor-pointer transition shadow-2xs">
                       <Upload className="w-3.5 h-3.5" />
                       <span>Subir logo PNG/JPG</span>
                       <input
@@ -1586,11 +1586,11 @@ export function SocialCardGenerator({ campaigns }: SocialCardGeneratorProps) {
 
         {/* RIGHT COLUMN: WORKBENCH CANVAS & ACTIONS (5 cols) */}
         <div className="lg:col-span-5 sticky top-20 space-y-4">
-          <div className="rounded-xl bg-slate-950 border border-slate-800 p-4 sm:p-5 shadow-xl text-white space-y-4">
+          <div className="keep-dark rounded-xl bg-[#0a1120] border border-slate-800 p-4 sm:p-5 shadow-xl text-white space-y-4">
             {/* Top Toolbar */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
               <div className="flex items-center gap-2">
-                <ImageIcon className="w-4 h-4 text-rose-500" />
+                <ImageIcon className="w-4 h-4 text-amber-400" />
                 <span className="text-xs font-semibold text-slate-200">
                   Previsualización en Vivo
                 </span>

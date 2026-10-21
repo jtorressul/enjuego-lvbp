@@ -257,17 +257,17 @@ html[data-theme="light"] .text-white:not(header):not(header *):not(.portal-heade
   color: #0f172a !important;
 }
 
-html[data-theme="light"] .hover\:text-white:hover:not(header):not(header *):not(.keep-dark):not(.keep-dark *) {
+html[data-theme="light"] .hover\:text-white:hover:not(header):not(header *):not(.keep-dark):not(.keep-dark *):not(.dark-pill):not(.dark-pill *) {
   color: #0f172a !important;
 }
 
-html[data-theme="light"] .text-slate-200:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
-html[data-theme="light"] .text-slate-300:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *) {
+html[data-theme="light"] .text-slate-200:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *):not(.dark-pill):not(.dark-pill *),
+html[data-theme="light"] .text-slate-300:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *):not(.dark-pill):not(.dark-pill *) {
   color: #334155 !important;
 }
 
-html[data-theme="light"] .text-slate-400:not(header):not(header *):not(.keep-dark):not(.keep-dark *),
-html[data-theme="light"] .text-slate-500:not(header):not(header *):not(.keep-dark):not(.keep-dark *) {
+html[data-theme="light"] .text-slate-400:not(header):not(header *):not(.keep-dark):not(.keep-dark *):not(.dark-pill):not(.dark-pill *),
+html[data-theme="light"] .text-slate-500:not(header):not(header *):not(.keep-dark):not(.keep-dark *):not(.dark-pill):not(.dark-pill *) {
   color: #64748b !important;
 }
 

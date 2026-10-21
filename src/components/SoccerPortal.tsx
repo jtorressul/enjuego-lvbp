@@ -278,44 +278,6 @@ export function SoccerPortal({
             </button>
           </div>
         </div>
-
-        {/* Mobile & Tablet Horizontal Section Tabs (<1024px) — Clean Editorial Underline Bar */}
-        <div
-          className="lg:hidden border-t overflow-x-auto no-scrollbar"
-          style={{ backgroundColor: "#0a1120", borderColor: "#1e293b" }}
-        >
-          <div className="flex items-center px-3 min-w-max gap-5">
-            {[
-              { key: "home", label: "Inicio", href: "/inicio" },
-              { key: "resultados", label: "Resultados", href: "/resultados?liga=lvbp" },
-              { key: "posiciones", label: "Posiciones", href: "/posiciones?liga=lvbp" },
-              { key: "calendario", label: "Calendario", href: "/calendario?liga=lvbp" },
-              { key: "futbol", label: "Fútbol", href: "/futbol" },
-              { key: "lideres", label: "Líderes", href: "/lideres?liga=lvbp" },
-              { key: "equipos", label: "Equipos", href: "/teams?team=leones&liga=lvbp" },
-              { key: "noticias", label: "Noticias", href: "/noticias" },
-            ].map((item) => {
-              const isActive = item.key === "futbol";
-              return (
-                <Link
-                  key={item.key}
-                  href={item.href}
-                  className={`relative py-2.5 text-xs font-bold tracking-wide transition shrink-0 select-none ${
-                    isActive ? "text-white font-black" : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  <span>{item.label}</span>
-                  {isActive && (
-                    <span
-                      className="absolute bottom-0 left-0 right-0 h-[2.5px] rounded-t-full"
-                      style={{ backgroundColor: "#f59e0b" }}
-                    />
-                  )}
-                </Link>
-              );
-            })}
-          </div>
-        </div>
       </header>
 
       {/* 2. SUBHEADER COMPETITION STRIP (Official League Crests, Zero Emojis, Matching Baseball Ticker Bar) */}

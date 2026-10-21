@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { LVBP_TEAMS } from "@/lib/lvbp-teams";
 import { MLB_TEAMS } from "@/lib/mlb-teams";
+import { LIDOM_TEAMS, LMP_TEAMS } from "@/lib/winter-teams";
+import { LeagueId } from "@/lib/leagues";
 import { RosterPlayer, ScheduleGame } from "@/lib/types";
 import { Users, MapPin, Calendar, Shield, Tv, Search, Star, Clock } from "lucide-react";
 
@@ -24,7 +26,7 @@ export function TeamRosterView({
   onOpenGame: (gameId: string) => void;
   favoriteTeamCode?: string;
   onToggleFavoriteTeam?: (code: string) => void;
-  league?: "lvbp" | "mlb";
+  league?: LeagueId;
 }) {
   const searchParams = useSearchParams();
   const initialPos = searchParams?.get("pos")?.toUpperCase() || "ALL";
@@ -51,10 +53,25 @@ export function TeamRosterView({
     }
   }, [searchParams]);
 
-  const activeTeamsCatalog = league === "mlb" ? MLB_TEAMS : LVBP_TEAMS;
-  const currentTeam =
-    activeTeamsCatalog[selectedTeamCode] ||
-    (league === "mlb" ? MLB_TEAMS.NYY : LVBP_TEAMS.CAR);
+  const activeTeamsCatalog =
+    league === "mlb"
+      ? MLB_TEAMS
+      : league === "lidom"
+      ? LIDOM_TEAMS
+      : league === "lmp"
+      ? LMP_TEAMS
+      : LVBP_TEAMS;
+
+  const defaultTeam =
+    league === "mlb"
+      ? MLB_TEAMS.NYY
+      : league === "lidom"
+      ? LIDOM_TEAMS.LIC
+      : league === "lmp"
+      ? LMP_TEAMS.CUL
+      : LVBP_TEAMS.CAR;
+
+  const currentTeam = activeTeamsCatalog[selectedTeamCode] || defaultTeam;
   const isFavorite = favoriteTeamCode === currentTeam.code;
 
   useEffect(() => {
@@ -122,6 +139,10 @@ export function TeamRosterView({
         className={
           league === "mlb"
             ? "grid grid-cols-3 sm:grid-cols-6 lg:grid-cols-10 gap-2"
+            : league === "lmp"
+            ? "grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2"
+            : league === "lidom"
+            ? "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2"
             : "grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2"
         }
       >

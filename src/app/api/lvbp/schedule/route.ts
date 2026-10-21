@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { fetchLvbpSchedule, fetchMlbSchedule } from "@/lib/mlb-lvbp-service";
+import { fetchWinterSchedule, isWinterLeague } from "@/lib/winter-leagues-service";
+import { parseLeague } from "@/lib/leagues";
 import { checkAndDispatchGameAlerts } from "@/lib/score-notifications";
 import type { ScheduleGame } from "@/lib/types";
 import { publicCacheHeaders, withEdgeCache } from "@/lib/edge-cache";
@@ -40,9 +42,13 @@ export async function GET(request: Request) {
   return withEdgeCache(request, async () => {
     try {
       const { searchParams } = new URL(request.url);
-      const league = searchParams.get("league") === "mlb" ? "mlb" : "lvbp";
+      const league = parseLeague(searchParams.get("league") ?? searchParams.get("liga"));
       const season = searchParams.get("season") || "2026";
-      const games = league === "mlb" ? await fetchMlbSchedule(season) : await fetchLvbpSchedule(season);
+      const games = isWinterLeague(league)
+        ? await fetchWinterSchedule(league, season)
+        : league === "mlb"
+          ? await fetchMlbSchedule(season)
+          : await fetchLvbpSchedule(season);
       if (league === "lvbp" && Array.isArray(games)) {
         const now = Date.now();
         if (now - lastScheduleAlertAt > 45_000) {

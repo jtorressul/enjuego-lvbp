@@ -1,4 +1,5 @@
 import type { LvbpTeamMeta } from "./lvbp-teams";
+import { LIDOM_TEAMS, LMP_TEAMS, WINTER_TEAM_BY_ID } from "./winter-teams";
 import { LVBP_TEAMS, resolveLvbpTeam } from "./lvbp-teams";
 
 export interface MlbTeamMeta extends LvbpTeamMeta {
@@ -784,19 +785,61 @@ export function resolveMlbTeam(idOrCode?: number | string, fallbackName = "MLB T
   return found || MLB_TEAMS.NYY;
 }
 
+export type TeamResolverLeague = "lvbp" | "mlb" | "lidom" | "lmp";
+
+const stripAccents = (v: string) =>
+  v.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+function findWinterTeam(
+  catalog: Record<string, LvbpTeamMeta>,
+  raw: string,
+  fallbackName: string,
+  allowNickMatch: boolean
+): LvbpTeamMeta | undefined {
+  const upper = raw.toUpperCase();
+  if (catalog[upper]) return catalog[upper];
+  const needle = stripAccents(raw);
+  if (!needle) return undefined;
+  const teams = Object.values(catalog);
+  const exact = teams.find(
+    (t) =>
+      t.slug === needle ||
+      t.mlbAbbr.toUpperCase() === upper ||
+      (allowNickMatch && stripAccents(t.nick) === needle)
+  );
+  if (exact) return exact;
+  if (allowNickMatch) {
+    const byName = teams.find(
+      (t) =>
+        (needle.length >= 3 && stripAccents(t.name).includes(needle)) ||
+        (fallbackName && stripAccents(fallbackName).includes(stripAccents(t.name)))
+    );
+    if (byName) return byName;
+  }
+  return undefined;
+}
+
 export function resolveAnyBaseballTeam(
   idOrCode?: number | string,
   fallbackName = "",
-  preferredLeague: "lvbp" | "mlb" = "lvbp"
+  preferredLeague: TeamResolverLeague = "lvbp"
 ): LvbpTeamMeta {
   const num = Number(idOrCode);
   if (!Number.isNaN(num) && String(idOrCode || "").trim() !== "") {
     if (MLB_TEAM_BY_ID[num]) return MLB_TEAM_BY_ID[num];
+    if (WINTER_TEAM_BY_ID[num]) return WINTER_TEAM_BY_ID[num];
     if (num >= 690 && num <= 705) return resolveLvbpTeam(num, fallbackName);
   }
   const raw = String(idOrCode || "").trim();
   const upper = raw.toUpperCase();
   const lower = raw.toLowerCase();
+
+  // LIDOM / LMP: buscar primero dentro de la liga pedida (apodos incluidos).
+  if (preferredLeague === "lidom" || preferredLeague === "lmp") {
+    const own = preferredLeague === "lidom" ? LIDOM_TEAMS : LMP_TEAMS;
+    const hit = findWinterTeam(own, raw, fallbackName, true);
+    if (hit) return hit;
+  }
 
   if (preferredLeague === "mlb") {
     if (MLB_TEAMS[upper]) return MLB_TEAMS[upper];
@@ -819,6 +862,12 @@ export function resolveAnyBaseballTeam(
     (t) => t.slug === lower || t.nick.toLowerCase() === lower
   );
   if (lvbpBySlug) return lvbpBySlug;
+
+  // Entre ligas distintas solo se acepta código o slug (los apodos se repiten:
+  // Águilas, Leones, Tigres, Toros...).
+  const otherWinter =
+    findWinterTeam(LIDOM_TEAMS, raw, "", false) ?? findWinterTeam(LMP_TEAMS, raw, "", false);
+  if (otherWinter) return otherWinter;
 
   const mlbBySlug = Object.values(MLB_TEAMS).find(
     (t) =>

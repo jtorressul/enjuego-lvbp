@@ -193,7 +193,7 @@ function translatePlayText(text = ""): string {
     .replace(/Defensive Substitution:/gi, "Cambio defensivo:");
 }
 
-function mapStatus(statusObj: any): GameStatus {
+export function mapStatus(statusObj: any): GameStatus {
   const code = statusObj?.statusCode || statusObj?.codedGameState || "";
   const abstract = statusObj?.abstractGameState || "";
   if (code === "P" || code === "PW") return "WARMUP";
@@ -225,7 +225,7 @@ export function translateDetailedState(detailedState?: string, status?: GameStat
   return s;
 }
 
-function formatCaracasTime(isoDate: string): string {
+export function formatCaracasTime(isoDate: string): string {
   if (!isoDate) return "7:00 PM";
   try {
     return new Intl.DateTimeFormat("es-VE", {

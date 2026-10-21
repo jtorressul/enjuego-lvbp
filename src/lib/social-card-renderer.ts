@@ -2,6 +2,8 @@
 // Used by the admin "Generador de Artes" and by the public "Compartir" button.
 import { LVBP_TEAMS } from "@/lib/lvbp-teams";
 import { MLB_TEAMS } from "@/lib/mlb-teams";
+import { LIDOM_TEAMS, LMP_TEAMS } from "@/lib/winter-teams";
+import { LeagueId, leagueOfTeamCode } from "@/lib/leagues";
 import type { ScheduleGame, StandingRow } from "@/lib/types";
 
 export type CardTemplateMode =
@@ -22,14 +24,28 @@ export type MedallionStyleMode = "floating_shield" | "pearl_medallion" | "mascot
 /** How the sponsor ("Presentado por:") is presented */
 export type SponsorDisplayLayout = "floating" | "adaptive_card" | "full_banner";
 
-export const ALL_TEAMS: Record<string, any> = { ...LVBP_TEAMS, ...MLB_TEAMS };
+export const ALL_TEAMS: Record<string, any> = {
+  ...LVBP_TEAMS,
+  ...LIDOM_TEAMS,
+  ...LMP_TEAMS,
+  ...MLB_TEAMS,
+};
 
-/** Official LVBP shields with the white background removed (512x512 transparent PNG) */
-export const TEAM_CLEAN_SHIELD = (code: string) =>
-  MLB_TEAMS[code] ? MLB_TEAMS[code].logoSvg : `/logos/clean/${code}.png`;
-/** Illustrated mascots (512x512 transparent PNG) */
-export const TEAM_MASCOT = (code: string) =>
-  MLB_TEAMS[code] ? MLB_TEAMS[code].logoSvg : `/teams/${code}.png`;
+/** Official team shields with vector or clean PNG fallback */
+export const TEAM_CLEAN_SHIELD = (code: string) => {
+  if (MLB_TEAMS[code]) return MLB_TEAMS[code].logoSvg;
+  if (LIDOM_TEAMS[code]) return LIDOM_TEAMS[code].logoSvg;
+  if (LMP_TEAMS[code]) return LMP_TEAMS[code].logoSvg;
+  return `/logos/clean/${code}.png`;
+};
+
+/** Illustrated mascots */
+export const TEAM_MASCOT = (code: string) => {
+  if (MLB_TEAMS[code]) return MLB_TEAMS[code].logoSvg;
+  if (LIDOM_TEAMS[code]) return LIDOM_TEAMS[code].logoSvg;
+  if (LMP_TEAMS[code]) return LMP_TEAMS[code].logoSvg;
+  return `/teams/${code}.png`;
+};
 
 export const BRAND_LOGO_SRC = "/logo.png";
 
@@ -410,7 +426,7 @@ export interface SocialCardOptions {
   removeSponsorWhite: boolean;
   activeSponsorImageUrl: string;
   activeSponsorLabel: string;
-  league?: "lvbp" | "mlb";
+  league?: LeagueId;
   showLeagueLogo?: boolean;
   standingsData?: StandingRow[];
 }
@@ -435,9 +451,9 @@ export async function renderSocialCard(
       const theme = THEME_PALETTES[backgroundTheme];
       const awayTeam = ALL_TEAMS[awayCode] || LVBP_TEAMS.LAR;
       const homeTeam = ALL_TEAMS[homeCode] || LVBP_TEAMS.ZUL;
-      const detectedLeague: "lvbp" | "mlb" =
+      const detectedLeague: LeagueId =
         opts.league ||
-        (MLB_TEAMS[awayCode] || MLB_TEAMS[homeCode] ? "mlb" : "lvbp");
+        leagueOfTeamCode(awayCode || homeCode);
 
       const leagueLogoSrc =
         detectedLeague === "mlb"

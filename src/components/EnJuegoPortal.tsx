@@ -7,6 +7,8 @@ import { LeaderCategory, ScheduleGame, StandingRow } from "@/lib/types";
 import type { PortalSeed } from "@/lib/portal-seed";
 import { LVBP_OFFICIAL_LOGO, LVBP_TEAMS, resolveLvbpTeam } from "@/lib/lvbp-teams";
 import { MLB_TEAMS, resolveMlbTeam, resolveAnyBaseballTeam } from "@/lib/mlb-teams";
+import { LIDOM_TEAMS, LMP_TEAMS } from "@/lib/winter-teams";
+import { LeagueId, LEAGUES, LEAGUES_LIST, parseLeague } from "@/lib/leagues";
 import { GamedayView } from "@/components/gameday/GamedayView";
 import { LeadersWidget } from "@/components/LeadersWidget";
 import { TeamRosterView } from "@/components/TeamRosterView";
@@ -184,7 +186,7 @@ export function EnJuegoPortal({
     initialLeaders.hitting.length > 0;
   const [schedule, setSchedule] = useState<ScheduleGame[]>(initialSchedule);
   const [mlbJornadaGames, setMlbJornadaGames] = useState<ScheduleGame[]>([]);
-  const [jornadaLeague, setJornadaLeague] = useState<"lvbp" | "mlb">("lvbp");
+  const [jornadaLeague, setJornadaLeague] = useState<LeagueId>("lvbp");
   const [mlbDateIndex, setMlbDateIndex] = useState(0);
   const manualMlbDateRef = useRef(false);
   const [standings, setStandings] = useState<StandingRow[]>(initialStandings);
@@ -200,8 +202,8 @@ export function EnJuegoPortal({
 
   // Resolve initial team from URL slug (/equipos/magallanes) or query (?team=magallanes, ?equipo=magallanes, ?=magallanes, ?magallanes)
   const resolvedUrlTeam = useMemo(() => {
-    const qLeague = (searchParams?.get("liga") || searchParams?.get("league") || "").toLowerCase();
-    const prefLeague: "lvbp" | "mlb" = qLeague === "mlb" ? "mlb" : "lvbp";
+    const rawLeague = searchParams?.get("liga") || searchParams?.get("league");
+    const prefLeague: LeagueId = parseLeague(rawLeague);
 
     // 1. Standard query parameters: ?team=..., ?equipo=...
     let qTeam: string | null | undefined =
@@ -228,11 +230,17 @@ export function EnJuegoPortal({
     return resolveAnyBaseballTeam(qTeam, "", prefLeague);
   }, [searchParams, initialTeamSlug]);
 
-  const [activeLeague, setActiveLeague] = useState<"lvbp" | "mlb">(() => {
-    const qLeague = (searchParams?.get("liga") || searchParams?.get("league") || "").toLowerCase();
-    if (qLeague === "mlb") return "mlb";
-    if (qLeague === "lvbp") return "lvbp";
-    if (resolvedUrlTeam && MLB_TEAMS[resolvedUrlTeam.code]) return "mlb";
+  const [activeLeague, setActiveLeague] = useState<LeagueId>(() => {
+    const rawLeague = searchParams?.get("liga") || searchParams?.get("league");
+    if (rawLeague) {
+      return parseLeague(rawLeague);
+    }
+    if (resolvedUrlTeam) {
+      if (LIDOM_TEAMS[resolvedUrlTeam.code]) return "lidom";
+      if (LMP_TEAMS[resolvedUrlTeam.code]) return "lmp";
+      if (MLB_TEAMS[resolvedUrlTeam.code]) return "mlb";
+      return "lvbp";
+    }
     return "lvbp";
   });
   const [mlbStandingsFilter, setMlbStandingsFilter] = useState<"PLAYOFFS" | "ALL" | "AL" | "NL">("ALL");
@@ -241,20 +249,30 @@ export function EnJuegoPortal({
   const [mobileExpandedSection, setMobileExpandedSection] = useState<string | null>(null);
   const navMenuRef = useRef<HTMLElement>(null);
 
-  const activeTeamsCatalog = useMemo(
-    () => (activeLeague === "mlb" ? MLB_TEAMS : LVBP_TEAMS),
-    [activeLeague]
-  );
+  const activeTeamsCatalog = useMemo(() => {
+    switch (activeLeague) {
+      case "lidom":
+        return LIDOM_TEAMS;
+      case "lmp":
+        return LMP_TEAMS;
+      case "mlb":
+        return MLB_TEAMS;
+      case "lvbp":
+      default:
+        return LVBP_TEAMS;
+    }
+  }, [activeLeague]);
 
   const anyTeamsCatalog = useMemo(
-    () => ({ ...LVBP_TEAMS, ...MLB_TEAMS }),
+    () => ({ ...LVBP_TEAMS, ...LIDOM_TEAMS, ...LMP_TEAMS, ...MLB_TEAMS }),
     []
   );
 
   const [selectedTeamCode, setSelectedTeamCode] = useState<string>(() => {
     if (resolvedUrlTeam?.code) return resolvedUrlTeam.code;
-    const qLeague = (searchParams?.get("liga") || searchParams?.get("league") || "").toLowerCase();
-    return qLeague === "mlb" ? "NYY" : "CAR";
+    const rawLeague = searchParams?.get("liga") || searchParams?.get("league");
+    const qLeague = parseLeague(rawLeague);
+    return LEAGUES[qLeague].defaultTeamCode;
   });
   const [teamFilter, setTeamFilter] = useState<string>(
     section === "calendario" && resolvedUrlTeam ? resolvedUrlTeam.code : ""
@@ -294,7 +312,7 @@ export function EnJuegoPortal({
   const [pwaModalOpen, setPwaModalOpen] = useState(false);
   const [pwaOnboardingOpen, setPwaOnboardingOpen] = useState(false);
 
-  const switchLeague = (nextLeague: "lvbp" | "mlb") => {
+  const switchLeague = (nextLeague: LeagueId) => {
     setActiveLeague((prev) => {
       if (prev !== nextLeague) {
         setLoading(true);
@@ -307,24 +325,38 @@ export function EnJuegoPortal({
     setTeamFilter("");
     manualDateRef.current = false;
     setSelectedTeamCode((prev) => {
-      if (nextLeague === "mlb") return MLB_TEAMS[prev] ? prev : "NYY";
-      return LVBP_TEAMS[prev] ? prev : "CAR";
+      const targetCatalog =
+        nextLeague === "lidom"
+          ? LIDOM_TEAMS
+          : nextLeague === "lmp"
+          ? LMP_TEAMS
+          : nextLeague === "mlb"
+          ? MLB_TEAMS
+          : LVBP_TEAMS;
+      if (targetCatalog[prev]) return prev;
+      return LEAGUES[nextLeague].defaultTeamCode;
     });
   };
 
-  // Sync activeLeague immediately whenever URL ?liga=lvbp|mlb changes
+  // Sync activeLeague immediately whenever URL ?liga changes
   useEffect(() => {
-    const qLeague = (searchParams?.get("liga") || searchParams?.get("league") || "").toLowerCase();
+    const rawLeague = searchParams?.get("liga") || searchParams?.get("league");
     if (pathname === "/inicio" || pathname === "/") {
-      // On /inicio, the page itself always stays LVBP; only the Jornada switches
-      switchLeague("lvbp");
-      if (qLeague === "mlb" || qLeague === "lvbp") {
-        setJornadaLeague(qLeague);
+      if (rawLeague) {
+        const parsed = parseLeague(rawLeague);
+        switchLeague(parsed);
+        setJornadaLeague(parsed);
+      } else {
+        switchLeague("lvbp");
       }
-    } else if (qLeague === "mlb" || qLeague === "lvbp") {
-      switchLeague(qLeague);
+    } else if (rawLeague) {
+      switchLeague(parseLeague(rawLeague));
     } else if (resolvedUrlTeam) {
-      if (MLB_TEAMS[resolvedUrlTeam.code]) {
+      if (LIDOM_TEAMS[resolvedUrlTeam.code]) {
+        switchLeague("lidom");
+      } else if (LMP_TEAMS[resolvedUrlTeam.code]) {
+        switchLeague("lmp");
+      } else if (MLB_TEAMS[resolvedUrlTeam.code]) {
         switchLeague("mlb");
       } else if (LVBP_TEAMS[resolvedUrlTeam.code]) {
         switchLeague("lvbp");
@@ -472,7 +504,7 @@ export function EnJuegoPortal({
     }
   };
 
-  const handlePwaOnboardingComplete = (user: UserProfile, chosenLeague: "lvbp" | "mlb") => {
+  const handlePwaOnboardingComplete = (user: UserProfile, chosenLeague: LeagueId) => {
     handleUserUpdate(user);
     if (chosenLeague !== activeLeague) {
       switchLeague(chosenLeague);
@@ -574,19 +606,24 @@ export function EnJuegoPortal({
 
         if (controller.signal.aborted) return;
 
-        // Strictly filter games and standings by targetLeague so LVBP and MLB never mix
+        // Strictly filter games and standings by targetLeague so leagues never mix
+        const leagueTeamsMap =
+          targetLeague === "mlb"
+            ? MLB_TEAMS
+            : targetLeague === "lidom"
+            ? LIDOM_TEAMS
+            : targetLeague === "lmp"
+            ? LMP_TEAMS
+            : LVBP_TEAMS;
+
         const rawGames: ScheduleGame[] = schData.games || [];
         const loadedGames = rawGames.filter((g) =>
-          targetLeague === "mlb"
-            ? Boolean(MLB_TEAMS[g.homeTeam.code] || MLB_TEAMS[g.awayTeam.code])
-            : Boolean(LVBP_TEAMS[g.homeTeam.code] || LVBP_TEAMS[g.awayTeam.code])
+          Boolean(leagueTeamsMap[g.homeTeam?.code] || leagueTeamsMap[g.awayTeam?.code])
         );
 
         const rawStandings: StandingRow[] = stdData.standings || [];
         const cleanStandings = rawStandings.filter((r) =>
-          targetLeague === "mlb"
-            ? Boolean(MLB_TEAMS[r.team.code])
-            : Boolean(LVBP_TEAMS[r.team.code])
+          Boolean(leagueTeamsMap[r.team?.code])
         );
 
         setSchedule(loadedGames);
@@ -710,8 +747,8 @@ export function EnJuegoPortal({
 
   const activeDate = dates[selectedDateIndex] || getTodayCaracasIso();
 
-  // Independent Jornada state for /inicio so switching the Jornada to MLB does NOT change the rest of /inicio
-  const currentJornadaLeague: "lvbp" | "mlb" =
+  // Independent Jornada state for /inicio
+  const currentJornadaLeague: LeagueId =
     section === "home" ? jornadaLeague : activeLeague;
 
   const jornadaSchedule = useMemo(
@@ -1438,7 +1475,48 @@ export function EnJuegoPortal({
             </Link>
           </div>
 
-          {/* Desktop Main Navigation with Dropdowns per Section (LVBP / MLB) */}
+          {/* Global League Switcher Strip (Desktop & Tablet) */}
+          <div className="hidden md:flex items-center gap-1 p-1 rounded-xl bg-slate-900/90 border border-slate-800 shrink-0">
+            {LEAGUES_LIST.map((lg) => {
+              const isLgActive = activeLeague === lg.id;
+              return (
+                <button
+                  key={lg.id}
+                  type="button"
+                  onClick={() => {
+                    switchLeague(lg.id);
+                    setJornadaLeague(lg.id);
+                    const targetPath =
+                      section === "equipos"
+                        ? `/teams?team=${
+                            lg.id === "lidom"
+                              ? "licey"
+                              : lg.id === "lmp"
+                              ? "tomateros"
+                              : lg.id === "mlb"
+                              ? "yankees"
+                              : "leones"
+                          }&liga=${lg.id}`
+                        : section === "home"
+                        ? `/inicio?liga=${lg.id}`
+                        : `/${section}?liga=${lg.id}`;
+                    router.push(targetPath);
+                  }}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-black transition cursor-pointer ${
+                    isLgActive
+                      ? "bg-amber-400 text-slate-950 shadow-xs"
+                      : "text-slate-300 hover:text-white hover:bg-slate-800/80"
+                  }`}
+                  title={`Ver ${lg.name}`}
+                >
+                  <span className="text-sm">{lg.flag}</span>
+                  <span className="tracking-tight">{lg.shortName}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Desktop Main Navigation with Dropdowns per Section */}
           <nav
             ref={navMenuRef}
             className="hidden lg:flex items-center gap-1 p-1.5 rounded-xl border border-slate-800"
@@ -1464,42 +1542,172 @@ export function EnJuegoPortal({
                 {
                   key: "resultados",
                   label: "Resultados",
-                  lvbpHref: "/resultados?liga=lvbp",
-                  mlbHref: "/resultados?liga=mlb",
-                  lvbpDesc: "Pizarra en vivo de Venezuela",
-                  mlbDesc: "Pizarra de Grandes Ligas",
+                  options: [
+                    {
+                      id: "lvbp" as LeagueId,
+                      name: "LVBP",
+                      flag: "🇻🇪",
+                      desc: "Pizarra en vivo de Venezuela",
+                      href: "/resultados?liga=lvbp",
+                    },
+                    {
+                      id: "lidom" as LeagueId,
+                      name: "LIDOM",
+                      flag: "🇩🇴",
+                      desc: "Pelota de Rep. Dominicana",
+                      href: "/resultados?liga=lidom",
+                    },
+                    {
+                      id: "lmp" as LeagueId,
+                      name: "LMP",
+                      flag: "🇲🇽",
+                      desc: "Liga ARCO Mexicana del Pacífico",
+                      href: "/resultados?liga=lmp",
+                    },
+                    {
+                      id: "mlb" as LeagueId,
+                      name: "MLB",
+                      flag: "🇺🇸",
+                      desc: "Pizarra de Grandes Ligas",
+                      href: "/resultados?liga=mlb",
+                    },
+                  ],
                 },
                 {
                   key: "calendario",
                   label: "Calendario",
-                  lvbpHref: "/calendario?liga=lvbp",
-                  mlbHref: "/calendario?liga=mlb",
-                  lvbpDesc: "Juegos y canales TV LVBP",
-                  mlbDesc: "Juegos y canales TV MLB",
+                  options: [
+                    {
+                      id: "lvbp" as LeagueId,
+                      name: "LVBP",
+                      flag: "🇻🇪",
+                      desc: "Juegos y canales TV LVBP",
+                      href: "/calendario?liga=lvbp",
+                    },
+                    {
+                      id: "lidom" as LeagueId,
+                      name: "LIDOM",
+                      flag: "🇩🇴",
+                      desc: "Juegos y señales Quisqueya",
+                      href: "/calendario?liga=lidom",
+                    },
+                    {
+                      id: "lmp" as LeagueId,
+                      name: "LMP",
+                      flag: "🇲🇽",
+                      desc: "Juegos y transmisiones México",
+                      href: "/calendario?liga=lmp",
+                    },
+                    {
+                      id: "mlb" as LeagueId,
+                      name: "MLB",
+                      flag: "🇺🇸",
+                      desc: "Juegos y canales TV MLB",
+                      href: "/calendario?liga=mlb",
+                    },
+                  ],
                 },
                 {
                   key: "posiciones",
                   label: "Posiciones",
-                  lvbpHref: "/posiciones?liga=lvbp",
-                  mlbHref: "/posiciones?liga=mlb",
-                  lvbpDesc: "Tabla Round Robin (8 clubes)",
-                  mlbDesc: "6 Divisiones Liga Americana y Nacional",
+                  options: [
+                    {
+                      id: "lvbp" as LeagueId,
+                      name: "LVBP",
+                      flag: "🇻🇪",
+                      desc: "Tabla Round Robin (8 clubes)",
+                      href: "/posiciones?liga=lvbp",
+                    },
+                    {
+                      id: "lidom" as LeagueId,
+                      name: "LIDOM",
+                      flag: "🇩🇴",
+                      desc: "Tabla Round Robin (6 clubes)",
+                      href: "/posiciones?liga=lidom",
+                    },
+                    {
+                      id: "lmp" as LeagueId,
+                      name: "LMP",
+                      flag: "🇲🇽",
+                      desc: "Tabla General a Playoffs (10 clubes)",
+                      href: "/posiciones?liga=lmp",
+                    },
+                    {
+                      id: "mlb" as LeagueId,
+                      name: "MLB",
+                      flag: "🇺🇸",
+                      desc: "6 Divisiones AL / NL (30 clubes)",
+                      href: "/posiciones?liga=mlb",
+                    },
+                  ],
                 },
                 {
                   key: "lideres",
                   label: "Líderes",
-                  lvbpHref: "/lideres?liga=lvbp",
-                  mlbHref: "/lideres?liga=mlb",
-                  lvbpDesc: "Bateo y pitcheo LVBP",
-                  mlbDesc: "Bateo y pitcheo MLB",
+                  options: [
+                    {
+                      id: "lvbp" as LeagueId,
+                      name: "LVBP",
+                      flag: "🇻🇪",
+                      desc: "Bateo y pitcheo LVBP",
+                      href: "/lideres?liga=lvbp",
+                    },
+                    {
+                      id: "lidom" as LeagueId,
+                      name: "LIDOM",
+                      flag: "🇩🇴",
+                      desc: "Bateo y pitcheo LIDOM",
+                      href: "/lideres?liga=lidom",
+                    },
+                    {
+                      id: "lmp" as LeagueId,
+                      name: "LMP",
+                      flag: "🇲🇽",
+                      desc: "Bateo y pitcheo LMP",
+                      href: "/lideres?liga=lmp",
+                    },
+                    {
+                      id: "mlb" as LeagueId,
+                      name: "MLB",
+                      flag: "🇺🇸",
+                      desc: "Bateo y pitcheo MLB",
+                      href: "/lideres?liga=mlb",
+                    },
+                  ],
                 },
                 {
                   key: "equipos",
                   label: "Equipos",
-                  lvbpHref: "/teams?team=leones&liga=lvbp",
-                  mlbHref: "/teams?team=yankees&liga=mlb",
-                  lvbpDesc: "8 franquicias y rosters LVBP",
-                  mlbDesc: "30 franquicias y rosters MLB",
+                  options: [
+                    {
+                      id: "lvbp" as LeagueId,
+                      name: "LVBP",
+                      flag: "🇻🇪",
+                      desc: "8 franquicias y rosters LVBP",
+                      href: "/teams?team=leones&liga=lvbp",
+                    },
+                    {
+                      id: "lidom" as LeagueId,
+                      name: "LIDOM",
+                      flag: "🇩🇴",
+                      desc: "6 franquicias y rosters LIDOM",
+                      href: "/teams?team=licey&liga=lidom",
+                    },
+                    {
+                      id: "lmp" as LeagueId,
+                      name: "LMP",
+                      flag: "🇲🇽",
+                      desc: "10 franquicias y rosters LMP",
+                      href: "/teams?team=tomateros&liga=lmp",
+                    },
+                    {
+                      id: "mlb" as LeagueId,
+                      name: "MLB",
+                      flag: "🇺🇸",
+                      desc: "30 franquicias y rosters MLB",
+                      href: "/teams?team=yankees&liga=mlb",
+                    },
+                  ],
                 },
               ] as const
             ).map((item) => {
@@ -1538,7 +1746,7 @@ export function EnJuegoPortal({
                             : "bg-slate-700 text-slate-200"
                         }`}
                       >
-                        {activeLeague.toUpperCase()}
+                        {LEAGUES[activeLeague]?.shortName || activeLeague.toUpperCase()}
                       </span>
                     )}
                     <ChevronDown
@@ -1549,7 +1757,7 @@ export function EnJuegoPortal({
                   </button>
 
                   {isOpen && (
-                    <div className="absolute left-0 top-full pt-2 w-64 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                    <div className="absolute left-0 top-full pt-2 w-72 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
                       <div
                         className="rounded-2xl bg-white border border-slate-200 shadow-2xl p-2 space-y-1 text-slate-900"
                         style={{ backgroundColor: "#ffffff", color: "#0f172a" }}
@@ -1558,61 +1766,39 @@ export function EnJuegoPortal({
                           {item.label} · Selecciona Liga
                         </div>
 
-                        <Link
-                          href={item.lvbpHref}
-                          onClick={() => {
-                            switchLeague("lvbp");
-                            setOpenNavDropdown(null);
-                          }}
-                          className={`flex items-center justify-between gap-2.5 p-2.5 rounded-xl border transition cursor-pointer ${
-                            isCurrentSection && activeLeague === "lvbp"
-                              ? "bg-amber-50 border-amber-400 text-slate-950"
-                              : "bg-white hover:bg-slate-50 border-transparent hover:border-slate-200 text-slate-900"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <span className="w-8 h-8 rounded-lg bg-amber-100 border border-amber-200 flex items-center justify-center text-base shrink-0">
-                              🇻🇪
-                            </span>
-                            <div className="min-w-0">
-                              <div className="text-xs font-black text-slate-950 leading-tight">
-                                {item.label} LVBP
+                        {item.options.map((opt) => {
+                          const isOptionActive = isCurrentSection && activeLeague === opt.id;
+                          return (
+                            <Link
+                              key={opt.id}
+                              href={opt.href}
+                              onClick={() => {
+                                switchLeague(opt.id);
+                                setOpenNavDropdown(null);
+                              }}
+                              className={`flex items-center justify-between gap-2.5 p-2 rounded-xl border transition cursor-pointer ${
+                                isOptionActive
+                                  ? "bg-amber-50 border-amber-400 text-slate-950 font-black shadow-2xs"
+                                  : "bg-white hover:bg-slate-50 border-transparent hover:border-slate-200 text-slate-900"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <span className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-base shrink-0">
+                                  {opt.flag}
+                                </span>
+                                <div className="min-w-0">
+                                  <div className="text-xs font-black text-slate-950 leading-tight">
+                                    {item.label} {opt.name}
+                                  </div>
+                                  <div className="text-[10px] font-semibold text-slate-500 truncate">
+                                    {opt.desc}
+                                  </div>
+                                </div>
                               </div>
-                              <div className="text-[10px] font-semibold text-slate-500 truncate">
-                                {item.lvbpDesc}
-                              </div>
-                            </div>
-                          </div>
-                          <ChevronRight className="w-4 h-4 text-amber-600 shrink-0" />
-                        </Link>
-
-                        <Link
-                          href={item.mlbHref}
-                          onClick={() => {
-                            switchLeague("mlb");
-                            setOpenNavDropdown(null);
-                          }}
-                          className={`flex items-center justify-between gap-2.5 p-2.5 rounded-xl border transition cursor-pointer ${
-                            isCurrentSection && activeLeague === "mlb"
-                              ? "bg-sky-50 border-sky-400 text-slate-950"
-                              : "bg-white hover:bg-slate-50 border-transparent hover:border-slate-200 text-slate-900"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <span className="w-8 h-8 rounded-lg bg-sky-100 border border-sky-200 flex items-center justify-center text-base shrink-0">
-                              ⚾
-                            </span>
-                            <div className="min-w-0">
-                              <div className="text-xs font-black text-slate-950 leading-tight">
-                                {item.label} MLB
-                              </div>
-                              <div className="text-[10px] font-semibold text-slate-500 truncate">
-                                {item.mlbDesc}
-                              </div>
-                            </div>
-                          </div>
-                          <ChevronRight className="w-4 h-4 text-sky-600 shrink-0" />
-                        </Link>
+                              <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                            </Link>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -1689,14 +1875,14 @@ export function EnJuegoPortal({
                         style={{ color: "#0f172a" }}
                       >
                         <Users className="w-3.5 h-3.5 text-amber-600" />{" "}
-                        {activeLeague === "mlb" ? "Equipos MLB (2026)" : "Equipos LVBP (2026-27)"}
+                        Equipos {LEAGUES[activeLeague].shortName}
                       </div>
                       <p className="text-[10px]" style={{ color: "#64748b" }}>
-                        {activeLeague === "mlb" ? "30 franquicias de Grandes Ligas" : "8 franquicias de la liga"}
+                        {LEAGUES[activeLeague].tagline}
                       </p>
                     </div>
                     <Link
-                      href={`/teams?team=${activeLeague === "mlb" ? "yankees" : "leones"}&liga=${activeLeague}`}
+                      href={`/teams?team=${activeTeamsCatalog[selectedTeamCode]?.slug || LEAGUES[activeLeague].defaultTeamCode}&liga=${activeLeague}`}
                       onClick={() => setTeamsDropdownOpen(false)}
                       className="text-[11px] font-extrabold hover:underline"
                       style={{ color: "#d97706" }}
@@ -1706,31 +1892,22 @@ export function EnJuegoPortal({
                   </div>
 
                   {/* Quick League Switcher inside Teams Dropdown */}
-                  <div className="grid grid-cols-2 gap-1.5 p-1 mb-2.5 rounded-xl bg-slate-100 border border-slate-200">
-                    <button
-                      type="button"
-                      onClick={() => switchLeague("lvbp")}
-                      className={`py-1.5 px-2.5 rounded-lg text-[11px] font-black transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                        activeLeague === "lvbp"
-                          ? "bg-amber-400 text-slate-950 shadow-2xs"
-                          : "text-slate-600 hover:text-slate-950"
-                      }`}
-                    >
-                      <span>🇻🇪</span>
-                      <span>LVBP (8)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => switchLeague("mlb")}
-                      className={`py-1.5 px-2.5 rounded-lg text-[11px] font-black transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                        activeLeague === "mlb"
-                          ? "bg-sky-400 text-slate-950 shadow-2xs"
-                          : "text-slate-600 hover:text-slate-950"
-                      }`}
-                    >
-                      <span>⚾</span>
-                      <span>MLB (30)</span>
-                    </button>
+                  <div className="grid grid-cols-4 gap-1 p-1 mb-2.5 rounded-xl bg-slate-100 border border-slate-200">
+                    {LEAGUES_LIST.map((lg) => (
+                      <button
+                        key={lg.id}
+                        type="button"
+                        onClick={() => switchLeague(lg.id)}
+                        className={`py-1.5 px-1 rounded-lg text-[10px] font-black transition cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
+                          activeLeague === lg.id
+                            ? "bg-amber-400 text-slate-950 shadow-2xs"
+                            : "text-slate-600 hover:text-slate-950"
+                        }`}
+                      >
+                        <span className="text-xs">{lg.flag}</span>
+                        <span>{lg.shortName}</span>
+                      </button>
+                    ))}
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
@@ -1881,6 +2058,46 @@ export function EnJuegoPortal({
             </button>
           </div>
         </div>
+
+        {/* Mobile Sub-strip: Quick 4-League Switcher for Mobile & Small Screens */}
+        <div className="md:hidden border-t border-slate-800/80 bg-[#090e17] px-3 py-1.5 overflow-x-auto no-scrollbar flex items-center gap-1.5">
+          {LEAGUES_LIST.map((lg) => {
+            const isLgActive = activeLeague === lg.id;
+            return (
+              <button
+                key={lg.id}
+                type="button"
+                onClick={() => {
+                  switchLeague(lg.id);
+                  setJornadaLeague(lg.id);
+                  const targetPath =
+                    section === "equipos"
+                      ? `/teams?team=${
+                          lg.id === "lidom"
+                            ? "licey"
+                            : lg.id === "lmp"
+                            ? "tomateros"
+                            : lg.id === "mlb"
+                            ? "yankees"
+                            : "leones"
+                        }&liga=${lg.id}`
+                      : section === "home"
+                      ? `/inicio?liga=${lg.id}`
+                      : `/${section}?liga=${lg.id}`;
+                  router.push(targetPath);
+                }}
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black transition cursor-pointer shrink-0 ${
+                  isLgActive
+                    ? "bg-amber-400 text-slate-950 shadow-xs"
+                    : "bg-slate-900 text-slate-300 border border-slate-800 hover:text-white"
+                }`}
+              >
+                <span>{lg.flag}</span>
+                <span>{lg.shortName}</span>
+              </button>
+            );
+          })}
+        </div>
       </header>
 
       {/* MOBILE SLIDE-OVER DRAWER */}
@@ -1930,7 +2147,53 @@ export function EnJuegoPortal({
 
             {/* Scrollable Drawer Body */}
             <div className="flex-1 overflow-y-auto overscroll-contain pb-10">
-            {/* Fan Profile / Login Card in Drawer */}
+              {/* Quick 4-League Selector at top of Drawer */}
+              <div className="p-3 bg-slate-900 border-b border-slate-800">
+                <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-2 px-1">
+                  Selecciona Liga
+                </div>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {LEAGUES_LIST.map((lg) => {
+                    const isLgActive = activeLeague === lg.id;
+                    return (
+                      <button
+                        key={lg.id}
+                        type="button"
+                        onClick={() => {
+                          switchLeague(lg.id);
+                          setJornadaLeague(lg.id);
+                          const targetPath =
+                            section === "equipos"
+                              ? `/teams?team=${
+                                  lg.id === "lidom"
+                                    ? "licey"
+                                    : lg.id === "lmp"
+                                    ? "tomateros"
+                                    : lg.id === "mlb"
+                                    ? "yankees"
+                                    : "leones"
+                                }&liga=${lg.id}`
+                              : section === "home"
+                              ? `/inicio?liga=${lg.id}`
+                              : `/${section}?liga=${lg.id}`;
+                          router.push(targetPath);
+                          setMobileDrawerOpen(false);
+                        }}
+                        className={`flex flex-col items-center justify-center p-2 rounded-xl text-[11px] font-black transition cursor-pointer ${
+                          isLgActive
+                            ? "bg-amber-400 text-slate-950 shadow-xs"
+                            : "bg-slate-800 text-slate-200 hover:bg-slate-700"
+                        }`}
+                      >
+                        <span className="text-base">{lg.flag}</span>
+                        <span className="leading-tight mt-0.5">{lg.shortName}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Fan Profile / Login Card in Drawer */}
             <div className="p-4 bg-slate-50 border-b border-slate-200">
               {currentUser ? (
                 <div className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs">
@@ -2170,44 +2433,43 @@ export function EnJuegoPortal({
 
                     {isExpanded && (
                       <div className="pl-7 pr-2 py-1 space-y-1 animate-in fade-in slide-in-from-top-1 duration-150">
-                        <Link
-                          href={lvbpHref}
-                          onClick={() => {
-                            switchLeague("lvbp");
-                            setMobileExpandedSection(null);
-                            setMobileDrawerOpen(false);
-                          }}
-                          className={`flex items-center justify-between py-2 px-3 rounded-xl text-xs font-black border transition ${
-                            active && activeLeague === "lvbp"
-                              ? "bg-amber-400 text-slate-950 border-amber-400 shadow-2xs"
-                              : "bg-slate-50 text-slate-800 border-slate-200 hover:border-amber-400"
-                          }`}
-                        >
-                          <span className="flex items-center gap-2">
-                            <span>🇻🇪</span>
-                            <span>LVBP — Liga Venezolana</span>
-                          </span>
-                          <ChevronRight className="w-3.5 h-3.5 opacity-60" />
-                        </Link>
-                        <Link
-                          href={mlbHref}
-                          onClick={() => {
-                            switchLeague("mlb");
-                            setMobileExpandedSection(null);
-                            setMobileDrawerOpen(false);
-                          }}
-                          className={`flex items-center justify-between py-2 px-3 rounded-xl text-xs font-black border transition ${
-                            active && activeLeague === "mlb"
-                              ? "bg-sky-400 text-slate-950 border-sky-400 shadow-2xs"
-                              : "bg-slate-50 text-slate-800 border-slate-200 hover:border-sky-400"
-                          }`}
-                        >
-                          <span className="flex items-center gap-2">
-                            <span>⚾</span>
-                            <span>MLB — Grandes Ligas</span>
-                          </span>
-                          <ChevronRight className="w-3.5 h-3.5 opacity-60" />
-                        </Link>
+                        {LEAGUES_LIST.map((lg) => {
+                          const href =
+                            key === "equipos"
+                              ? `/teams?team=${
+                                  lg.id === "lidom"
+                                    ? "licey"
+                                    : lg.id === "lmp"
+                                    ? "tomateros"
+                                    : lg.id === "mlb"
+                                    ? "yankees"
+                                    : "leones"
+                                }&liga=${lg.id}`
+                              : `/${key}?liga=${lg.id}`;
+                          const isOptActive = active && activeLeague === lg.id;
+                          return (
+                            <Link
+                              key={lg.id}
+                              href={href}
+                              onClick={() => {
+                                switchLeague(lg.id);
+                                setMobileExpandedSection(null);
+                                setMobileDrawerOpen(false);
+                              }}
+                              className={`flex items-center justify-between py-2 px-3 rounded-xl text-xs font-black border transition ${
+                                isOptActive
+                                  ? "bg-amber-400 text-slate-950 border-amber-400 shadow-2xs"
+                                  : "bg-slate-50 text-slate-800 border-slate-200 hover:border-amber-400"
+                              }`}
+                            >
+                              <span className="flex items-center gap-2">
+                                <span>{lg.flag}</span>
+                                <span>{lg.shortName} — {lg.tagline}</span>
+                              </span>
+                              <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                            </Link>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -2219,10 +2481,10 @@ export function EnJuegoPortal({
             <div className="p-4 flex-1">
               <div className="flex items-center justify-between px-1 mb-2.5">
                 <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
-                  {activeLeague === "mlb" ? "Equipos de la MLB" : "Equipos de la LVBP"}
+                  Equipos de la {LEAGUES[activeLeague].shortName}
                 </span>
                 <span className="text-xs font-bold text-amber-600">
-                  {activeLeague === "mlb" ? "30 Clubes" : "8 Clubes"}
+                  {Object.keys(activeTeamsCatalog).length} Clubes
                 </span>
               </div>
               <div className="space-y-2">
@@ -2267,8 +2529,8 @@ export function EnJuegoPortal({
 
             {/* Drawer Bottom info */}
             <div className="p-4 border-t border-slate-200 bg-slate-50 text-xs text-slate-500">
-              <p className="font-extrabold text-slate-800">EN JUEGO · LVBP & MLB</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Marcadores y jugada a jugada en vivo</p>
+              <p className="font-extrabold text-slate-800">EN JUEGO · LVBP · LIDOM · LMP · MLB</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Marcadores y jugada a jugada en vivo de todo el Caribe y Grandes Ligas</p>
             </div>
             </div>
           </div>
@@ -2281,56 +2543,47 @@ export function EnJuegoPortal({
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 flex items-center gap-2">
           {/* Date Selector Box with League Selector right above the Jornada */}
           <div className="flex flex-col items-center justify-center bg-white border border-slate-200 rounded-xl px-1.5 sm:px-2.5 py-1 shrink-0 shadow-2xs">
-            {/* Compact League Switcher right above Jornada (Only switches Jornada on /inicio) */}
-            <div className="inline-flex items-center gap-1 bg-slate-100 rounded-lg p-0.5 mb-0.5 w-full justify-center">
-              <button
-                type="button"
-                onClick={() => {
-                  if (section === "home") {
-                    setJornadaLeague("lvbp");
-                  } else {
-                    switchLeague("lvbp");
-                    router.push(
-                      section === "equipos"
-                        ? "/teams?team=leones&liga=lvbp"
-                        : `/${section}?liga=lvbp`
-                    );
-                  }
-                }}
-                className={`flex-1 px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-black uppercase transition cursor-pointer flex items-center justify-center gap-1 ${
-                  currentJornadaLeague === "lvbp"
-                    ? "bg-amber-400 text-slate-950 shadow-2xs"
-                    : "text-slate-500 hover:text-slate-900"
-                }`}
-                title="Ver Jornada LVBP"
-              >
-                <span>🇻🇪</span>
-                <span>LVBP</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (section === "home") {
-                    setJornadaLeague("mlb");
-                  } else {
-                    switchLeague("mlb");
-                    router.push(
-                      section === "equipos"
-                        ? "/teams?team=yankees&liga=mlb"
-                        : `/${section}?liga=mlb`
-                    );
-                  }
-                }}
-                className={`flex-1 px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] font-black uppercase transition cursor-pointer flex items-center justify-center gap-1 ${
-                  currentJornadaLeague === "mlb"
-                    ? "bg-amber-400 text-slate-950 shadow-2xs"
-                    : "text-slate-500 hover:text-slate-900"
-                }`}
-                title="Ver Jornada MLB"
-              >
-                <span>⚾</span>
-                <span>MLB</span>
-              </button>
+            {/* Compact League Switcher right above Jornada */}
+            <div className="inline-flex items-center gap-0.5 bg-slate-100 rounded-lg p-0.5 mb-0.5 w-full justify-center">
+              {LEAGUES_LIST.map((lg) => {
+                const isSelected = currentJornadaLeague === lg.id;
+                return (
+                  <button
+                    key={lg.id}
+                    type="button"
+                    onClick={() => {
+                      if (section === "home") {
+                        setJornadaLeague(lg.id);
+                        switchLeague(lg.id);
+                      } else {
+                        switchLeague(lg.id);
+                        router.push(
+                          section === "equipos"
+                            ? `/teams?team=${
+                                lg.id === "lidom"
+                                  ? "licey"
+                                  : lg.id === "lmp"
+                                  ? "tomateros"
+                                  : lg.id === "mlb"
+                                  ? "yankees"
+                                  : "leones"
+                              }&liga=${lg.id}`
+                            : `/${section}?liga=${lg.id}`
+                        );
+                      }
+                    }}
+                    className={`flex-1 px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] font-black uppercase transition cursor-pointer flex items-center justify-center gap-1 ${
+                      isSelected
+                        ? "bg-amber-400 text-slate-950 shadow-2xs"
+                        : "text-slate-500 hover:text-slate-900"
+                    }`}
+                    title={`Ver Jornada ${lg.shortName}`}
+                  >
+                    <span>{lg.flag}</span>
+                    <span>{lg.shortName}</span>
+                  </button>
+                );
+              })}
             </div>
 
             <div className="flex items-center gap-1 sm:gap-1.5">
@@ -2669,7 +2922,7 @@ export function EnJuegoPortal({
                   <div>
                     <header className="flex items-center justify-between pb-3 border-b border-slate-200">
                       <h3 className="text-sm font-black text-slate-950">
-                        Tabla de posiciones {activeLeague === "mlb" ? "(MLB)" : "(LVBP)"}
+                        Tabla de posiciones ({LEAGUES[activeLeague].shortName})
                       </h3>
                       <div className="flex items-center gap-1.5">
                         <button
@@ -2707,6 +2960,14 @@ export function EnJuegoPortal({
                           const zoneDot =
                             activeLeague === "mlb"
                               ? "bg-sky-500"
+                              : activeLeague === "lidom"
+                              ? idx < 4
+                                ? "bg-emerald-500"
+                                : "bg-slate-300"
+                              : activeLeague === "lmp"
+                              ? idx < 8
+                                ? "bg-emerald-500"
+                                : "bg-slate-300"
                               : idx < 4
                                 ? "bg-emerald-500"
                                 : idx < 6
@@ -2754,6 +3015,24 @@ export function EnJuegoPortal({
                       >
                         Ver las 6 divisiones oficiales AL / NL ›
                       </Link>
+                    ) : activeLeague === "lidom" ? (
+                      <>
+                        <span className="flex items-center gap-1">
+                          <i className="w-2 h-2 rounded-full bg-emerald-500" /> 1°-4° Round Robin
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <i className="w-2 h-2 rounded-full bg-slate-300" /> 5°-6° Eliminados
+                        </span>
+                      </>
+                    ) : activeLeague === "lmp" ? (
+                      <>
+                        <span className="flex items-center gap-1">
+                          <i className="w-2 h-2 rounded-full bg-emerald-500" /> 1°-8° Playoffs
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <i className="w-2 h-2 rounded-full bg-slate-300" /> 9°-10° Eliminados
+                        </span>
+                      </>
                     ) : (
                       <>
                         <span className="flex items-center gap-1">
@@ -3038,12 +3317,10 @@ export function EnJuegoPortal({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
-                  {activeLeague === "mlb"
-                    ? "⚾ Grandes Ligas (MLB 2026) · Pizarras C · H · E"
-                    : "🇻🇪 Béisbol Venezolano (LVBP 2026-27) · Pizarras C · H · E"}
+                  {LEAGUES[activeLeague].flag} {LEAGUES[activeLeague].name} · Pizarras C · H · E
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-950">
-                  Resultados de la {activeLeague === "mlb" ? "MLB (2026)" : "LVBP"}
+                  Resultados de la {LEAGUES[activeLeague].shortName}
                 </h1>
               </div>
 
@@ -3119,12 +3396,10 @@ export function EnJuegoPortal({
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
               <div>
                 <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
-                  {activeLeague === "mlb"
-                    ? "⚾ Grandes Ligas (MLB) · Señales de TV y Estadios"
-                    : "🇻🇪 Temporada 2026-2027 (LVBP) · Señales de TV y Estadios"}
+                  {LEAGUES[activeLeague].flag} {LEAGUES[activeLeague].name} · Señales de TV y Estadios
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-950">
-                  Calendario de Juegos ({activeLeague.toUpperCase()})
+                  Calendario de Juegos ({LEAGUES[activeLeague].shortName})
                 </h1>
               </div>
 
@@ -3502,10 +3777,14 @@ export function EnJuegoPortal({
                 <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
                   {activeLeague === "mlb"
                     ? "⚾ Grandes Ligas (MLB) · 6 Divisiones Oficiales (AL y NL)"
+                    : activeLeague === "lidom"
+                    ? "🇩🇴 Liga de Béisbol Profesional de la Rep. Dominicana · Serie Regular"
+                    : activeLeague === "lmp"
+                    ? "🇲🇽 Liga ARCO Mexicana del Pacífico · Temporada Regular"
                     : "🇻🇪 Tabla de Clasificación LVBP · Rumbo al Round Robin"}
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-950">
-                  Tabla de Posiciones ({activeLeague === "mlb" ? "MLB" : "LVBP"})
+                  Tabla de Posiciones ({LEAGUES[activeLeague].shortName})
                 </h1>
               </div>
 
@@ -3770,11 +4049,11 @@ export function EnJuegoPortal({
                   Esta fase aún no ha comenzado
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Actualmente se disputa la Temporada Regular 2026-2027 de la LVBP.
+                  Actualmente se disputa la Temporada Regular de {LEAGUES[activeLeague].name}.
                 </p>
               </div>
             ) : (
-              /* LVBP: CLASSIC 8-TEAM TABLE WITH ROUND ROBIN & COMODÍN ZONES */
+              /* CLASSIC WINTER LEAGUE TABLE WITH ACCURATE QUALIFICATION ZONES */
               <>
                 <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-xs no-scrollbar">
                   <table className="w-full min-w-[720px] text-xs text-right border-collapse">
@@ -3797,11 +4076,31 @@ export function EnJuegoPortal({
                     </thead>
                     <tbody className="divide-y divide-slate-100 tabular-nums">
                       {standings
-                        .filter((r) => Boolean(LVBP_TEAMS[r.team.code]))
+                        .filter((r) => Boolean(activeTeamsCatalog[r.team.code]))
                         .map((row, idx) => {
                           const isFav = favoriteTeamCode === row.team.code;
                           const zoneBadge =
-                            idx < 4 ? (
+                            activeLeague === "lidom" ? (
+                              idx < 4 ? (
+                                <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 px-2 py-0.5 text-[10px] font-extrabold">
+                                  Round Robin
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 border border-slate-200 text-slate-500 px-2 py-0.5 text-[10px] font-bold">
+                                  Eliminado
+                                </span>
+                              )
+                            ) : activeLeague === "lmp" ? (
+                              idx < 8 ? (
+                                <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 px-2 py-0.5 text-[10px] font-extrabold">
+                                  Playoffs
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 border border-slate-200 text-slate-500 px-2 py-0.5 text-[10px] font-bold">
+                                  Eliminado
+                                </span>
+                              )
+                            ) : idx < 4 ? (
                               <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 px-2 py-0.5 text-[10px] font-extrabold">
                                 Round Robin
                               </span>
@@ -3869,18 +4168,44 @@ export function EnJuegoPortal({
                 {/* Qualification Legend */}
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600 shadow-2xs">
                   <div className="flex flex-wrap items-center gap-4">
-                    <span className="inline-flex items-center gap-2 font-bold text-emerald-800">
-                      <span className="w-3 h-3 rounded bg-emerald-500" />
-                      1° al 4° lugar: Clasificación directa al Round Robin (Enero)
-                    </span>
-                    <span className="inline-flex items-center gap-2 font-bold text-amber-800">
-                      <span className="w-3 h-3 rounded bg-amber-400" />
-                      5° y 6° lugar: Serie del Comodín (Play-In por el 5° cupo)
-                    </span>
-                    <span className="inline-flex items-center gap-2 font-semibold text-slate-500">
-                      <span className="w-3 h-3 rounded bg-slate-300" />
-                      7° y 8° lugar: Eliminados
-                    </span>
+                    {activeLeague === "lidom" ? (
+                      <>
+                        <span className="inline-flex items-center gap-2 font-bold text-emerald-800">
+                          <span className="w-3 h-3 rounded bg-emerald-500" />
+                          1° al 4° lugar: Clasificación al Round Robin Semifinal (Todos contra Todos)
+                        </span>
+                        <span className="inline-flex items-center gap-2 font-semibold text-slate-500">
+                          <span className="w-3 h-3 rounded bg-slate-300" />
+                          5° y 6° lugar: Eliminados
+                        </span>
+                      </>
+                    ) : activeLeague === "lmp" ? (
+                      <>
+                        <span className="inline-flex items-center gap-2 font-bold text-emerald-800">
+                          <span className="w-3 h-3 rounded bg-emerald-500" />
+                          1° al 8° lugar: Clasificación a Playoffs de Postemporada
+                        </span>
+                        <span className="inline-flex items-center gap-2 font-semibold text-slate-500">
+                          <span className="w-3 h-3 rounded bg-slate-300" />
+                          9° y 10° lugar: Eliminados
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="inline-flex items-center gap-2 font-bold text-emerald-800">
+                          <span className="w-3 h-3 rounded bg-emerald-500" />
+                          1° al 4° lugar: Clasificación directa al Round Robin (Enero)
+                        </span>
+                        <span className="inline-flex items-center gap-2 font-bold text-amber-800">
+                          <span className="w-3 h-3 rounded bg-amber-400" />
+                          5° y 6° lugar: Serie del Comodín (Play-In por el 5° cupo)
+                        </span>
+                        <span className="inline-flex items-center gap-2 font-semibold text-slate-500">
+                          <span className="w-3 h-3 rounded bg-slate-300" />
+                          7° y 8° lugar: Eliminados
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
               </>
@@ -3894,10 +4219,10 @@ export function EnJuegoPortal({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
-                  Estadísticas de la {activeLeague === "mlb" ? "MLB" : "LVBP"}
+                  {LEAGUES[activeLeague].flag} Estadísticas de la {LEAGUES[activeLeague].shortName}
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-950">
-                  Líderes Individuales de Bateo y Pitcheo ({activeLeague.toUpperCase()})
+                  Líderes Individuales de Bateo y Pitcheo ({LEAGUES[activeLeague].shortName})
                 </h1>
               </div>
               <Link
@@ -3949,7 +4274,13 @@ export function EnJuegoPortal({
                 "equipos",
                 `/teams?liga=${activeLeague}&team=${
                   activeTeamsCatalog[selectedTeamCode]?.slug ||
-                  (activeLeague === "mlb" ? "yankees" : "leones")
+                  (activeLeague === "lidom"
+                    ? "licey"
+                    : activeLeague === "lmp"
+                    ? "tomateros"
+                    : activeLeague === "mlb"
+                    ? "yankees"
+                    : "leones")
                 }`,
                 "Equipos",
                 Users,

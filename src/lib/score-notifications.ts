@@ -2,6 +2,7 @@ import webpush from "web-push";
 import { getAllPushSubscriptions, removePushSubscription } from "./push-store";
 import { VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT } from "./push-config";
 import { ScheduleGame } from "./types";
+import { leagueOfTeamCode } from "./leagues";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 interface SavedGameState {
@@ -16,6 +17,14 @@ interface SavedGameState {
 
 export async function checkAndDispatchGameAlerts(games: ScheduleGame[]): Promise<void> {
   if (!Array.isArray(games) || games.length === 0) return;
+
+  // Las alertas push son de LVBP/MLB. Los partidos de LIDOM y LMP no deben
+  // notificar a los suscriptores existentes (los de preferencia "all" los recibirían).
+  games = games.filter((game) => {
+    const leagueCode = leagueOfTeamCode(game?.homeTeam?.code) ?? leagueOfTeamCode(game?.awayTeam?.code);
+    return leagueCode !== "lidom" && leagueCode !== "lmp";
+  });
+  if (games.length === 0) return;
 
   try {
     let rawKv: any = null;

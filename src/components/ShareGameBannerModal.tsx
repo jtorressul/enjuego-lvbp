@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { ScheduleGame } from "@/lib/types";
 import { MLB_TEAMS } from "@/lib/mlb-teams";
+import { LeagueId, leagueOfTeamCode } from "@/lib/leagues";
 import {
   ALL_TEAMS,
   renderSocialCard,
@@ -37,8 +38,8 @@ export function ShareGameBannerModal({ game, onClose }: ShareGameBannerModalProp
   const [downloading, setDownloading] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  const detectedLeague: "lvbp" | "mlb" =
-    game && (MLB_TEAMS[game.awayTeam.code] || MLB_TEAMS[game.homeTeam.code]) ? "mlb" : "lvbp";
+  const detectedLeague: LeagueId =
+    game ? leagueOfTeamCode(game.awayTeam.code || game.homeTeam.code) : "lvbp";
 
   const templateMode: CardTemplateMode =
     !game || game.status === "SCHEDULED"

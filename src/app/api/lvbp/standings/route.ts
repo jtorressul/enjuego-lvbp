@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { fetchLvbpStandingsAndLeaders, fetchMlbStandingsAndLeaders } from "@/lib/mlb-lvbp-service";
+import { fetchWinterStandingsAndLeaders, isWinterLeague } from "@/lib/winter-leagues-service";
+import { parseLeague } from "@/lib/leagues";
 import { publicCacheHeaders, withEdgeCache } from "@/lib/edge-cache";
 
 export const dynamic = "force-dynamic";
@@ -8,10 +10,11 @@ export async function GET(request: Request) {
   return withEdgeCache(request, async () => {
     try {
       const { searchParams } = new URL(request.url);
-      const league = searchParams.get("league") === "mlb" ? "mlb" : "lvbp";
+      const league = parseLeague(searchParams.get("league") ?? searchParams.get("liga"));
       const season = searchParams.get("season") || "2026";
-      const data =
-        league === "mlb"
+      const data = isWinterLeague(league)
+        ? await fetchWinterStandingsAndLeaders(league, season)
+        : league === "mlb"
           ? await fetchMlbStandingsAndLeaders(season)
           : await fetchLvbpStandingsAndLeaders(season);
       return NextResponse.json(data, {

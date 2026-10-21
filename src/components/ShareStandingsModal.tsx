@@ -18,12 +18,13 @@ import {
   type BackgroundTheme,
   type CardSizeFormat,
 } from "@/lib/social-card-renderer";
+import type { LeagueId } from "@/lib/leagues";
 
 interface ShareStandingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   standings: StandingRow[];
-  league?: "lvbp" | "mlb";
+  league?: LeagueId;
 }
 
 export function ShareStandingsModal({
@@ -42,9 +43,16 @@ export function ShareStandingsModal({
   const [downloading, setDownloading] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  const leagueTitle = league === "mlb" ? "Grandes Ligas (MLB)" : "LVBP Béisbol Venezolano";
+  const leagueTitle =
+    league === "mlb"
+      ? "Grandes Ligas (MLB)"
+      : league === "lidom"
+      ? "LIDOM Rep. Dominicana"
+      : league === "lmp"
+      ? "LMP Liga ARCO Mexicana"
+      : "LVBP Béisbol Venezolano";
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/posiciones?liga=${league}` : "https://enjuego.online/posiciones";
-  const shareCaption = `📊 ¡Así marcha la Tabla de Posiciones de la ${league === "mlb" ? "MLB" : "LVBP"}! ⚾🔥 Sigue cada jugada en vivo y transmisiones oficiales en ${shareUrl}`;
+  const shareCaption = `📊 ¡Así marcha la Tabla de Posiciones de la ${league.toUpperCase()}! ⚾🔥 Sigue cada jugada en vivo y transmisiones oficiales en ${shareUrl}`;
 
   // Render social card to offscreen canvas and copy to preview
   const handleRender = useCallback(async () => {

@@ -4,7 +4,7 @@ module.exports = {
       name: "enjuego",
       cwd: "/var/www/enjuego",
       script: "node_modules/next/dist/bin/next",
-      args: "start -p 3098",
+      args: "start -p 3000",
       instances: 4,
       exec_mode: "cluster",
       autorestart: true,
@@ -13,7 +13,7 @@ module.exports = {
       node_args: "--max-old-space-size=3584",
       env: {
         NODE_ENV: "production",
-        PORT: 3098,
+        PORT: 3000,
         TZ: "America/Caracas",
       },
     },

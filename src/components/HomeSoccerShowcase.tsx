@@ -2,16 +2,16 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { SOCCER_LEAGUES, SOCCER_LEAGUES_LIST, type SoccerLeagueId } from "@/lib/soccer-leagues";
 import type { SoccerMatch } from "@/lib/soccer-service";
-import { SoccerMatchModal } from "@/components/SoccerMatchModal";
 import { Clock, Trophy, ChevronRight, Activity, Calendar } from "lucide-react";
 
 export function HomeSoccerShowcase() {
+  const router = useRouter();
   const [selectedLeague, setSelectedLeague] = useState<SoccerLeagueId>("uefa.champions");
   const [matches, setMatches] = useState<SoccerMatch[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedMatch, setSelectedMatch] = useState<SoccerMatch | null>(null);
 
   const currentLeague = SOCCER_LEAGUES[selectedLeague] || SOCCER_LEAGUES["uefa.champions"];
 
@@ -143,7 +143,7 @@ export function HomeSoccerShowcase() {
               return (
                 <article
                   key={m.id}
-                  onClick={() => setSelectedMatch(m)}
+                  onClick={() => router.push(`/futbol?liga=${selectedLeague}&partido=${m.id}`)}
                   className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm hover:shadow-md hover:border-amber-400 transition flex flex-col justify-between text-slate-900 cursor-pointer group select-none active:scale-[0.99]"
                 >
                   {/* Top Bar: Venue & Status */}
@@ -241,15 +241,6 @@ export function HomeSoccerShowcase() {
           </div>
         )}
       </div>
-
-      {/* Match Detail Modal */}
-      <SoccerMatchModal
-        match={selectedMatch}
-        onClose={() => setSelectedMatch(null)}
-        onViewStandings={() => {
-          window.location.href = `/futbol?liga=${selectedLeague}`;
-        }}
-      />
     </section>
   );
 }

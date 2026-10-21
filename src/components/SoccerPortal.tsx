@@ -11,7 +11,7 @@ import {
 } from "@/lib/soccer-leagues";
 import type { SoccerMatch, SoccerStandingRow } from "@/lib/soccer-service";
 import { AuthModal } from "@/components/AuthModal";
-import { SoccerMatchModal } from "@/components/SoccerMatchModal";
+import { SoccerGamedayView } from "@/components/soccer/SoccerGamedayView";
 import { UserProfile } from "@/lib/user-auth";
 import {
   Trophy,
@@ -58,11 +58,11 @@ export function SoccerPortal({
 
   // Navigation & Drawer states
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  const [headerLeagueMenuOpen, setHeaderLeagueMenuOpen] = useState(false);
-  const headerLeagueRef = useRef<HTMLDivElement>(null);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
-  const [selectedMatch, setSelectedMatch] = useState<SoccerMatch | null>(null);
+  const [activeMatchId, setActiveMatchId] = useState<string | null>(() => {
+    return searchParams.get("partido") || searchParams.get("match") || null;
+  });
 
   // Auth modal states
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -86,9 +86,6 @@ export function SoccerPortal({
   // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (headerLeagueRef.current && !headerLeagueRef.current.contains(e.target as Node)) {
-        setHeaderLeagueMenuOpen(false);
-      }
       if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
         setMoreMenuOpen(false);
       }
@@ -97,7 +94,7 @@ export function SoccerPortal({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Sync league if searchParams change
+  // Sync league and match if searchParams change
   useEffect(() => {
     const raw = searchParams.get("liga") || searchParams.get("league");
     if (raw) {
@@ -105,6 +102,10 @@ export function SoccerPortal({
       if (parsed !== activeLeague) {
         switchLeague(parsed);
       }
+    }
+    const partido = searchParams.get("partido") || searchParams.get("match");
+    if (partido) {
+      setActiveMatchId(partido);
     }
   }, [searchParams]);
 
@@ -135,6 +136,20 @@ export function SoccerPortal({
     switchLeague(id);
     startTransition(() => {
       router.push(`/futbol?liga=${id}`);
+    });
+  };
+
+  const handleOpenMatch = (matchId: string) => {
+    setActiveMatchId(matchId);
+    startTransition(() => {
+      router.push(`/futbol?liga=${activeLeague}&partido=${matchId}`, { scroll: false });
+    });
+  };
+
+  const handleCloseMatch = () => {
+    setActiveMatchId(null);
+    startTransition(() => {
+      router.push(`/futbol?liga=${activeLeague}`, { scroll: false });
     });
   };
 
@@ -257,75 +272,6 @@ export function SoccerPortal({
 
           {/* Desktop Right Action Pills */}
           <div className="hidden lg:flex items-center gap-2 xl:gap-2.5 shrink-0">
-            {/* Soccer League Capsule Pill */}
-            <div className="relative" ref={headerLeagueRef}>
-              <button
-                type="button"
-                onClick={() => setHeaderLeagueMenuOpen((prev) => !prev)}
-                className="rounded-full border border-slate-700/80 bg-slate-900/70 hover:bg-slate-800 text-slate-200 hover:text-white px-3 py-1.5 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
-                aria-expanded={headerLeagueMenuOpen}
-                aria-label="Seleccionar competición de fútbol"
-              >
-                <span>{currentLeague.flag}</span>
-                <span>{currentLeague.shortName}</span>
-                <ChevronDown
-                  className={`w-3 h-3 text-slate-400 transition-transform duration-200 ${
-                    headerLeagueMenuOpen ? "rotate-180 text-white" : ""
-                  }`}
-                />
-              </button>
-
-              {headerLeagueMenuOpen && (
-                <div
-                  className="absolute right-0 top-full mt-2 w-64 rounded-2xl bg-[#0c1322] border border-slate-800 shadow-2xl p-2 z-50 text-white animate-in fade-in slide-in-from-top-2 duration-150"
-                  style={{ backgroundColor: "#0c1322", color: "#ffffff" }}
-                >
-                  <div className="px-2 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-800/80 mb-1 flex items-center justify-between">
-                    <span>Competición Europea</span>
-                    <span className="text-rose-400">UEFA & Big 5</span>
-                  </div>
-                  {SOCCER_LEAGUES_LIST.map((lg) => {
-                    const isSel = activeLeague === lg.id;
-                    return (
-                      <button
-                        key={lg.id}
-                        type="button"
-                        onClick={() => {
-                          handleSelectLeague(lg.id);
-                          setHeaderLeagueMenuOpen(false);
-                        }}
-                        className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                          isSel
-                            ? "bg-amber-400 text-slate-950 font-black shadow-xs"
-                            : "text-slate-300 hover:text-white hover:bg-slate-800/80"
-                        }`}
-                      >
-                        <span className="flex items-center gap-2">
-                          <span className="text-base">{lg.flag}</span>
-                          <span>{lg.name}</span>
-                        </span>
-                        {isSel && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                      </button>
-                    );
-                  })}
-
-                  <div className="pt-1.5 mt-1.5 border-t border-slate-800">
-                    <Link
-                      href="/inicio"
-                      onClick={() => setHeaderLeagueMenuOpen(false)}
-                      className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-black text-amber-300 hover:text-white hover:bg-amber-950/40 border border-amber-500/30 transition cursor-pointer"
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className="text-base">⚾</span>
-                        <span>Volver a Béisbol (LVBP · MLB)</span>
-                      </span>
-                      <ChevronRight className="w-3.5 h-3.5 text-amber-400" />
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* Auth Buttons / Fan Profile */}
             {currentUser ? (
               <button
@@ -565,7 +511,22 @@ export function SoccerPortal({
 
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-3 sm:px-4 py-5 space-y-6">
-        {/* League Selector Horizontal Tabs */}
+        {activeMatchId ? (
+          <SoccerGamedayView
+            matchId={activeMatchId}
+            leagueId={activeLeague}
+            onBack={handleCloseMatch}
+            onViewStandings={() => {
+              handleCloseMatch();
+              setTimeout(() => {
+                const el = document.getElementById("tabla-clasificacion");
+                el?.scrollIntoView({ behavior: "smooth" });
+              }, 100);
+            }}
+          />
+        ) : (
+          <>
+            {/* League Selector Horizontal Tabs */}
         <div className="bg-white rounded-2xl border border-slate-200/90 p-2 shadow-xs">
           <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 px-2 py-1 flex items-center justify-between">
             <span>Competición Europea</span>
@@ -703,7 +664,7 @@ export function SoccerPortal({
                 return (
                   <article
                     key={m.id}
-                    onClick={() => setSelectedMatch(m)}
+                    onClick={() => handleOpenMatch(m.id)}
                     className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs hover:shadow-md hover:border-amber-400 transition flex flex-col justify-between cursor-pointer group select-none active:scale-[0.99]"
                   >
                     {/* Card Header: Venue & Status */}
@@ -910,17 +871,9 @@ export function SoccerPortal({
             </table>
           </div>
         </section>
+        </>
+        )}
       </main>
-
-      {/* Soccer Match Detail Modal */}
-      <SoccerMatchModal
-        match={selectedMatch}
-        onClose={() => setSelectedMatch(null)}
-        onViewStandings={() => {
-          const el = document.getElementById("tabla-clasificacion");
-          el?.scrollIntoView({ behavior: "smooth" });
-        }}
-      />
 
       {/* Auth Modal Integration */}
       <AuthModal

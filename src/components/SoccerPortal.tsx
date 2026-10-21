@@ -50,6 +50,9 @@ export function SoccerPortal({
   const [standings, setStandings] = useState<SoccerStandingRow[]>(initialStandings);
   const [loading, setLoading] = useState(false);
   const [matchesFilter, setMatchesFilter] = useState<"ALL" | "LIVE" | "UPCOMING" | "FINISHED">("ALL");
+  const [viewTab, setViewTab] = useState<"resumen" | "calendario" | "posiciones">("resumen");
+  const [selectedDate, setSelectedDate] = useState<string>("ALL");
+  const [selectedClubId, setSelectedClubId] = useState<string>("ALL");
 
   // Navigation & Drawer states
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
@@ -63,6 +66,39 @@ export function SoccerPortal({
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
 
   const currentLeague = SOCCER_LEAGUES[activeLeague] || SOCCER_LEAGUES["uefa.champions"];
+
+  const formatSoccerShortDate = (isoDate: string): string => {
+    try {
+      const [yyyy, mm, dd] = isoDate.split("-").map(Number);
+      const d = new Date(Date.UTC(yyyy, (mm || 1) - 1, dd || 1, 12, 0, 0));
+      return new Intl.DateTimeFormat("es-VE", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        timeZone: "UTC",
+      })
+        .format(d)
+        .replace(/\./g, "");
+    } catch {
+      return isoDate;
+    }
+  };
+
+  const formatSoccerFullDate = (isoDate: string): string => {
+    try {
+      const [yyyy, mm, dd] = isoDate.split("-").map(Number);
+      const d = new Date(Date.UTC(yyyy, (mm || 1) - 1, dd || 1, 12, 0, 0));
+      const str = new Intl.DateTimeFormat("es-VE", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        timeZone: "UTC",
+      }).format(d);
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    } catch {
+      return isoDate;
+    }
+  };
 
   // Load user session on mount
   useEffect(() => {
@@ -93,6 +129,8 @@ export function SoccerPortal({
 
   const switchLeague = async (nextLeague: SoccerLeagueId) => {
     setActiveLeague(nextLeague);
+    setSelectedDate("ALL");
+    setSelectedClubId("ALL");
     setLoading(true);
 
     try {
@@ -136,12 +174,48 @@ export function SoccerPortal({
     });
   };
 
+  const uniqueDates = Array.from(new Set(matches.map((m) => m.dateCaracas))).sort();
+
   const filteredMatches = matches.filter((m) => {
-    if (matchesFilter === "LIVE") return m.status === "IN_PROGRESS";
-    if (matchesFilter === "UPCOMING") return m.status === "SCHEDULED";
-    if (matchesFilter === "FINISHED") return m.status === "FINISHED";
+    if (matchesFilter === "LIVE" && m.status !== "IN_PROGRESS") return false;
+    if (matchesFilter === "UPCOMING" && m.status !== "SCHEDULED") return false;
+    if (matchesFilter === "FINISHED" && m.status !== "FINISHED") return false;
+    if (selectedDate !== "ALL" && m.dateCaracas !== selectedDate) return false;
+    if (
+      selectedClubId !== "ALL" &&
+      m.homeTeam.id !== selectedClubId &&
+      m.awayTeam.id !== selectedClubId
+    ) {
+      return false;
+    }
     return true;
   });
+
+  const matchesByDate = React.useMemo(() => {
+    const map = new Map<string, SoccerMatch[]>();
+    const list = matches
+      .filter((m) => {
+        if (matchesFilter === "LIVE" && m.status !== "IN_PROGRESS") return false;
+        if (matchesFilter === "UPCOMING" && m.status !== "SCHEDULED") return false;
+        if (matchesFilter === "FINISHED" && m.status !== "FINISHED") return false;
+        if (
+          selectedClubId !== "ALL" &&
+          m.homeTeam.id !== selectedClubId &&
+          m.awayTeam.id !== selectedClubId
+        ) {
+          return false;
+        }
+        return true;
+      })
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    for (const m of list) {
+      const arr = map.get(m.dateCaracas) || [];
+      arr.push(m);
+      map.set(m.dateCaracas, arr);
+    }
+    return Array.from(map.entries());
+  }, [matches, matchesFilter, selectedClubId]);
 
   const liveCount = matches.filter((m) => m.status === "IN_PROGRESS").length;
 
@@ -461,7 +535,7 @@ export function SoccerPortal({
         </div>
       )}
 
-      {/* 3. MAIN CONTENT CONTAINER (Exact 7xl Grid Matching Baseball) */}
+      {/* 3. MAIN CONTENT CONTAINER (Editorial 12-Col Layout Adapted for Mobile & PC) */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 pt-3.5 sm:pt-5 pb-6 sm:pb-8 space-y-5">
         {activeMatchId ? (
           <SoccerGamedayView
@@ -470,19 +544,16 @@ export function SoccerPortal({
             onBack={handleCloseMatch}
             onViewStandings={() => {
               handleCloseMatch();
-              setTimeout(() => {
-                const el = document.getElementById("tabla-clasificacion");
-                el?.scrollIntoView({ behavior: "smooth" });
-              }, 100);
+              setViewTab("posiciones");
             }}
           />
         ) : (
           <>
-            {/* SECTION 1: MATCHES / SCOREBOARD (Consistent Editorial Header + 4-Col Grid) */}
-            <section className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 p-2 shadow-2xs flex items-center justify-center shrink-0">
+            {/* EDITORIAL LEAGUE CONTROL HEADER CARD */}
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-2xs space-y-3.5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-slate-50 border border-slate-200/80 p-2 shadow-2xs flex items-center justify-center shrink-0">
                     <img
                       src={currentLeague.logo}
                       alt={currentLeague.name}
@@ -490,308 +561,658 @@ export function SoccerPortal({
                     />
                   </div>
                   <div>
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600 block">
-                      Fútbol Europeo · {currentLeague.country} · Temporada 2026-2027
-                    </span>
-                    <h1 className="text-xl sm:text-2xl font-black text-slate-950">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200/80 text-slate-800 text-[10px] font-black uppercase tracking-wider">
+                        {currentLeague.country}
+                      </span>
+                      <span className="text-[11px] font-bold text-slate-400">
+                        Temporada 2026-27
+                      </span>
+                    </div>
+                    <h1 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight">
                       {currentLeague.name}
                     </h1>
                   </div>
                 </div>
 
-                {/* Filter buttons */}
-                <div className="inline-flex p-1 rounded-xl bg-white border border-slate-200 shadow-2xs self-start sm:self-auto">
-                  {[
-                    { key: "ALL", label: "Todos" },
-                    { key: "LIVE", label: `En Vivo (${liveCount})` },
-                    { key: "UPCOMING", label: "Próximos" },
-                    { key: "FINISHED", label: "Finalizados" },
-                  ].map((f) => (
-                    <button
-                      key={f.key}
-                      type="button"
-                      onClick={() => setMatchesFilter(f.key as any)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer select-none ${
-                        matchesFilter === f.key
-                          ? "dark-pill shadow-2xs"
-                          : "text-slate-600 hover:text-slate-950"
-                      }`}
-                    >
-                      {f.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {filteredMatches.length === 0 ? (
-                <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500 shadow-xs">
-                  <Calendar className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                  <p className="text-sm font-bold">No hay partidos en esta categoría para la jornada.</p>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Selecciona &ldquo;Todos&rdquo; para revisar el calendario completo de la fecha.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {filteredMatches.map((m) => {
-                    const isLive = m.status === "IN_PROGRESS";
-                    const isFinished = m.status === "FINISHED";
-                    const awayWon =
-                      (isFinished || isLive) &&
-                      m.awayTeam.score !== undefined &&
-                      m.homeTeam.score !== undefined &&
-                      Number(m.awayTeam.score) > Number(m.homeTeam.score);
-                    const homeWon =
-                      (isFinished || isLive) &&
-                      m.awayTeam.score !== undefined &&
-                      m.homeTeam.score !== undefined &&
-                      Number(m.homeTeam.score) > Number(m.awayTeam.score);
-
+                {/* View Mode Tabs: Partidos | Calendario | Posiciones */}
+                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/80 w-full sm:w-auto">
+                  {(
+                    [
+                      { id: "resumen", label: "Partidos y Tabla" },
+                      { id: "calendario", label: "Calendario" },
+                      { id: "posiciones", label: "Posiciones" },
+                    ] as const
+                  ).map((t) => {
+                    const active = viewTab === t.id;
                     return (
-                      <article
-                        key={m.id}
-                        onClick={() => handleOpenMatch(m.id)}
-                        className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs hover:shadow-md hover:border-amber-400 transition flex flex-col justify-between cursor-pointer group select-none"
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setViewTab(t.id)}
+                        className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer select-none ${
+                          active
+                            ? "dark-pill bg-slate-950 text-white shadow-2xs"
+                            : "text-slate-600 hover:text-slate-950"
+                        }`}
                       >
-                        {/* Card Header: Venue & Status */}
-                        <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-100 text-xs">
-                          <span className="font-extrabold text-slate-500 text-[11px] truncate max-w-[165px] flex items-center gap-1">
-                            <MapPin className="w-3 h-3 text-amber-600 shrink-0" />
-                            <span className="truncate">{m.venue || currentLeague.shortName}</span>
-                          </span>
-                          <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider shrink-0 ${
-                              isLive
-                                ? "bg-emerald-500/15 text-emerald-700 border border-emerald-500/30 animate-pulse"
-                                : isFinished
-                                ? "bg-slate-100 text-slate-700 font-black"
-                                : "bg-amber-500/15 text-amber-800 font-extrabold"
-                            }`}
-                          >
-                            {isLive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
-                            <span>{m.statusText}</span>
-                          </span>
-                        </div>
-
-                        {/* Teams & Scores */}
-                        <div className="space-y-3 py-1">
-                          {/* Away Team */}
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <img
-                                src={m.awayTeam.logo}
-                                alt={m.awayTeam.name}
-                                className="w-7 h-7 object-contain shrink-0"
-                                loading="lazy"
-                              />
-                              <span
-                                className={`text-sm truncate ${
-                                  awayWon ? "font-black text-slate-950" : "font-bold text-slate-800"
-                                }`}
-                              >
-                                {m.awayTeam.shortName}
-                              </span>
-                            </div>
-                            <span
-                              className={`text-base font-black px-2.5 py-0.5 rounded-lg min-w-[34px] text-center tabular-nums ${
-                                isFinished || isLive
-                                  ? awayWon
-                                    ? "dark-pill shadow-xs"
-                                    : "bg-slate-100 text-slate-800"
-                                  : "text-slate-400 font-medium text-xs"
-                              }`}
-                            >
-                              {isFinished || isLive ? (m.awayTeam.score ?? 0) : "–"}
-                            </span>
-                          </div>
-
-                          {/* Home Team */}
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <img
-                                src={m.homeTeam.logo}
-                                alt={m.homeTeam.name}
-                                className="w-7 h-7 object-contain shrink-0"
-                                loading="lazy"
-                              />
-                              <span
-                                className={`text-sm truncate ${
-                                  homeWon ? "font-black text-slate-950" : "font-bold text-slate-800"
-                                }`}
-                              >
-                                {m.homeTeam.shortName}
-                              </span>
-                            </div>
-                            <span
-                              className={`text-base font-black px-2.5 py-0.5 rounded-lg min-w-[34px] text-center tabular-nums ${
-                                isFinished || isLive
-                                  ? homeWon
-                                    ? "dark-pill shadow-xs"
-                                    : "bg-slate-100 text-slate-800"
-                                  : "text-slate-400 font-medium text-xs"
-                              }`}
-                            >
-                              {isFinished || isLive ? (m.homeTeam.score ?? 0) : "–"}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Card Footer: Date Caracas + Action Button */}
-                        <div className="pt-2.5 mt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5 text-slate-400" />
-                            <span>{m.timeCaracas} (Caracas)</span>
-                          </span>
-                          <span className="inline-flex items-center gap-0.5 text-amber-600 font-black group-hover:text-amber-700">
-                            <span>Gameday</span>
-                            <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                          </span>
-                        </div>
-                      </article>
+                        {t.label}
+                      </button>
                     );
                   })}
                 </div>
-              )}
-            </section>
-
-            {/* SECTION 2: STANDINGS TABLE */}
-            <section className="space-y-3 pt-4" id="tabla-clasificacion">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
-                    Clasificación Oficial
-                  </span>
-                  <h2 className="text-lg sm:text-xl font-black text-slate-950 flex items-center gap-2">
-                    <Trophy className="w-5 h-5 text-amber-500" />
-                    <span>Tabla de Posiciones · {currentLeague.name}</span>
-                  </h2>
-                </div>
-
-                {/* Zone Legend */}
-                <div className="flex flex-wrap items-center gap-3 text-[11px] font-bold text-slate-600">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                    <span>
-                      {activeLeague === "uefa.champions" ? "Octavos Directo (Top 8)" : "Champions League"}
-                    </span>
-                  </span>
-                  {activeLeague === "uefa.champions" ? (
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                      <span>Playoffs (9° al 24°)</span>
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                      <span>Europa League</span>
-                    </span>
-                  )}
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                    <span>
-                      {activeLeague === "uefa.champions" ? "Eliminado" : "Descenso"}
-                    </span>
-                  </span>
-                </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-xs">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs sm:text-sm">
-                    <thead>
-                      <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-black uppercase tracking-wider text-slate-500">
-                        <th className="py-3 pl-4 pr-2 w-10">#</th>
-                        <th className="py-3 px-2">Club</th>
-                        <th className="py-3 px-2.5 text-center" title="Partidos Jugados">PJ</th>
-                        <th className="py-3 px-2.5 text-center" title="Ganados">G</th>
-                        <th className="py-3 px-2.5 text-center" title="Empatados">E</th>
-                        <th className="py-3 px-2.5 text-center" title="Perdidos">P</th>
-                        <th className="py-3 px-2.5 text-center hidden sm:table-cell" title="Goles a Favor">GF</th>
-                        <th className="py-3 px-2.5 text-center hidden sm:table-cell" title="Goles en Contra">GC</th>
-                        <th className="py-3 px-2.5 text-center" title="Diferencia de Goles">DG</th>
-                        <th className="py-3 pl-2.5 pr-4 text-center font-black text-slate-900">PTS</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {standings.map((row) => {
-                        const zoneColor =
-                          row.zone === "champions"
-                            ? "bg-emerald-500 text-white"
-                            : row.zone === "champions_playoff"
-                            ? "bg-amber-400 text-slate-950"
-                            : row.zone === "europa"
-                            ? "bg-blue-500 text-white"
-                            : row.zone === "conference"
-                            ? "bg-sky-500 text-white"
-                            : row.zone === "relegation"
-                            ? "bg-rose-500 text-white"
-                            : "bg-slate-100 text-slate-700";
-
+              {/* Filter Row: Status Pills + Date Strip (when in Partidos or Calendario) */}
+              {viewTab !== "posiciones" && (
+                <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2.5">
+                  {/* Date Filter Strip */}
+                  {uniqueDates.length > 0 && viewTab === "resumen" && (
+                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-full pb-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedDate("ALL")}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold border transition cursor-pointer shrink-0 ${
+                          selectedDate === "ALL"
+                            ? "dark-pill bg-slate-950 text-white border-slate-950 shadow-2xs"
+                            : "bg-slate-50 text-slate-700 border-slate-200/80 hover:bg-slate-100"
+                        }`}
+                      >
+                        Todas las fechas ({matches.length})
+                      </button>
+                      {uniqueDates.map((d) => {
+                        const isSel = selectedDate === d;
                         return (
-                          <tr
-                            key={row.team.id}
-                            className="hover:bg-slate-50/90 transition"
+                          <button
+                            key={d}
+                            type="button"
+                            onClick={() => setSelectedDate(isSel ? "ALL" : d)}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition cursor-pointer shrink-0 capitalize ${
+                              isSel
+                                ? "dark-pill bg-slate-950 text-white border-slate-950 shadow-2xs"
+                                : "bg-white text-slate-700 border-slate-200/80 hover:bg-slate-50"
+                            }`}
                           >
-                            <td className="py-2.5 pl-4 pr-2">
-                              <span
-                                className={`inline-flex items-center justify-center w-6 h-6 rounded-lg text-[11px] font-black tabular-nums ${zoneColor}`}
-                              >
-                                {row.rank}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-2">
-                              <div className="flex items-center gap-2.5 min-w-[140px]">
-                                <img
-                                  src={row.team.logo}
-                                  alt={row.team.name}
-                                  className="w-6 h-6 object-contain shrink-0"
-                                  loading="lazy"
-                                />
-                                <span className="font-bold text-slate-900 truncate">
-                                  {row.team.name}
-                                </span>
-                              </div>
-                            </td>
-                            <td className="py-2.5 px-2.5 text-center font-semibold text-slate-600 tabular-nums">
-                              {row.gamesPlayed}
-                            </td>
-                            <td className="py-2.5 px-2.5 text-center font-bold text-slate-800 tabular-nums">
-                              {row.wins}
-                            </td>
-                            <td className="py-2.5 px-2.5 text-center text-slate-600 tabular-nums">
-                              {row.ties}
-                            </td>
-                            <td className="py-2.5 px-2.5 text-center text-slate-600 tabular-nums">
-                              {row.losses}
-                            </td>
-                            <td className="py-2.5 px-2.5 text-center text-slate-500 hidden sm:table-cell tabular-nums">
-                              {row.goalsFor}
-                            </td>
-                            <td className="py-2.5 px-2.5 text-center text-slate-500 hidden sm:table-cell tabular-nums">
-                              {row.goalsAgainst}
-                            </td>
-                            <td
-                              className={`py-2.5 px-2.5 text-center font-bold tabular-nums ${
-                                row.goalDiff > 0
-                                  ? "text-emerald-700"
-                                  : row.goalDiff < 0
-                                  ? "text-rose-600"
-                                  : "text-slate-500"
-                              }`}
-                            >
-                              {row.goalDiff > 0 ? `+${row.goalDiff}` : row.goalDiff}
-                            </td>
-                            <td className="py-2.5 pl-2.5 pr-4 text-center font-black text-slate-950 bg-amber-50/70 text-sm tabular-nums">
-                              {row.points}
-                            </td>
-                          </tr>
+                            {formatSoccerShortDate(d)}
+                          </button>
                         );
                       })}
-                    </tbody>
-                  </table>
+                    </div>
+                  )}
+
+                  {/* Club Filter Strip when in Calendario */}
+                  {viewTab === "calendario" && standings.length > 0 && (
+                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-full pb-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedClubId("ALL")}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold border transition cursor-pointer shrink-0 ${
+                          selectedClubId === "ALL"
+                            ? "dark-pill bg-slate-950 text-white border-slate-950"
+                            : "bg-slate-50 text-slate-700 border-slate-200"
+                        }`}
+                      >
+                        Todos los clubes
+                      </button>
+                      {standings.map((row) => {
+                        const active = selectedClubId === row.team.id;
+                        return (
+                          <button
+                            key={row.team.id}
+                            type="button"
+                            onClick={() => setSelectedClubId(active ? "ALL" : row.team.id)}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition cursor-pointer shrink-0 ${
+                              active
+                                ? "dark-pill bg-slate-950 text-white border-slate-950"
+                                : "bg-white text-slate-700 border-slate-200 hover:border-slate-300"
+                            }`}
+                          >
+                            <img src={row.team.logo} alt="" className="w-3.5 h-3.5 object-contain" />
+                            <span>{row.team.shortName}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Match State Filter */}
+                  <div className="inline-flex p-1 rounded-xl bg-slate-100 border border-slate-200/80 overflow-x-auto no-scrollbar">
+                    {[
+                      { key: "ALL", label: "Todos" },
+                      { key: "LIVE", label: `En Vivo (${liveCount})` },
+                      { key: "UPCOMING", label: "Próximos" },
+                      { key: "FINISHED", label: "Finalizados" },
+                    ].map((f) => (
+                      <button
+                        key={f.key}
+                        type="button"
+                        onClick={() => setMatchesFilter(f.key as any)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition cursor-pointer select-none whitespace-nowrap ${
+                          matchesFilter === f.key
+                            ? "dark-pill bg-slate-950 text-white shadow-2xs"
+                            : "text-slate-600 hover:text-slate-950"
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+              )}
+            </div>
+
+            {/* VIEW 1: RESUMEN (12-Column Editorial Split on PC: 8 Cols Matches + 4 Cols Standings) */}
+            {viewTab === "resumen" && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                {/* Left Column (8 Cols): Match Cards Grid */}
+                <div className="lg:col-span-8 space-y-3.5">
+                  <div className="flex items-center justify-between px-1">
+                    <h2 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-900">
+                      Pizarra de Partidos ({filteredMatches.length})
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => setViewTab("calendario")}
+                      className="text-xs font-extrabold text-slate-600 hover:text-slate-950 cursor-pointer"
+                    >
+                      Ver Calendario por Fecha ›
+                    </button>
+                  </div>
+
+                  {filteredMatches.length === 0 ? (
+                    <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500 shadow-2xs">
+                      <Calendar className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                      <p className="text-sm font-bold text-slate-800">
+                        No hay partidos con los filtros seleccionados.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMatchesFilter("ALL");
+                          setSelectedDate("ALL");
+                          setSelectedClubId("ALL");
+                        }}
+                        className="dark-pill mt-3 inline-flex items-center px-3.5 py-1.5 rounded-xl bg-slate-950 text-white text-xs font-extrabold cursor-pointer"
+                      >
+                        Mostrar todos los partidos
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      {filteredMatches.map((m) => {
+                        const isLive = m.status === "IN_PROGRESS";
+                        const isFinished = m.status === "FINISHED";
+                        const awayWon =
+                          (isFinished || isLive) &&
+                          m.awayTeam.score !== undefined &&
+                          m.homeTeam.score !== undefined &&
+                          Number(m.awayTeam.score) > Number(m.homeTeam.score);
+                        const homeWon =
+                          (isFinished || isLive) &&
+                          m.awayTeam.score !== undefined &&
+                          m.homeTeam.score !== undefined &&
+                          Number(m.homeTeam.score) > Number(m.awayTeam.score);
+
+                        return (
+                          <article
+                            key={m.id}
+                            onClick={() => handleOpenMatch(m.id)}
+                            className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-2xs hover:shadow-md hover:border-slate-300 transition flex flex-col justify-between cursor-pointer group select-none"
+                          >
+                            {/* Card Header: Date + Status Pill */}
+                            <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-100 text-xs">
+                              <span className="font-bold text-slate-500 text-[11px] capitalize flex items-center gap-1.5">
+                                <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                <span>{formatSoccerShortDate(m.dateCaracas)}</span>
+                              </span>
+                              <span
+                                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider shrink-0 ${
+                                  isLive
+                                    ? "bg-red-50 text-red-600 border border-red-200 animate-pulse"
+                                    : isFinished
+                                      ? "bg-slate-100 text-slate-700"
+                                      : "bg-slate-900 text-white dark-pill"
+                                }`}
+                              >
+                                {isLive && <span className="w-1.5 h-1.5 rounded-full bg-red-600" />}
+                                <span>{isLive ? m.statusText : isFinished ? "FINAL" : `${m.timeCaracas} VET`}</span>
+                              </span>
+                            </div>
+
+                            {/* Teams & Scores (Local vs Visitante) */}
+                            <div className="space-y-2.5 py-0.5">
+                              {/* Home Team */}
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <img
+                                    src={m.homeTeam.logo}
+                                    alt={m.homeTeam.name}
+                                    className="w-7 h-7 object-contain shrink-0"
+                                    loading="lazy"
+                                  />
+                                  <div className="min-w-0">
+                                    <span
+                                      className={`text-sm block truncate ${
+                                        homeWon ? "font-black text-slate-950" : "font-bold text-slate-800"
+                                      }`}
+                                    >
+                                      {m.homeTeam.shortName}
+                                    </span>
+                                    {m.homeTeam.record && (
+                                      <span className="text-[10px] font-semibold text-slate-400 block">
+                                        {m.homeTeam.record}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <span
+                                  className={`text-base font-black px-2.5 py-0.5 rounded-lg min-w-[34px] text-center tabular-nums ${
+                                    isFinished || isLive
+                                      ? homeWon
+                                        ? "dark-pill bg-slate-950 text-white shadow-2xs"
+                                        : "bg-slate-100 text-slate-800"
+                                      : "text-slate-300 font-bold text-xs"
+                                  }`}
+                                >
+                                  {isFinished || isLive ? (m.homeTeam.score ?? 0) : "vs"}
+                                </span>
+                              </div>
+
+                              {/* Away Team */}
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <img
+                                    src={m.awayTeam.logo}
+                                    alt={m.awayTeam.name}
+                                    className="w-7 h-7 object-contain shrink-0"
+                                    loading="lazy"
+                                  />
+                                  <div className="min-w-0">
+                                    <span
+                                      className={`text-sm block truncate ${
+                                        awayWon ? "font-black text-slate-950" : "font-bold text-slate-800"
+                                      }`}
+                                    >
+                                      {m.awayTeam.shortName}
+                                    </span>
+                                    {m.awayTeam.record && (
+                                      <span className="text-[10px] font-semibold text-slate-400 block">
+                                        {m.awayTeam.record}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <span
+                                  className={`text-base font-black px-2.5 py-0.5 rounded-lg min-w-[34px] text-center tabular-nums ${
+                                    isFinished || isLive
+                                      ? awayWon
+                                        ? "dark-pill bg-slate-950 text-white shadow-2xs"
+                                        : "bg-slate-100 text-slate-800"
+                                      : "text-slate-300 font-bold text-xs"
+                                  }`}
+                                >
+                                  {isFinished || isLive ? (m.awayTeam.score ?? 0) : `${m.timeCaracas}`}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Card Footer: Venue + Gameday CTA */}
+                            <div className="pt-2.5 mt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                              <span className="flex items-center gap-1 truncate max-w-[180px] font-medium">
+                                <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                                <span className="truncate">{m.venue || currentLeague.shortName}</span>
+                              </span>
+                              <span className="inline-flex items-center gap-0.5 text-slate-900 font-extrabold group-hover:text-blue-600 shrink-0">
+                                <span>Centro de Partido</span>
+                                <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                              </span>
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Right Column (4 Cols): Compact Standings Sidebar Card */}
+                <aside className="lg:col-span-4 space-y-3.5">
+                  <div className="rounded-2xl border border-slate-200/90 bg-white overflow-hidden shadow-2xs">
+                    <div className="px-4 py-3.5 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Trophy className="w-4 h-4 text-amber-500" />
+                        <h2 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-950">
+                          Posiciones · {currentLeague.shortName}
+                        </h2>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setViewTab("posiciones")}
+                        className="text-[11px] font-extrabold text-blue-600 hover:underline cursor-pointer"
+                      >
+                        Tabla completa ›
+                      </button>
+                    </div>
+
+                    <div className="overflow-x-auto no-scrollbar">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="border-b border-slate-200/80 bg-slate-50/40 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                            <th className="py-2.5 pl-3.5 pr-1.5 w-8">#</th>
+                            <th className="py-2.5 px-1.5">Club</th>
+                            <th className="py-2.5 px-1.5 text-center">PJ</th>
+                            <th className="py-2.5 px-1.5 text-center">DG</th>
+                            <th className="py-2.5 pl-1.5 pr-3.5 text-right text-slate-900">PTS</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 tabular-nums">
+                          {standings.slice(0, 12).map((row) => {
+                            const dotColor =
+                              row.zone === "champions"
+                                ? "bg-emerald-500"
+                                : row.zone === "champions_playoff"
+                                  ? "bg-amber-400"
+                                  : row.zone === "europa"
+                                    ? "bg-blue-500"
+                                    : row.zone === "relegation"
+                                      ? "bg-rose-500"
+                                      : "bg-slate-300";
+
+                            return (
+                              <tr key={row.team.id} className="hover:bg-slate-50/80 transition">
+                                <td className="py-2 pl-3.5 pr-1.5 font-bold text-slate-600">
+                                  <span className="inline-flex items-center gap-1.5">
+                                    <span className={`w-1.5 h-3.5 rounded-full ${dotColor}`} />
+                                    <span className="text-slate-900 font-black">{row.rank}</span>
+                                  </span>
+                                </td>
+                                <td className="py-2 px-1.5">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <img
+                                      src={row.team.logo}
+                                      alt=""
+                                      className="w-5 h-5 object-contain shrink-0"
+                                      loading="lazy"
+                                    />
+                                    <span className="font-bold text-slate-900 truncate max-w-[125px]">
+                                      {row.team.shortName}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="py-2 px-1.5 text-center text-slate-500">
+                                  {row.gamesPlayed}
+                                </td>
+                                <td
+                                  className={`py-2 px-1.5 text-center font-bold ${
+                                    row.goalDiff > 0
+                                      ? "text-emerald-600"
+                                      : row.goalDiff < 0
+                                        ? "text-rose-600"
+                                        : "text-slate-500"
+                                  }`}
+                                >
+                                  {row.goalDiff > 0 ? `+${row.goalDiff}` : row.goalDiff}
+                                </td>
+                                <td className="py-2 pl-1.5 pr-3.5 text-right font-black text-slate-950">
+                                  {row.points}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="p-3 bg-slate-50/70 border-t border-slate-100 text-center">
+                      <button
+                        type="button"
+                        onClick={() => setViewTab("posiciones")}
+                        className="w-full py-2 rounded-xl bg-white border border-slate-200/90 text-xs font-extrabold text-slate-800 hover:bg-slate-100 transition cursor-pointer shadow-2xs"
+                      >
+                        Ver los {standings.length} clubes y estadísticas completas
+                      </button>
+                    </div>
+                  </div>
+                </aside>
               </div>
-            </section>
+            )}
+
+            {/* VIEW 2: CALENDARIO POR FECHA (Chronological Matchday Schedule) */}
+            {viewTab === "calendario" && (
+              <div className="space-y-4">
+                {matchesByDate.length === 0 ? (
+                  <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500 shadow-2xs">
+                    <p className="text-sm font-bold text-slate-800">
+                      No hay partidos programados con los filtros actuales.
+                    </p>
+                  </div>
+                ) : (
+                  matchesByDate.map(([dateStr, dayMatches]) => (
+                    <div
+                      key={dateStr}
+                      className="rounded-2xl border border-slate-200/90 bg-white overflow-hidden shadow-2xs"
+                    >
+                      <div className="px-4 py-3 bg-slate-50/90 border-b border-slate-200/80 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-slate-700" />
+                          <h3 className="text-xs sm:text-sm font-black text-slate-950">
+                            {formatSoccerFullDate(dateStr)}
+                          </h3>
+                        </div>
+                        <span className="text-[11px] font-bold text-slate-500 bg-white px-2.5 py-0.5 rounded-md border border-slate-200">
+                          {dayMatches.length} {dayMatches.length === 1 ? "partido" : "partidos"}
+                        </span>
+                      </div>
+
+                      <div className="divide-y divide-slate-100">
+                        {dayMatches.map((m) => {
+                          const isLive = m.status === "IN_PROGRESS";
+                          const isFinished = m.status === "FINISHED";
+                          const hasScore = isLive || isFinished;
+
+                          return (
+                            <div
+                              key={m.id}
+                              onClick={() => handleOpenMatch(m.id)}
+                              className="p-3.5 sm:p-4 hover:bg-slate-50/90 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer"
+                            >
+                              {/* Teams & Center Score */}
+                              <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-4 flex-1 min-w-0">
+                                <div className="flex items-center gap-2 min-w-0 flex-1 sm:flex-initial sm:w-48 justify-end text-right">
+                                  <span className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                                    {m.homeTeam.shortName}
+                                  </span>
+                                  <img
+                                    src={m.homeTeam.logo}
+                                    alt={m.homeTeam.name}
+                                    className="w-6 h-6 sm:w-7 sm:h-7 object-contain shrink-0"
+                                  />
+                                </div>
+
+                                {hasScore ? (
+                                  <div className="px-3 py-1 rounded-xl bg-slate-100 border border-slate-200 text-xs sm:text-sm font-black text-slate-950 tabular-nums shrink-0">
+                                    {m.homeTeam.score ?? 0} - {m.awayTeam.score ?? 0}
+                                  </div>
+                                ) : (
+                                  <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200/80 text-[11px] font-extrabold text-slate-700 tabular-nums shrink-0">
+                                    {m.timeCaracas}
+                                  </span>
+                                )}
+
+                                <div className="flex items-center gap-2 min-w-0 flex-1 sm:flex-initial sm:w-48">
+                                  <img
+                                    src={m.awayTeam.logo}
+                                    alt={m.awayTeam.name}
+                                    className="w-6 h-6 sm:w-7 sm:h-7 object-contain shrink-0"
+                                  />
+                                  <span className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                                    {m.awayTeam.shortName}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Venue & Status Action */}
+                              <div className="flex items-center justify-between sm:justify-end gap-3 text-xs text-slate-500 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                                <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 truncate max-w-[180px] sm:max-w-[220px]">
+                                  <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                  <span className="truncate">{m.venue || currentLeague.shortName}</span>
+                                </span>
+
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {isLive && (
+                                    <span className="px-2 py-0.5 rounded bg-red-50 border border-red-200 text-red-600 text-[10px] font-black uppercase">
+                                      {m.statusText}
+                                    </span>
+                                  )}
+                                  <span className="dark-pill px-3 py-1 rounded-lg bg-slate-900 text-white text-[11px] font-extrabold">
+                                    {isFinished ? "Resumen" : "Ficha"}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {/* VIEW 3: FULL STANDINGS TABLE (Adapted for Mobile & PC) */}
+            {viewTab === "posiciones" && (
+              <section className="space-y-3.5" id="tabla-clasificacion">
+                <div className="rounded-2xl border border-slate-200/90 bg-white overflow-hidden shadow-2xs">
+                  <div className="px-4 py-3.5 bg-slate-50/80 border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Trophy className="w-4 h-4 text-amber-500" />
+                      <h2 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-950">
+                        Clasificación Oficial · {currentLeague.name}
+                      </h2>
+                    </div>
+
+                    {/* Zone Legend */}
+                    <div className="flex flex-wrap items-center gap-3 text-[11px] font-bold text-slate-600">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                        <span>
+                          {activeLeague === "uefa.champions" ? "Octavos Directo (1°-8°)" : "Champions League"}
+                        </span>
+                      </span>
+                      {activeLeague === "uefa.champions" ? (
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                          <span>Playoffs (9°-24°)</span>
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                          <span>Europa League</span>
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                        <span>
+                          {activeLeague === "uefa.champions" ? "Eliminado" : "Descenso"}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto no-scrollbar">
+                    <table className="w-full text-left border-collapse text-xs sm:text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50/50 text-[11px] font-black uppercase tracking-wider text-slate-500">
+                          <th className="py-3 pl-3.5 sm:pl-4 pr-2 w-10">#</th>
+                          <th className="py-3 px-2">Club</th>
+                          <th className="py-3 px-2 sm:px-2.5 text-center" title="Partidos Jugados">PJ</th>
+                          <th className="py-3 px-2 sm:px-2.5 text-center" title="Ganados">G</th>
+                          <th className="py-3 px-2 sm:px-2.5 text-center" title="Empatados">E</th>
+                          <th className="py-3 px-2 sm:px-2.5 text-center" title="Perdidos">P</th>
+                          <th className="py-3 px-2.5 text-center hidden sm:table-cell" title="Goles a Favor">GF</th>
+                          <th className="py-3 px-2.5 text-center hidden sm:table-cell" title="Goles en Contra">GC</th>
+                          <th className="py-3 px-2 sm:px-2.5 text-center" title="Diferencia de Goles">DG</th>
+                          <th className="py-3 pl-2 sm:pl-2.5 pr-3.5 sm:pr-4 text-center font-black text-slate-950">PTS</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 tabular-nums">
+                        {standings.map((row) => {
+                          const zoneColor =
+                            row.zone === "champions"
+                              ? "bg-emerald-500 text-white"
+                              : row.zone === "champions_playoff"
+                                ? "bg-amber-400 text-slate-950"
+                                : row.zone === "europa"
+                                  ? "bg-blue-500 text-white"
+                                  : row.zone === "conference"
+                                    ? "bg-sky-500 text-white"
+                                    : row.zone === "relegation"
+                                      ? "bg-rose-500 text-white"
+                                      : "bg-slate-100 text-slate-700";
+
+                          return (
+                            <tr key={row.team.id} className="hover:bg-slate-50/90 transition">
+                              <td className="py-2.5 pl-3.5 sm:pl-4 pr-2">
+                                <span
+                                  className={`inline-flex items-center justify-center w-6 h-6 rounded-lg text-[11px] font-black tabular-nums ${zoneColor}`}
+                                >
+                                  {row.rank}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-2">
+                                <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                                  <img
+                                    src={row.team.logo}
+                                    alt={row.team.name}
+                                    className="w-6 h-6 object-contain shrink-0"
+                                    loading="lazy"
+                                  />
+                                  <span className="font-bold text-slate-900 truncate max-w-[125px] sm:max-w-none">
+                                    <span className="sm:hidden">{row.team.shortName}</span>
+                                    <span className="hidden sm:inline">{row.team.name}</span>
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-2 sm:px-2.5 text-center font-semibold text-slate-600">
+                                {row.gamesPlayed}
+                              </td>
+                              <td className="py-2.5 px-2 sm:px-2.5 text-center font-bold text-slate-800">
+                                {row.wins}
+                              </td>
+                              <td className="py-2.5 px-2 sm:px-2.5 text-center text-slate-600">
+                                {row.ties}
+                              </td>
+                              <td className="py-2.5 px-2 sm:px-2.5 text-center text-slate-600">
+                                {row.losses}
+                              </td>
+                              <td className="py-2.5 px-2.5 text-center text-slate-500 hidden sm:table-cell">
+                                {row.goalsFor}
+                              </td>
+                              <td className="py-2.5 px-2.5 text-center text-slate-500 hidden sm:table-cell">
+                                {row.goalsAgainst}
+                              </td>
+                              <td
+                                className={`py-2.5 px-2 sm:px-2.5 text-center font-bold ${
+                                  row.goalDiff > 0
+                                    ? "text-emerald-700"
+                                    : row.goalDiff < 0
+                                      ? "text-rose-600"
+                                      : "text-slate-500"
+                                }`}
+                              >
+                                {row.goalDiff > 0 ? `+${row.goalDiff}` : row.goalDiff}
+                              </td>
+                              <td className="py-2.5 pl-2 sm:pl-2.5 pr-3.5 sm:pr-4 text-center font-black text-slate-950 bg-slate-50 text-sm">
+                                {row.points}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+            )}
           </>
         )}
       </main>

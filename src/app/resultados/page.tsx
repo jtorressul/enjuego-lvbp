@@ -1,33 +1,34 @@
 import type { Metadata } from "next";
 import { SeededPortal } from "@/components/SeededPortal";
+import { LEAGUES, parseLeague } from "@/lib/leagues";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Resultados LVBP Hoy en Vivo · Pizarra y Marcadores Béisbol Venezolano",
-  description:
-    "Resultados de los juegos de la LVBP hoy en tiempo real. Pizarra jugada a jugada, box score completo, lanzadores ganadores y salvados, y highlights en video.",
-  alternates: {
-    canonical: "https://enjuego.online/resultados",
-  },
-  keywords: [
-    "resultados lvbp",
-    "resultados lvbp hoy",
-    "pizarra lvbp",
-    "marcadores lvbp",
-    "juegos de hoy lvbp",
-    "juegos de ayer lvbp",
-    "quien gano ayer lvbp",
-    "beisbol venezolano resultados",
-    "box score lvbp",
-  ],
-  openGraph: {
-    title: "Resultados LVBP Hoy en Vivo · Pizarra y Marcadores",
-    description:
-      "Consulta los resultados actualizados de la LVBP y MLB. Marcador jugada a jugada y box score de cada juego.",
-    url: "https://enjuego.online/resultados",
-  },
-};
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ liga?: string; league?: string; fecha?: string }>;
+}): Promise<Metadata> {
+  const sp = await searchParams;
+  const leagueId = parseLeague(sp?.liga || sp?.league);
+  const cfg = LEAGUES[leagueId];
+
+  const title = `Resultados ${cfg.shortName} en Vivo · Pizarra, Box Score y Marcadores`;
+  const description = `Resultados actualizados de ${cfg.name} (${cfg.shortName}) en tiempo real: pizarras C·H·E, box score completo, lanzadores ganadores y jugadas clave.`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: `https://enjuego.online/resultados?liga=${leagueId}`,
+    },
+    openGraph: {
+      title,
+      description,
+      url: `https://enjuego.online/resultados?liga=${leagueId}`,
+    },
+  };
+}
 
 export default function ResultadosPage() {
   return <SeededPortal initialSection="resultados" />;

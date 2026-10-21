@@ -1,31 +1,34 @@
 import type { Metadata } from "next";
 import { SeededPortal } from "@/components/SeededPortal";
+import { LEAGUES, parseLeague } from "@/lib/leagues";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Tabla de Posiciones LVBP 2026 · Clasificación Béisbol Venezolano",
-  description:
-    "Tabla de posiciones oficial de la LVBP: juegos ganados, perdidos, average, diferencia de juegos (DIF) y racha de los 8 equipos del béisbol venezolano.",
-  alternates: {
-    canonical: "https://enjuego.online/posiciones",
-  },
-  keywords: [
-    "tabla de posiciones lvbp",
-    "posiciones lvbp",
-    "posiciones beisbol venezolano",
-    "clasificacion lvbp",
-    "como van las posiciones de la lvbp",
-    "tabla round robin lvbp",
-    "posiciones lvbp 2026",
-  ],
-  openGraph: {
-    title: "Tabla de Posiciones LVBP 2026 · Clasificación Béisbol Venezolano",
-    description:
-      "Consulta cómo van los 8 equipos en la tabla de la LVBP: juegos ganados, perdidos, average y racha.",
-    url: "https://enjuego.online/posiciones",
-  },
-};
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ liga?: string; league?: string }>;
+}): Promise<Metadata> {
+  const sp = await searchParams;
+  const leagueId = parseLeague(sp?.liga || sp?.league);
+  const cfg = LEAGUES[leagueId];
+
+  const title = `Tabla de Posiciones ${cfg.shortName} 2026 · Clasificación ${cfg.name}`;
+  const description = `Tabla de posiciones oficial de ${cfg.name} (${cfg.shortName}): juegos ganados, perdidos, porcentaje (PCT), diferencia (DIF) y racha actualizada.`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: `https://enjuego.online/posiciones?liga=${leagueId}`,
+    },
+    openGraph: {
+      title,
+      description,
+      url: `https://enjuego.online/posiciones?liga=${leagueId}`,
+    },
+  };
+}
 
 export default function PosicionesPage() {
   return <SeededPortal initialSection="posiciones" />;

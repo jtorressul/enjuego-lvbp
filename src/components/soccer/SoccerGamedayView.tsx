@@ -398,8 +398,13 @@ export function SoccerGamedayView({
         />
 
         <div className="p-5 sm:p-7">
-          {/* Status Pill */}
-          <div className="flex justify-center mb-4">
+          {/* Status & Stage Pill */}
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
+            {match.stage && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-slate-100 border border-slate-200/80 text-slate-700 text-[11px] font-extrabold uppercase tracking-wider">
+                {match.stage}
+              </span>
+            )}
             {isLive ? (
               <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-red-50 border border-red-200 text-red-600 text-xs font-black uppercase tracking-wider shadow-2xs">
                 <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
@@ -428,13 +433,32 @@ export function SoccerGamedayView({
                   className="w-full h-full object-contain"
                 />
               </div>
-              <div>
+              <div className="space-y-0.5">
                 <h2 className="text-sm sm:text-lg font-black text-slate-950 leading-tight">
                   {match.homeTeam.name}
                 </h2>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   Local {match.lineups?.home?.formation ? `· ${match.lineups.home.formation}` : ""}
+                  {match.homeTeam.record ? ` · (${match.homeTeam.record})` : ""}
                 </span>
+                {match.homeTeam.form && (
+                  <div className="hidden sm:flex items-center justify-center gap-1 pt-1">
+                    {match.homeTeam.form.split("-").map((ch, idx) => (
+                      <span
+                        key={idx}
+                        className={`w-4 h-4 rounded text-[9px] font-black flex items-center justify-center ${
+                          ch === "G"
+                            ? "bg-emerald-500 text-white"
+                            : ch === "E"
+                              ? "bg-slate-200 text-slate-700"
+                              : "bg-rose-500 text-white"
+                        }`}
+                      >
+                        {ch}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -471,13 +495,32 @@ export function SoccerGamedayView({
                   className="w-full h-full object-contain"
                 />
               </div>
-              <div>
+              <div className="space-y-0.5">
                 <h2 className="text-sm sm:text-lg font-black text-slate-950 leading-tight">
                   {match.awayTeam.name}
                 </h2>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   Visitante {match.lineups?.away?.formation ? `· ${match.lineups.away.formation}` : ""}
+                  {match.awayTeam.record ? ` · (${match.awayTeam.record})` : ""}
                 </span>
+                {match.awayTeam.form && (
+                  <div className="hidden sm:flex items-center justify-center gap-1 pt-1">
+                    {match.awayTeam.form.split("-").map((ch, idx) => (
+                      <span
+                        key={idx}
+                        className={`w-4 h-4 rounded text-[9px] font-black flex items-center justify-center ${
+                          ch === "G"
+                            ? "bg-emerald-500 text-white"
+                            : ch === "E"
+                              ? "bg-slate-200 text-slate-700"
+                              : "bg-rose-500 text-white"
+                        }`}
+                      >
+                        {ch}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -512,22 +555,33 @@ export function SoccerGamedayView({
             </div>
           )}
 
-          {/* Venue & Attendance Footer */}
-          <div className="mt-5 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-center gap-4 text-[11px] font-semibold text-slate-500">
+          {/* Venue, City, Referee & Attendance Metadata Bar */}
+          <div className="mt-5 pt-3.5 border-t border-slate-100 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[11px] font-semibold text-slate-600">
             {match.venue && (
               <span className="inline-flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                <span>{match.venue}</span>
+                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span>
+                  {match.venue}
+                  {match.city ? ` (${match.city})` : ""}
+                </span>
               </span>
             )}
             <span className="inline-flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              <span>{match.dateCaracas}</span>
+              <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span>
+                {match.dateCaracas} · {match.timeCaracas} VET
+              </span>
             </span>
+            {match.referee && (
+              <span className="inline-flex items-center gap-1.5">
+                <Shield className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span>Árbitro: {match.referee}</span>
+              </span>
+            )}
             {match.attendance && (
               <span className="inline-flex items-center gap-1.5">
-                <Users className="w-3.5 h-3.5 text-slate-400" />
-                <span>Asistencia: {match.attendance} espectadores</span>
+                <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span>Asistencia: {match.attendance}</span>
               </span>
             )}
           </div>
@@ -1690,29 +1744,63 @@ export function SoccerGamedayView({
             )}
           </section>
 
-          {/* 3. TECHNICAL SHEET */}
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 space-y-2.5 shadow-xs">
-            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-900">
-              <Shield className="w-4 h-4 text-slate-700" />
-              <span>Ficha Técnica</span>
-            </div>
-            <div className="text-xs text-slate-600 space-y-1.5 pt-1 border-t border-slate-100">
-              <div className="flex justify-between gap-2">
-                <span className="text-slate-400 font-semibold">Competición:</span>
-                <span className="font-bold text-slate-800 text-right">{match.leagueName}</span>
+          {/* 3. FICHA TÉCNICA Y METADATOS DEL PARTIDO */}
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 space-y-3 shadow-xs">
+            <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-900">
+                <Shield className="w-4 h-4 text-slate-700" />
+                <span>Ficha y Metadatos del Partido</span>
               </div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase">ID #{match.id}</span>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2.5 text-xs text-slate-600">
+              <div className="flex justify-between items-center gap-2 py-1 border-b border-slate-50">
+                <span className="text-slate-400 font-semibold">Competición:</span>
+                <span className="font-extrabold text-slate-900 text-right">{match.leagueName}</span>
+              </div>
+              {match.stage && (
+                <div className="flex justify-between items-center gap-2 py-1 border-b border-slate-50">
+                  <span className="text-slate-400 font-semibold">Fase / Jornada:</span>
+                  <span className="font-bold text-slate-800 text-right">{match.stage}</span>
+                </div>
+              )}
               {match.venue && (
-                <div className="flex justify-between gap-2">
+                <div className="flex justify-between items-center gap-2 py-1 border-b border-slate-50">
                   <span className="text-slate-400 font-semibold">Estadio:</span>
                   <span className="font-bold text-slate-800 text-right">{match.venue}</span>
                 </div>
               )}
-              <div className="flex justify-between gap-2">
-                <span className="text-slate-400 font-semibold">Fecha:</span>
+              {match.city && (
+                <div className="flex justify-between items-center gap-2 py-1 border-b border-slate-50">
+                  <span className="text-slate-400 font-semibold">Ciudad / País:</span>
+                  <span className="font-bold text-slate-800 text-right">{match.city}</span>
+                </div>
+              )}
+              {match.referee && (
+                <div className="flex justify-between items-center gap-2 py-1 border-b border-slate-50">
+                  <span className="text-slate-400 font-semibold">Árbitro Principal:</span>
+                  <span className="font-bold text-slate-800 text-right">{match.referee}</span>
+                </div>
+              )}
+              {match.attendance && (
+                <div className="flex justify-between items-center gap-2 py-1 border-b border-slate-50">
+                  <span className="text-slate-400 font-semibold">Asistencia Oficial:</span>
+                  <span className="font-bold text-slate-800 text-right">{match.attendance} espectadores</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center gap-2 py-1 border-b border-slate-50">
+                <span className="text-slate-400 font-semibold">Fecha y Hora (VET):</span>
                 <span className="font-bold text-slate-800 text-right">
-                  {match.dateCaracas} · {match.timeCaracas} (VET)
+                  {match.dateCaracas} · {match.timeCaracas}
                 </span>
               </div>
+              {match.broadcast && (
+                <div className="flex justify-between items-center gap-2 py-1">
+                  <span className="text-slate-400 font-semibold">Señal Internacional:</span>
+                  <span className="font-bold text-slate-800 text-right">{match.broadcast}</span>
+                </div>
+              )}
             </div>
           </section>
         </div>

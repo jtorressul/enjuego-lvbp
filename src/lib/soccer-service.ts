@@ -8,6 +8,8 @@ export interface SoccerTeam {
   abbreviation: string;
   logo: string;
   score?: number | string;
+  record?: string;
+  form?: string;
 }
 
 export interface SoccerMatch {
@@ -19,6 +21,9 @@ export interface SoccerMatch {
   statusText: string;  // e.g. "45'", "HT", "Final", "15:00"
   clock?: string;
   venue?: string;
+  city?: string;
+  stage?: string;
+  broadcast?: string;
   leagueId: SoccerLeagueId;
   leagueName: string;
   homeTeam: SoccerTeam;
@@ -142,7 +147,11 @@ export interface SoccerMatchDetail {
   status: "SCHEDULED" | "IN_PROGRESS" | "FINISHED";
   statusText: string;
   venue?: string;
+  city?: string;
   attendance?: string;
+  referee?: string;
+  stage?: string;
+  broadcast?: string;
   homeTeam: SoccerTeam;
   awayTeam: SoccerTeam;
   events: SoccerMatchEvent[];
@@ -290,6 +299,19 @@ export async function fetchSoccerScoreboard(
       }
 
       const isScheduled = status === "SCHEDULED";
+      const translateForm = (rawForm?: string): string | undefined => {
+        if (!rawForm) return undefined;
+        return rawForm
+          .toUpperCase()
+          .split("")
+          .map((ch) => (ch === "W" ? "G" : ch === "D" ? "E" : ch === "L" ? "P" : ch))
+          .join("-");
+      };
+
+      const rawBroadcast =
+        comp?.broadcasts?.[0]?.names?.[0] ||
+        comp?.geoBroadcasts?.[0]?.media?.shortName ||
+        undefined;
 
       return {
         id: String(ev.id || Math.random().toString(36).slice(2, 9)),
@@ -299,7 +321,10 @@ export async function fetchSoccerScoreboard(
         status,
         statusText,
         clock: ev.status?.displayClock,
-        venue: comp?.venue?.fullName || comp?.venue?.address?.city,
+        venue: comp?.venue?.fullName || comp?.venue?.shortName || comp?.venue?.address?.city,
+        city: [comp?.venue?.address?.city, comp?.venue?.address?.country].filter(Boolean).join(", ") || undefined,
+        stage: ev.season?.slug?.replace(/-/g, " ") || undefined,
+        broadcast: rawBroadcast,
         leagueId,
         leagueName: leagueConfig.name,
         homeTeam: {
@@ -309,6 +334,8 @@ export async function fetchSoccerScoreboard(
           abbreviation: homeComp?.team?.abbreviation || "LOC",
           logo: homeComp?.team?.logo || `https://a.espncdn.com/i/teamlogos/soccer/500/${homeComp?.team?.id}.png`,
           score: isScheduled ? undefined : (homeComp?.score !== undefined && homeComp?.score !== "" ? Number(homeComp.score) : undefined),
+          record: homeComp?.records?.[0]?.summary || undefined,
+          form: translateForm(homeComp?.form),
         },
         awayTeam: {
           id: String(awayComp?.team?.id || "away"),
@@ -317,6 +344,8 @@ export async function fetchSoccerScoreboard(
           abbreviation: awayComp?.team?.abbreviation || "VIS",
           logo: awayComp?.team?.logo || `https://a.espncdn.com/i/teamlogos/soccer/500/${awayComp?.team?.id}.png`,
           score: isScheduled ? undefined : (awayComp?.score !== undefined && awayComp?.score !== "" ? Number(awayComp.score) : undefined),
+          record: awayComp?.records?.[0]?.summary || undefined,
+          form: translateForm(awayComp?.form),
         },
       };
     });
@@ -508,6 +537,15 @@ export async function fetchSoccerMatchDetail(
     const homeScore = isScheduled || !homeComp?.score ? undefined : parseInt(homeComp.score, 10);
     const awayScore = isScheduled || !awayComp?.score ? undefined : parseInt(awayComp.score, 10);
 
+    const translateFormDetail = (rawForm?: string): string | undefined => {
+      if (!rawForm) return undefined;
+      return rawForm
+        .toUpperCase()
+        .split("")
+        .map((ch) => (ch === "W" ? "G" : ch === "D" ? "E" : ch === "L" ? "P" : ch))
+        .join("-");
+    };
+
     const homeTeam: SoccerTeam = {
       id: String(homeComp?.team?.id || "home"),
       name: homeComp?.team?.displayName || homeComp?.team?.name || "Local",
@@ -515,6 +553,8 @@ export async function fetchSoccerMatchDetail(
       abbreviation: homeComp?.team?.abbreviation || "LOC",
       logo: homeComp?.team?.logos?.[0]?.href || `https://a.espncdn.com/i/teamlogos/soccer/500/${homeComp?.team?.id}.png`,
       score: homeScore,
+      record: homeComp?.records?.[0]?.summary || undefined,
+      form: translateFormDetail(homeComp?.form),
     };
 
     const awayTeam: SoccerTeam = {
@@ -524,12 +564,41 @@ export async function fetchSoccerMatchDetail(
       abbreviation: awayComp?.team?.abbreviation || "VIS",
       logo: awayComp?.team?.logos?.[0]?.href || `https://a.espncdn.com/i/teamlogos/soccer/500/${awayComp?.team?.id}.png`,
       score: awayScore,
+      record: awayComp?.records?.[0]?.summary || undefined,
+      form: translateFormDetail(awayComp?.form),
     };
 
-    // Venue & Info
+    // Venue, City, Referee, Broadcast & Stage Info
     const venueObj = json.gameInfo?.venue;
-    const venueName = venueObj ? [venueObj.fullName || venueObj.shortName, venueObj.address?.city].filter(Boolean).join(", ") : undefined;
+    const venueName = venueObj ? (venueObj.fullName || venueObj.shortName || venueObj.address?.city) : undefined;
+    const cityName = venueObj ? [venueObj.address?.city, venueObj.address?.country].filter(Boolean).join(", ") : undefined;
     const attendance = json.gameInfo?.attendance ? new Intl.NumberFormat("es-VE").format(json.gameInfo.attendance) : undefined;
+    const referee =
+      json.gameInfo?.officials?.[0]?.fullName ||
+      json.gameInfo?.officials?.[0]?.displayName ||
+      undefined;
+    const stageRaw =
+      comp?.series?.title ||
+      json.header?.gameNote ||
+      json.header?.season?.name ||
+      undefined;
+    const stage = stageRaw
+      ? String(stageRaw)
+          .replace(/League Phase/gi, "Fase de Liga")
+          .replace(/Group Stage/gi, "Fase de Grupos")
+          .replace(/Round of 16/gi, "Octavos de Final")
+          .replace(/Quarterfinals/gi, "Cuartos de Final")
+          .replace(/Semifinals/gi, "Semifinales")
+          .replace(/English Premier League/gi, "Premier League")
+          .replace(/Spanish LALIGA/gi, "LaLiga EA Sports")
+          .replace(/Italian Serie A/gi, "Serie A")
+          .replace(/German Bundesliga/gi, "Bundesliga")
+          .replace(/French Ligue 1/gi, "Ligue 1")
+      : undefined;
+    const broadcast =
+      comp?.broadcasts?.[0]?.names?.join(", ") ||
+      comp?.geoBroadcasts?.[0]?.media?.shortName ||
+      "ESPN / Disney+";
 
     // Key Events: Goals, Cards, Substitutions
     const rawEvents: any[] = json.keyEvents || [];
@@ -1061,7 +1130,11 @@ export async function fetchSoccerMatchDetail(
       status,
       statusText,
       venue: venueName,
+      city: cityName,
       attendance,
+      referee,
+      stage,
+      broadcast,
       homeTeam,
       awayTeam,
       events,

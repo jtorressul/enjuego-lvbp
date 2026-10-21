@@ -31,12 +31,12 @@ export async function generateMetadata({
         : data.statusLabel || "En Vivo";
 
       const statusPrefix = isLive
-        ? `🔴 EN VIVO (${inningText}): ${awayName} ${data.awayScore} - ${data.homeScore} ${homeName}`
+        ? `EN VIVO (${inningText}): ${awayName} ${data.awayScore} - ${data.homeScore} ${homeName}`
         : isFinal
-          ? `⚾ FINAL: ${awayName} ${data.awayScore} - ${data.homeScore} ${homeName}`
-          : `⚾ HOY (${data.time || "7:00 PM"}): ${awayName} vs ${homeName}`;
+          ? `FINAL: ${awayName} ${data.awayScore} - ${data.homeScore} ${homeName}`
+          : `HOY (${data.time || "7:00 PM"}): ${awayName} vs ${homeName}`;
 
-      const title = `${statusPrefix} · Marcador y Transmisión`;
+      const title = `${statusPrefix} · Pizarra, Box Score y Transmisión`;
 
       const tvList =
         hasLiveStream
@@ -46,10 +46,10 @@ export async function generateMetadata({
             : data.tv || "TV Abierta y Streaming";
 
       const description = isLive
-        ? `🔴 Sigue en vivo el juego ${awayName} (${data.awayScore}) vs ${homeName} (${data.homeScore}). Señal de TV: ${tvList}. Pizarra jugada a jugada, alineaciones, pitcheos y estadísticas en tiempo real.`
+        ? `Sigue en vivo el juego ${awayName} (${data.awayScore}) vs ${homeName} (${data.homeScore}) en ${data.venue || "Venezuela"}. Señal de TV: ${tvList}. Pizarra jugada a jugada, alineaciones, pitcheos y estadísticas en tiempo real.`
         : isFinal
-          ? `Marcador final: ${awayName} ${data.awayScore} - ${data.homeScore} ${homeName}. Box score completo, estadísticas individuales, decisiones de pitcheo y resumen del partido.`
-          : `Duelo de la LVBP: ${awayName} vs ${homeName} a las ${data.time || "7:00 PM"} en ${data.venue || "Venezuela"}. Transmisión: ${tvList}. Alineaciones oficiales y marcador en vivo.`;
+          ? `Marcador final: ${awayName} ${data.awayScore} - ${data.homeScore} ${homeName} en ${data.venue || "el estadio"}. Box score completo, estadísticas de bateo y pitcheo, decisiones y resumen del partido.`
+          : `Partido oficial: ${awayName} vs ${homeName} a las ${data.time || "7:00 PM"} (VET) en ${data.venue || "Venezuela"}. Transmisión: ${tvList}. Alineaciones oficiales y pizarra en vivo.`;
 
       // 1200x630 Matchup Open Graph Image
       const ogImageUrl =

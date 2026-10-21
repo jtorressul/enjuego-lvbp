@@ -1,32 +1,34 @@
 import type { Metadata } from "next";
 import { SeededPortal } from "@/components/SeededPortal";
+import { LEAGUES, parseLeague } from "@/lib/leagues";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Calendario LVBP 2026 · Juegos de Hoy, Horarios y Canales de TV",
-  description:
-    "Calendario completo de la LVBP 2026. Conoce a qué hora juegan hoy y qué canales transmiten en vivo: Venevisión, Televen, IVC, 1Base TV, Canal I y BeisbolPlay.",
-  alternates: {
-    canonical: "https://enjuego.online/calendario",
-  },
-  keywords: [
-    "calendario lvbp",
-    "juegos de hoy lvbp",
-    "juegos lvbp hoy",
-    "a que hora juega el caracas hoy",
-    "a que hora juega el magallanes hoy",
-    "canales transmite beisbol venezolano",
-    "donde ver lvbp hoy",
-    "horarios lvbp",
-  ],
-  openGraph: {
-    title: "Calendario LVBP 2026 · Juegos de Hoy y Canales de TV",
-    description:
-      "Horarios oficiales de Venezuela y transmisiones de TV abierta y cable para todos los juegos de la LVBP.",
-    url: "https://enjuego.online/calendario",
-  },
-};
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ liga?: string; league?: string; equipo?: string }>;
+}): Promise<Metadata> {
+  const sp = await searchParams;
+  const leagueId = parseLeague(sp?.liga || sp?.league);
+  const cfg = LEAGUES[leagueId];
+
+  const title = `Calendario ${cfg.shortName} 2026 · Juegos de Hoy, Horarios y Canales de TV`;
+  const description = `Calendario oficial de ${cfg.name} (${cfg.shortName}): horarios en Venezuela (VET), estadios, señales de transmisión en vivo y filtro por equipo.`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: `https://enjuego.online/calendario?liga=${leagueId}`,
+    },
+    openGraph: {
+      title,
+      description,
+      url: `https://enjuego.online/calendario?liga=${leagueId}`,
+    },
+  };
+}
 
 export default function CalendarioPage() {
   return <SeededPortal initialSection="calendario" />;

@@ -13,15 +13,24 @@ export interface PushSubscriptionData {
 // In-memory fallback for local development
 let memSubscriptions: Map<string, PushSubscriptionData> = new Map();
 
+function isCloudflareRuntime(): boolean {
+  return Boolean(
+    process.env.CF_PAGES ||
+    (typeof navigator !== "undefined" && (navigator as any).userAgent === "Cloudflare-Workers")
+  );
+}
+
 async function getKV(): Promise<any | null> {
-  try {
-    const ctx = await getCloudflareContext({ async: true });
-    const env = ctx?.env as Record<string, any> | undefined;
-    if (env?.ENJUEGO_KV && typeof env.ENJUEGO_KV.get === "function") {
-      return env.ENJUEGO_KV;
+  if (isCloudflareRuntime()) {
+    try {
+      const ctx = await getCloudflareContext({ async: true });
+      const env = ctx?.env as Record<string, any> | undefined;
+      if (env?.ENJUEGO_KV && typeof env.ENJUEGO_KV.get === "function") {
+        return env.ENJUEGO_KV;
+      }
+    } catch {
+      // In local dev without cloudflare worker context
     }
-  } catch {
-    // In local dev without cloudflare worker context
   }
   return null;
 }
@@ -38,16 +47,39 @@ function endpointHash(endpoint: string): string {
 
 const INDEX_KEY = "push_sub_index_v1";
 
+async function loadSqliteSubscriptions(): Promise<Map<string, PushSubscriptionData>> {
+  const map = new Map<string, PushSubscriptionData>();
+  try {
+    const { sqliteGet } = await import("@/lib/sqlite-store");
+    const raw = sqliteGet(INDEX_KEY);
+    if (raw) {
+      const list: PushSubscriptionData[] = JSON.parse(raw);
+      for (const s of list) {
+        if (s && s.endpoint) {
+          map.set(endpointHash(s.endpoint), s);
+        }
+      }
+    }
+  } catch {}
+  return map;
+}
+
+async function saveSqliteSubscriptions(map: Map<string, PushSubscriptionData>): Promise<void> {
+  try {
+    const { sqlitePut } = await import("@/lib/sqlite-store");
+    sqlitePut(INDEX_KEY, JSON.stringify(Array.from(map.values())));
+  } catch {}
+}
+
 export async function savePushSubscription(sub: PushSubscriptionData): Promise<void> {
   const kv = await getKV();
   const id = endpointHash(sub.endpoint);
 
   if (!kv) {
-    memSubscriptions.set(id, sub);
-    try {
-      const { sqlitePut } = await import("@/lib/sqlite-store");
-      sqlitePut(INDEX_KEY, JSON.stringify(Array.from(memSubscriptions.values())));
-    } catch {}
+    const map = await loadSqliteSubscriptions();
+    map.set(id, sub);
+    memSubscriptions = map;
+    await saveSqliteSubscriptions(map);
     return;
   }
 
@@ -75,11 +107,10 @@ export async function removePushSubscription(endpoint: string): Promise<void> {
   const id = endpointHash(endpoint);
 
   if (!kv) {
-    memSubscriptions.delete(id);
-    try {
-      const { sqlitePut } = await import("@/lib/sqlite-store");
-      sqlitePut(INDEX_KEY, JSON.stringify(Array.from(memSubscriptions.values())));
-    } catch {}
+    const map = await loadSqliteSubscriptions();
+    map.delete(id);
+    memSubscriptions = map;
+    await saveSqliteSubscriptions(map);
     return;
   }
 
@@ -99,19 +130,9 @@ export async function getAllPushSubscriptions(): Promise<PushSubscriptionData[]>
   const kv = await getKV();
 
   if (!kv) {
-    if (memSubscriptions.size === 0) {
-      try {
-        const { sqliteGet } = await import("@/lib/sqlite-store");
-        const raw = sqliteGet(INDEX_KEY);
-        if (raw) {
-          const list: PushSubscriptionData[] = JSON.parse(raw);
-          for (const s of list) {
-            memSubscriptions.set(endpointHash(s.endpoint), s);
-          }
-        }
-      } catch {}
-    }
-    return Array.from(memSubscriptions.values());
+    const map = await loadSqliteSubscriptions();
+    memSubscriptions = map;
+    return Array.from(map.values());
   }
 
   const rawIndex = await kv.get(INDEX_KEY);
@@ -139,7 +160,8 @@ export async function getAllPushSubscriptions(): Promise<PushSubscriptionData[]>
 export async function getPushSubscriberCount(): Promise<number> {
   const kv = await getKV();
   if (!kv) {
-    return memSubscriptions.size;
+    const map = await loadSqliteSubscriptions();
+    return map.size;
   }
   const rawIndex = await kv.get(INDEX_KEY);
   if (!rawIndex) return 0;

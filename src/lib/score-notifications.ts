@@ -28,11 +28,17 @@ export async function checkAndDispatchGameAlerts(games: ScheduleGame[]): Promise
 
   try {
     let rawKv: any = null;
-    try {
-      const ctx = await getCloudflareContext({ async: true });
-      rawKv = (ctx?.env as any)?.ENJUEGO_KV;
-    } catch {
-      // Running on VPS Node.js
+    const isCloudflare = Boolean(
+      process.env.CF_PAGES ||
+      (typeof navigator !== "undefined" && (navigator as any).userAgent === "Cloudflare-Workers")
+    );
+    if (isCloudflare) {
+      try {
+        const ctx = await getCloudflareContext({ async: true });
+        rawKv = (ctx?.env as any)?.ENJUEGO_KV;
+      } catch {
+        // Running on VPS Node.js
+      }
     }
 
     const getStoredAlert = async (k: string): Promise<string | null> => {

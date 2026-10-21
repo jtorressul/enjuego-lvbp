@@ -30,7 +30,7 @@ export async function GET(request: Request) {
 
     const startTime = Date.now();
     const [
-      { isCloudflareKv },
+      storeInfo,
       campaigns,
       presence,
       registeredUsers,
@@ -89,7 +89,8 @@ export async function GET(request: Request) {
       presence,
       registeredUsers,
       systemHealth: {
-        kvConnected: isCloudflareKv,
+        kvConnected: Boolean(storeInfo.isCloudflareKv || storeInfo.isSqliteConnected),
+        storageType: storeInfo.storageType,
         mlbApiStatus,
         mlbLatencyMs,
         kvLatencyMs: Date.now() - startTime,

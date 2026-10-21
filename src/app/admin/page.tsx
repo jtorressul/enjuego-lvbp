@@ -230,6 +230,7 @@ export default function AdminDashboardPage() {
   const [registeredUsers, setRegisteredUsers] = useState<UserProfile[]>([]);
   const [systemHealth, setSystemHealth] = useState<{
     kvConnected: boolean;
+    storageType?: string;
     mlbApiStatus: "online" | "degraded";
     mlbLatencyMs: number;
     kvLatencyMs: number;
@@ -2401,7 +2402,7 @@ export default function AdminDashboardPage() {
                   <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60 tabular-nums">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     {systemHealth?.kvConnected
-                      ? `Conectado (${systemHealth.kvLatencyMs} ms)`
+                      ? `Conectado (${systemHealth.storageType || "SQLite WAL"} · ${systemHealth.kvLatencyMs} ms)`
                       : "Modo Local"}
                   </span>
                 </div>

@@ -56,14 +56,20 @@ export async function withEdgeCache(
   const stored = response.clone();
   const write = cache.put(key, stored).catch(() => {});
   let handedOff = false;
-  try {
-    const cf = await getCloudflareContext({ async: true });
-    if (cf?.ctx?.waitUntil) {
-      cf.ctx.waitUntil(write);
-      handedOff = true;
+  const isCloudflare = Boolean(
+    process.env.CF_PAGES ||
+    (typeof navigator !== "undefined" && (navigator as any).userAgent === "Cloudflare-Workers")
+  );
+  if (isCloudflare) {
+    try {
+      const cf = await getCloudflareContext({ async: true });
+      if (cf?.ctx?.waitUntil) {
+        cf.ctx.waitUntil(write);
+        handedOff = true;
+      }
+    } catch {
+      // Local dev has no execution context.
     }
-  } catch {
-    // Local dev has no execution context.
   }
   if (!handedOff) await write;
 

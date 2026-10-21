@@ -48,9 +48,18 @@ if (!globalRef.__ENJUEGO_LAST_R2_FLUSH__) {
 const memoryCache = globalRef.__ENJUEGO_MEM_CACHE_V2__;
 const lastR2Flush = globalRef.__ENJUEGO_LAST_R2_FLUSH__;
 
+export function isCloudflareRuntime(): boolean {
+  return Boolean(
+    process.env.CF_PAGES ||
+    (typeof navigator !== "undefined" && (navigator as any).userAgent === "Cloudflare-Workers")
+  );
+}
+
 export async function getAdminKv(): Promise<{
   kv: HybridKVStore;
   isCloudflareKv: boolean;
+  isSqliteConnected: boolean;
+  storageType: string;
 }> {
   let r2Bucket: {
     get(k: string): Promise<{ text(): Promise<string> } | null>;
@@ -62,17 +71,19 @@ export async function getAdminKv(): Promise<{
     put(k: string, v: string, o?: { expirationTtl?: number }): Promise<void>;
   } | null = null;
 
-  try {
-    const ctx = await getCloudflareContext({ async: true });
-    const env = ctx?.env as Record<string, any> | undefined;
-    if (env?.ENJUEGO_R2 && typeof env.ENJUEGO_R2.get === "function") {
-      r2Bucket = env.ENJUEGO_R2;
+  if (isCloudflareRuntime()) {
+    try {
+      const ctx = await getCloudflareContext({ async: true });
+      const env = ctx?.env as Record<string, any> | undefined;
+      if (env?.ENJUEGO_R2 && typeof env.ENJUEGO_R2.get === "function") {
+        r2Bucket = env.ENJUEGO_R2;
+      }
+      if (env?.ENJUEGO_KV && typeof env.ENJUEGO_KV.get === "function") {
+        rawKv = env.ENJUEGO_KV;
+      }
+    } catch {
+      // Fallback in local Node dev mode
     }
-    if (env?.ENJUEGO_KV && typeof env.ENJUEGO_KV.get === "function") {
-      rawKv = env.ENJUEGO_KV;
-    }
-  } catch {
-    // Fallback in local Node dev mode
   }
 
   const hybridKv: HybridKVStore = {
@@ -194,9 +205,12 @@ export async function getAdminKv(): Promise<{
     },
   };
 
+  const isSqlite = !r2Bucket && !rawKv;
   return {
     kv: hybridKv,
     isCloudflareKv: Boolean(r2Bucket || rawKv),
+    isSqliteConnected: isSqlite,
+    storageType: r2Bucket ? "Cloudflare R2" : rawKv ? "Cloudflare KV" : "SQLite WAL",
   };
 }
 

@@ -317,6 +317,8 @@ export function EnJuegoPortal({
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [teamsDropdownOpen, setTeamsDropdownOpen] = useState(false);
   const teamsDropdownRef = useRef<HTMLDivElement>(null);
+  const [headerLeagueMenuOpen, setHeaderLeagueMenuOpen] = useState(false);
+  const headerLeagueRef = useRef<HTMLDivElement>(null);
 
   // User Profile & Authentication State
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
@@ -376,6 +378,7 @@ export function EnJuegoPortal({
       }
     }
     setMobileDrawerOpen(false);
+    setHeaderLeagueMenuOpen(false);
   }, [pathname, searchParams, resolvedUrlTeam]);
 
   useEffect(() => {
@@ -386,11 +389,16 @@ export function EnJuegoPortal({
       if (!inLeagueMenu) {
         setLeagueMenuOpen(false);
       }
+      const inHeaderLeague = headerLeagueRef.current?.contains(target);
+      if (!inHeaderLeague) {
+        setHeaderLeagueMenuOpen(false);
+      }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setMobileDrawerOpen(false);
         setLeagueMenuOpen(false);
+        setHeaderLeagueMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -1495,9 +1503,9 @@ export function EnJuegoPortal({
           paddingTop: "env(safe-area-inset-top, 0px)",
         }}
       >
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 h-15 sm:h-17 flex items-center justify-between gap-2 sm:gap-3">
-          {/* Brand Horizontal Logo + .online Pill + League Switcher */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-15 sm:h-16 flex items-center justify-between gap-4">
+          {/* Brand Horizontal Logo + .online Pill */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <Link
               href="/inicio"
               className="flex items-center gap-1.5 sm:gap-2 py-1 group cursor-pointer select-none"
@@ -1506,10 +1514,10 @@ export function EnJuegoPortal({
               <img
                 src="/logo.png"
                 alt="En Juego · Béisbol Venezolano"
-                className="h-8 sm:h-10 md:h-11 w-auto object-contain transition-transform group-hover:scale-102 shrink-0"
+                className="h-8 sm:h-9 md:h-10 w-auto object-contain transition-transform group-hover:scale-102 shrink-0"
               />
               <span
-                className="inline-flex items-center gap-1 px-1.5 sm:px-2.5 py-0.5 rounded-md text-[10px] sm:text-xs font-black italic tracking-tight shadow-sm transition-transform group-hover:scale-105 shrink-0 -ml-0.5"
+                className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md text-[10px] sm:text-xs font-black italic tracking-tight shadow-sm transition-transform group-hover:scale-105 shrink-0 -ml-0.5"
                 style={{
                   background: "linear-gradient(135deg, #e11d48 0%, #be123c 100%)",
                   color: "#ffffff",
@@ -1522,10 +1530,9 @@ export function EnJuegoPortal({
             </Link>
           </div>
 
-          {/* Desktop Main Navigation - Clean, Pro & Compact (Never overflows) */}
+          {/* Desktop Main Navigation - Centered, Flat & Clean (Matching Reference Image) */}
           <nav
-            className="hidden lg:flex items-center gap-0.5 p-1 rounded-xl border border-slate-800"
-            style={{ backgroundColor: "#0b1220", borderColor: "#1e293b" }}
+            className="hidden lg:flex items-center justify-center flex-1 h-15 sm:h-16 gap-6 xl:gap-8"
             aria-label="Navegación Principal"
           >
             {[
@@ -1534,49 +1541,95 @@ export function EnJuegoPortal({
               { key: "calendario", label: "Calendario", href: `/calendario?liga=${activeLeague}` },
               { key: "posiciones", label: "Posiciones", href: `/posiciones?liga=${activeLeague}` },
               { key: "lideres", label: "Líderes", href: `/lideres?liga=${activeLeague}` },
-              { key: "equipos", label: "Equipos", href: `/teams?team=${activeTeamsCatalog?.[selectedTeamCode]?.slug || currentLeague.defaultTeamCode}&liga=${activeLeague || "lvbp"}` },
+              {
+                key: "equipos",
+                label: "Equipos",
+                href: `/teams?team=${activeTeamsCatalog?.[selectedTeamCode]?.slug || currentLeague.defaultTeamCode}&liga=${activeLeague || "lvbp"}`,
+              },
+              { key: "noticias", label: "Noticias", href: "/noticias" },
             ].map((item) => {
               const isActive = section === item.key;
               return (
                 <Link
                   key={item.key}
                   href={item.href}
-                  className={`px-3 py-1.5 rounded-lg text-xs transition cursor-pointer select-none ${
+                  className={`h-full flex items-center relative text-xs font-black tracking-wider uppercase transition-colors select-none px-1 cursor-pointer ${
                     isActive
-                      ? "bg-amber-400 text-slate-950 font-black shadow-2xs"
-                      : "text-slate-300 hover:text-white hover:bg-slate-800/70 font-semibold"
+                      ? "text-white"
+                      : "text-slate-300 hover:text-white"
                   }`}
                 >
-                  {item.label}
+                  <span>{item.label}</span>
+                  {isActive && (
+                    <span className="absolute bottom-0 left-0 right-0 h-0.75 bg-rose-600 rounded-full" />
+                  )}
                 </Link>
               );
             })}
-
-            {/* Direct Link to Noticias / Highlights */}
-            <Link
-              href="/noticias"
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer select-none ${
-                section === "noticias"
-                  ? "bg-rose-600 text-white font-black shadow-2xs"
-                  : "text-slate-300 hover:text-white hover:bg-slate-800/70"
-              }`}
-            >
-              <span>Noticias</span>
-              <span
-                className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider ${
-                  section === "noticias"
-                    ? "bg-white/20 text-white"
-                    : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
-                }`}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
-                <span>Video</span>
-              </span>
-            </Link>
           </nav>
 
-          {/* Desktop Right: Structured Fan Profile / Iniciar Sesión */}
-          <div className="hidden lg:flex items-center gap-2 shrink-0">
+          {/* Desktop Right Action Pills: [ 🇻🇪 LVBP ⌄ ] [ Entrar ] [ Suscríbete ] (Matching Reference Image) */}
+          <div className="hidden lg:flex items-center gap-2 xl:gap-2.5 shrink-0">
+            {/* League Capsule Pill (Replicating [ Mundo ] from reference) */}
+            <div className="relative" ref={headerLeagueRef}>
+              <button
+                type="button"
+                onClick={() => setHeaderLeagueMenuOpen((prev) => !prev)}
+                className="rounded-full border border-slate-700/80 bg-slate-900/70 hover:bg-slate-800 text-slate-200 hover:text-white px-3 py-1.5 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                aria-expanded={headerLeagueMenuOpen}
+                aria-label="Seleccionar liga"
+              >
+                <span>{currentLeague.flag}</span>
+                <span>{currentLeague.shortName}</span>
+                <ChevronDown
+                  className={`w-3 h-3 text-slate-400 transition-transform duration-200 ${
+                    headerLeagueMenuOpen ? "rotate-180 text-white" : ""
+                  }`}
+                />
+              </button>
+
+              {headerLeagueMenuOpen && (
+                <div
+                  className="absolute right-0 top-full mt-2 w-52 rounded-2xl bg-[#0c1322] border border-slate-800 shadow-2xl p-2 z-50 text-white animate-in fade-in slide-in-from-top-2 duration-150"
+                  style={{ backgroundColor: "#0c1322", color: "#ffffff" }}
+                >
+                  <div className="px-2 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-800/80 mb-1">
+                    Selecciona Liga
+                  </div>
+                  {LEAGUES_LIST.map((lg) => {
+                    const isSel = activeLeague === lg.id;
+                    return (
+                      <button
+                        key={lg.id}
+                        type="button"
+                        onClick={() => {
+                          switchLeague(lg.id);
+                          setHeaderLeagueMenuOpen(false);
+                          const target =
+                            section === "home"
+                              ? `/inicio?liga=${lg.id}`
+                              : `/${section}?liga=${lg.id}`;
+                          router.push(target);
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                          isSel
+                            ? "bg-amber-400 text-slate-950 font-black shadow-xs"
+                            : "text-slate-300 hover:text-white hover:bg-slate-800/80"
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className="text-base">{lg.flag}</span>
+                          <span>{lg.shortName}</span>
+                        </span>
+                        {isSel && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Auth Buttons / Fan Profile matching [ Entrar ] [ Suscríbete ] */}
             {currentUser ? (
               <button
                 type="button"
@@ -1584,12 +1637,11 @@ export function EnJuegoPortal({
                   setAuthModalTab("profile");
                   setAuthModalOpen(true);
                 }}
-                className="group flex items-center gap-2.5 pl-2 pr-3.5 py-1.5 rounded-xl border transition-all cursor-pointer shadow-sm hover:border-amber-400 active:scale-95 shrink-0"
-                style={{ backgroundColor: "#0b1220", borderColor: "#1e293b" }}
+                className="rounded-full border border-slate-700 bg-slate-900/90 hover:border-amber-400 text-white pl-1.5 pr-3.5 py-1 text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-xs active:scale-95"
                 title="Ver tu perfil de fanático y equipo favorito"
               >
                 <div
-                  className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white shrink-0 shadow-xs border border-white/10"
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black text-white shrink-0 shadow-xs border border-white/10"
                   style={{
                     backgroundColor:
                       (currentUser.favoriteTeam && anyTeamsCatalog[currentUser.favoriteTeam]?.color) || "#d97706",
@@ -1597,49 +1649,42 @@ export function EnJuegoPortal({
                 >
                   {(currentUser.name || "Fan").slice(0, 1).toUpperCase()}
                 </div>
-                <div className="text-left min-w-0">
-                  <div className="flex items-center gap-1 leading-none">
-                    <span className="text-[9px] font-black uppercase tracking-wider text-amber-400">
-                      Mi Fan
-                    </span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 animate-pulse" />
-                  </div>
-                  <div className="text-xs font-black text-white truncate max-w-[120px] mt-0.5 leading-tight">
-                    {currentUser.name || "Fanático"}
-                  </div>
-                </div>
+                <span className="text-xs font-black text-white truncate max-w-[110px]">
+                  {currentUser.name || "Fanático"}
+                </span>
                 {currentUser.favoriteTeam && anyTeamsCatalog[currentUser.favoriteTeam] && (
                   <img
                     src={anyTeamsCatalog[currentUser.favoriteTeam].logoSvg}
                     alt=""
-                    className="w-4.5 h-4.5 object-contain shrink-0 ml-0.5"
+                    className="w-4 h-4 object-contain shrink-0"
                   />
                 )}
               </button>
             ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthModalTab("login");
-                  setAuthModalOpen(true);
-                }}
-                className="group flex items-center gap-2.5 pl-2.5 pr-3.5 py-1.5 rounded-xl border transition-all cursor-pointer shadow-sm hover:shadow-amber-500/10 hover:border-amber-400 active:scale-95 shrink-0"
-                style={{ backgroundColor: "#0b1220", borderColor: "#1e293b" }}
-                title="Iniciar sesión en En Juego"
-              >
-                <div className="w-7 h-7 rounded-lg bg-amber-400/15 border border-amber-400/35 flex items-center justify-center text-amber-400 group-hover:bg-amber-400 group-hover:text-slate-950 transition-colors shrink-0">
-                  <User className="w-3.5 h-3.5 stroke-[2.2]" />
-                </div>
-                <div className="text-left min-w-0">
-                  <span className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-400 group-hover:text-amber-400/90 transition-colors leading-none">
-                    Zona Fan
-                  </span>
-                  <span className="block text-xs font-black text-white group-hover:text-amber-300 transition-colors leading-tight mt-0.5">
-                    Iniciar Sesión
-                  </span>
-                </div>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all ml-0.5" />
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthModalTab("login");
+                    setAuthModalOpen(true);
+                  }}
+                  className="rounded-full border border-slate-700 bg-slate-900/70 hover:bg-slate-800 hover:border-slate-500 text-slate-100 hover:text-white px-4 py-1.5 text-xs font-black tracking-wide transition cursor-pointer select-none active:scale-95"
+                  title="Iniciar sesión en En Juego"
+                >
+                  Entrar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthModalTab("quick");
+                    setAuthModalOpen(true);
+                  }}
+                  className="rounded-full bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white px-4 py-1.5 text-xs font-black tracking-wide transition shadow-sm hover:shadow-rose-600/30 active:scale-95 cursor-pointer select-none"
+                  title="Únete a la comunidad de fanáticos"
+                >
+                  Suscríbete
+                </button>
+              </>
             )}
           </div>
 

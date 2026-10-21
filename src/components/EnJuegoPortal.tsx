@@ -182,6 +182,7 @@ export function EnJuegoPortal({
   initialStandings = [],
   initialLeaders = { hitting: [], pitching: [] },
   initialDateIndex = 0,
+  initialSoccerMatches = [],
 }: {
   initialSection?: NavSection;
   initialTeamSlug?: string;
@@ -190,6 +191,7 @@ export function EnJuegoPortal({
   initialStandings?: PortalSeed["standings"];
   initialLeaders?: PortalSeed["leaders"];
   initialDateIndex?: number;
+  initialSoccerMatches?: PortalSeed["soccerMatches"];
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -561,14 +563,6 @@ export function EnJuegoPortal({
       const hasOnboarded = localStorage.getItem("enjuego_pwa_onboarded");
       if (isPwa && !hasOnboarded && !storedUser) {
         setPwaOnboardingOpen(true);
-      } else if (!isPwa) {
-        // When opening the web in browser: show the floating download & notifications modal ONLY ONCE
-        const seen = localStorage.getItem("enjuego_pwa_install_prompt_seen");
-        if (!seen) {
-          setTimeout(() => {
-            setPwaModalOpen(true);
-          }, 800);
-        }
       }
     } catch {
       // ignore
@@ -1363,8 +1357,10 @@ export function EnJuegoPortal({
                 <img
                   src={game.awayTeam.logoUrl}
                   alt={game.awayTeam.name}
+                  width={28}
+                  height={28}
+                  decoding="async"
                   className="w-6 h-6 sm:w-7 sm:h-7 object-contain shrink-0"
-                  loading="lazy"
                 />
                 <div className="flex items-baseline gap-1.5 min-w-0">
                   <span
@@ -1399,8 +1395,10 @@ export function EnJuegoPortal({
                 <img
                   src={game.homeTeam.logoUrl}
                   alt={game.homeTeam.name}
+                  width={28}
+                  height={28}
+                  decoding="async"
                   className="w-6 h-6 sm:w-7 sm:h-7 object-contain shrink-0"
-                  loading="lazy"
                 />
                 <div className="flex items-baseline gap-1.5 min-w-0">
                   <span
@@ -2046,7 +2044,7 @@ export function EnJuegoPortal({
 
       {/* MAIN CONTENT CONTAINER (Clean Padding · Zero Extra Empty Margin Before Footer) */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 pt-3.5 sm:pt-5 pb-6 sm:pb-8">
-        <AdBanner slot="top-leaderboard" />
+        {section !== "home" && <AdBanner slot="top-leaderboard" />}
         {/* SECTION: GAMEDAY (/juego/[id]) */}
         {section === "juego" && (
           <GamedayView
@@ -2075,13 +2073,14 @@ export function EnJuegoPortal({
                       {currentLeague.shortName}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block truncate">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block truncate capitalize">
+                        {jornadaDayFormatted.fullLabel} ·{" "}
                         {jornadaLeague === "mlb"
-                          ? "Béisbol · Grandes Ligas"
-                          : `Béisbol · Temporada ${currentLeague.shortName}`}
+                          ? "Grandes Ligas"
+                          : `Temporada ${currentLeague.shortName}`}
                       </span>
-                      <h1 className="text-sm sm:text-lg font-black text-slate-950 capitalize leading-tight truncate">
-                        {jornadaDayFormatted.fullLabel}
+                      <h1 className="text-sm sm:text-lg font-black text-slate-950 leading-tight truncate">
+                        Resultados en Vivo · {currentLeague.shortName}
                       </h1>
                     </div>
                   </div>
@@ -2149,8 +2148,10 @@ export function EnJuegoPortal({
                 )}
               </section>
 
+              <AdBanner slot="top-leaderboard" />
+
               {/* 2. FÚTBOL EUROPEO SHOWCASE */}
-              <HomeSoccerShowcase />
+              <HomeSoccerShowcase initialMatches={initialSoccerMatches} />
 
               {/* 3. RESÚMENES Y CRÓNICAS DE LA JORNADA */}
               <section className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-2xs space-y-4">
@@ -3560,6 +3561,51 @@ export function EnJuegoPortal({
         )}
 
         <AdBanner slot="home-bottom" />
+
+        {/* BLOQUE EDITORIAL SEO DE ALTA AUTORIDAD PARA "RESULTADOS EN VIVO" */}
+        {(section === "home" || section === "resultados") && (
+          <section
+            aria-label="Información sobre Resultados en Vivo"
+            className="mt-6 rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-2xs space-y-2.5"
+          >
+            <h2 className="text-xs sm:text-sm font-black text-slate-900 tracking-tight">
+              Resultados en Vivo Hoy · Marcadores de Béisbol (LVBP, MLB) y Fútbol Europeo en Directo
+            </h2>
+            <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed">
+              En <strong>EnJuego.online</strong> sigues todos los{" "}
+              <strong>resultados en vivo</strong> y marcadores actualizados al instante segundo a segundo.
+              Consulta la pizarra en vivo de la{" "}
+              <Link href="/resultados?liga=lvbp" className="font-bold text-slate-800 hover:underline">
+                Liga Venezolana de Béisbol Profesional (LVBP)
+              </Link>
+              ,{" "}
+              <Link href="/resultados?liga=mlb" className="font-bold text-slate-800 hover:underline">
+                Grandes Ligas (MLB)
+              </Link>
+              ,{" "}
+              <Link href="/resultados?liga=lidom" className="font-bold text-slate-800 hover:underline">
+                LIDOM
+              </Link>
+              ,{" "}
+              <Link href="/resultados?liga=lmp" className="font-bold text-slate-800 hover:underline">
+                LMP
+              </Link>{" "}
+              y los resultados de{" "}
+              <Link href="/futbol" className="font-bold text-slate-800 hover:underline">
+                Fútbol en Vivo (UEFA Champions League, LaLiga, Premier League, Serie A y Bundesliga)
+              </Link>
+              , junto con la{" "}
+              <Link href="/posiciones" className="font-bold text-slate-800 hover:underline">
+                tabla de posiciones
+              </Link>{" "}
+              y el{" "}
+              <Link href="/calendario" className="font-bold text-slate-800 hover:underline">
+                calendario de juegos de hoy y canales de TV
+              </Link>
+              .
+            </p>
+          </section>
+        )}
       </main>
 
       {/* MOBILE BOTTOM NAVIGATION BAR (5 Equal Columns · Includes Fútbol · 0ms Instant Switching) */}

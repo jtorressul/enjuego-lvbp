@@ -13,8 +13,8 @@ export async function generateMetadata({
   const leagueId = parseLeague(sp?.liga || sp?.league);
   const cfg = LEAGUES[leagueId];
 
-  const title = `Resultados ${cfg.shortName} en Vivo · Pizarra, Box Score y Marcadores`;
-  const description = `Resultados actualizados de ${cfg.name} (${cfg.shortName}) en tiempo real: pizarras C·H·E, box score completo, lanzadores ganadores y jugadas clave.`;
+  const title = `Resultados en Vivo ${cfg.shortName} Hoy · Pizarra, Marcadores y Box Score`;
+  const description = `Resultados en vivo de ${cfg.name} (${cfg.shortName}) hoy minuto a minuto: marcadores en directo, pizarras C·H·E, box score completo, lanzadores y jugadas clave en En Juego.`;
 
   return {
     title,

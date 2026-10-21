@@ -4,21 +4,23 @@ import { SeededPortal } from "@/components/SeededPortal";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Inicio · Resultados LVBP Hoy en Vivo y Béisbol Venezolano",
+  title: "Resultados en Vivo Hoy · Marcadores LVBP, MLB y Fútbol en Directo",
   description:
-    "Resultados de la LVBP hoy en vivo: marcadores jugada a jugada, juegos de hoy, tabla de posiciones, canales de TV abierta y cable, y highlights en video.",
+    "Resultados en vivo hoy segundo a segundo: pizarra de la LVBP, Grandes Ligas (MLB) y Fútbol Europeo en directo, juegos de hoy, tabla de posiciones y canales de TV.",
   alternates: {
-    canonical: "https://enjuego.online/inicio",
+    canonical: "https://enjuego.online",
   },
   keywords: [
+    "resultados en vivo",
+    "resultados en vivo hoy",
+    "marcadores en vivo",
     "resultados lvbp",
-    "lvbp",
+    "resultados lvbp en vivo",
     "lvbp hoy",
-    "juegos de hoy lvbp",
-    "resultados lvbp hoy",
+    "juegos de hoy en vivo",
     "pizarra lvbp",
-    "beisbol venezolano",
     "beisbol venezolano en vivo",
+    "resultados futbol en vivo",
   ],
 };
 

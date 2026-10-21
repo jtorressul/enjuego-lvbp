@@ -12,26 +12,34 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL("https://enjuego.online"),
   title: {
-    default: "Resultados LVBP Hoy en Vivo · Pizarra y Béisbol Venezolano | En Juego",
-    template: "%s | En Juego · Béisbol Venezolano",
+    default: "Resultados en Vivo Hoy · Béisbol LVBP, MLB y Fútbol en Directo | En Juego",
+    template: "%s | En Juego · Resultados en Vivo",
   },
   description:
-    "Resultados y marcadores en vivo de la LVBP: pizarra jugada a jugada, juegos de hoy, tabla de posiciones, canales de TV en vivo (Venevisión, Televen, IVC, 1Base) y highlights en video.",
-  applicationName: "En Juego",
+    "Resultados en vivo hoy minuto a minuto: marcadores en directo de Béisbol (LVBP, MLB, Serie del Caribe, LIDOM, LMP) y Fútbol Europeo (Champions League, LaLiga, Premier League), pizarra jugada a jugada, tabla de posiciones y canales de TV.",
+  applicationName: "En Juego · Resultados en Vivo",
   keywords: [
+    "resultados en vivo",
+    "resultados en vivo hoy",
+    "marcadores en vivo",
+    "resultados de hoy en vivo",
+    "pizarra en vivo",
+    "juegos de hoy en vivo",
     "resultados lvbp",
-    "lvbp",
+    "resultados lvbp en vivo",
+    "lvbp en vivo",
     "lvbp hoy",
     "juegos de hoy lvbp",
     "resultados lvbp hoy",
     "pizarra lvbp",
-    "beisbol venezolano",
     "beisbol venezolano en vivo",
-    "marcadores lvbp",
+    "resultados beisbol en vivo",
+    "resultados mlb en vivo",
+    "resultados futbol en vivo",
+    "champions league en vivo",
+    "laliga en vivo",
     "tabla de posiciones lvbp",
-    "posiciones lvbp",
     "calendario lvbp",
-    "canales transmite beisbol venezolano",
     "leones del caracas",
     "navegantes del magallanes",
     "tiburones de la guaira",
@@ -40,7 +48,6 @@ export const metadata: Metadata = {
     "caribes de anzoategui",
     "bravos de margarita",
     "tigres de aragua",
-    "highlights lvbp",
     "en juego",
     "enjuego online",
   ],
@@ -68,17 +75,17 @@ export const metadata: Metadata = {
     shortcut: "/favicon.png",
   },
   openGraph: {
-    title: "Resultados LVBP Hoy en Vivo · Pizarra y Béisbol Venezolano | En Juego",
+    title: "Resultados en Vivo Hoy · Béisbol LVBP, MLB y Fútbol en Directo | En Juego",
     description:
-      "Sigue la LVBP en tiempo real: marcadores en vivo, jugada a jugada, estadísticas, transmisiones de televisión abierta y cable, tabla de posiciones y resúmenes en video.",
+      "Consulta los resultados en vivo hoy: pizarra de la LVBP, Grandes Ligas (MLB) y Fútbol Europeo en tiempo real, jugada a jugada, posiciones y canales de TV.",
     url: "https://enjuego.online",
-    siteName: "En Juego · Béisbol Venezolano",
+    siteName: "En Juego · Resultados en Vivo",
     images: [
       {
         url: "/logo.png",
-        width: 800,
-        height: 300,
-        alt: "En Juego · Béisbol Venezolano",
+        width: 560,
+        height: 158,
+        alt: "En Juego · Resultados en Vivo",
       },
     ],
     locale: "es_VE",
@@ -86,9 +93,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Resultados LVBP Hoy en Vivo · Pizarra y Marcadores | En Juego",
+    title: "Resultados en Vivo Hoy · Béisbol LVBP, MLB y Fútbol | En Juego",
     description:
-      "Marcadores jugada a jugada, calendario de canales de TV, tabla de posiciones y highlights en video del béisbol venezolano.",
+      "Marcadores y resultados en vivo jugada a jugada de la LVBP, MLB y Fútbol Europeo, calendario de TV y tabla de posiciones.",
     images: ["/logo.png"],
   },
 };
@@ -100,26 +107,32 @@ const jsonLd = {
       "@type": "WebSite",
       "@id": "https://enjuego.online/#website",
       "url": "https://enjuego.online",
-      "name": "En Juego · Béisbol Venezolano",
+      "name": "En Juego · Resultados en Vivo",
       "alternateName": [
+        "Resultados en Vivo",
         "EnJuego",
         "En Juego Online",
-        "LVBP en vivo",
-        "Resultados LVBP",
+        "Resultados LVBP en Vivo",
+        "Marcadores en Vivo",
         "Pizarra LVBP"
       ],
       "description":
-        "Portal líder de marcadores y resultados de la Liga Venezolana de Béisbol Profesional (LVBP) y Grandes Ligas (MLB). Jugada a jugada, transmisiones de TV y highlights en video.",
-      "inLanguage": "es-VE"
+        "Portal líder de resultados en vivo y marcadores en directo de Béisbol (LVBP, MLB, LIDOM, LMP) y Fútbol Europeo (Champions League, LaLiga, Premier League). Jugada a jugada, posiciones y canales de TV.",
+      "inLanguage": "es-VE",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://enjuego.online/resultados?liga={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
     },
     {
       "@type": "SportsOrganization",
       "@id": "https://enjuego.online/#organization",
-      "name": "En Juego",
+      "name": "En Juego · Resultados en Vivo",
       "url": "https://enjuego.online",
       "logo": "https://enjuego.online/logo.png",
-      "sport": "Baseball",
-      "description": "Cobertura en tiempo real del béisbol venezolano e internacional."
+      "sport": ["Baseball", "Soccer"],
+      "description": "Resultados en vivo hoy en tiempo real de béisbol venezolano (LVBP), Grandes Ligas (MLB) y fútbol internacional."
     }
   ]
 };

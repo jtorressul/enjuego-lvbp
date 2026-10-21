@@ -2,6 +2,7 @@ import {
   fetchLvbpSchedule,
   fetchLvbpStandingsAndLeaders,
 } from "@/lib/mlb-lvbp-service";
+import { fetchSoccerScoreboard, type SoccerMatch } from "@/lib/soccer-service";
 import type { LeaderCategory, ScheduleGame, StandingRow } from "@/lib/types";
 
 export type PortalSeed = {
@@ -9,6 +10,7 @@ export type PortalSeed = {
   standings: StandingRow[];
   leaders: { hitting: LeaderCategory[]; pitching: LeaderCategory[] };
   dateIndex: number;
+  soccerMatches: SoccerMatch[];
 };
 
 const EMPTY_LEADERS = { hitting: [] as LeaderCategory[], pitching: [] as LeaderCategory[] };
@@ -45,15 +47,17 @@ export async function loadLvbpPortalSeed(): Promise<PortalSeed> {
     return cachedSeed.data;
   }
   try {
-    const [schedule, table] = await Promise.all([
+    const [schedule, table, soccerMatches] = await Promise.all([
       fetchLvbpSchedule("2026"),
       fetchLvbpStandingsAndLeaders("2026"),
+      fetchSoccerScoreboard("uefa.champions").catch(() => [] as SoccerMatch[]),
     ]);
     const data: PortalSeed = {
       schedule,
       standings: table.standings || [],
       leaders: table.leaders || EMPTY_LEADERS,
       dateIndex: dateIndexFor(schedule),
+      soccerMatches: soccerMatches || [],
     };
     cachedSeed = { data, expiresAt: now + 10_000 };
     return data;
@@ -64,6 +68,7 @@ export async function loadLvbpPortalSeed(): Promise<PortalSeed> {
       standings: [],
       leaders: EMPTY_LEADERS,
       dateIndex: 0,
+      soccerMatches: [],
     };
   }
 }

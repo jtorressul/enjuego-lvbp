@@ -7,11 +7,15 @@ import { SOCCER_LEAGUES, SOCCER_LEAGUES_LIST, type SoccerLeagueId } from "@/lib/
 import type { SoccerMatch } from "@/lib/soccer-service";
 import { Clock, Trophy, ChevronRight, Calendar, MapPin } from "lucide-react";
 
-export function HomeSoccerShowcase() {
+export function HomeSoccerShowcase({
+  initialMatches = [],
+}: {
+  initialMatches?: SoccerMatch[];
+}) {
   const router = useRouter();
   const [selectedLeague, setSelectedLeague] = useState<SoccerLeagueId>("uefa.champions");
-  const [matches, setMatches] = useState<SoccerMatch[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [matches, setMatches] = useState<SoccerMatch[]>(initialMatches);
+  const [loading, setLoading] = useState(initialMatches.length === 0);
 
   const currentLeague = SOCCER_LEAGUES[selectedLeague] || SOCCER_LEAGUES["uefa.champions"];
 
@@ -34,23 +38,26 @@ export function HomeSoccerShowcase() {
         });
     };
 
-    const startTimeout = setTimeout(() => {
-      if (!isCancelled) {
-        loadMatches(false);
-        intervalId = setInterval(() => {
-          if (typeof document !== "undefined" && document.visibilityState === "visible") {
-            loadMatches(true);
-          }
-        }, 15_000);
+    const hasSeedForChampions =
+      selectedLeague === "uefa.champions" && initialMatches.length > 0;
+
+    if (!hasSeedForChampions) {
+      loadMatches(false);
+    } else {
+      setLoading(false);
+    }
+
+    intervalId = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        loadMatches(true);
       }
-    }, 120);
+    }, 15_000);
 
     return () => {
       isCancelled = true;
-      clearTimeout(startTimeout);
       if (intervalId) clearInterval(intervalId);
     };
-  }, [selectedLeague]);
+  }, [selectedLeague, initialMatches]);
 
   const previewMatches = [...matches]
     .sort((a, b) => {
@@ -73,6 +80,10 @@ export function HomeSoccerShowcase() {
             <img
               src={currentLeague.logo}
               alt={currentLeague.name}
+              width={28}
+              height={28}
+              loading="lazy"
+              decoding="async"
               className="w-full h-full object-contain"
             />
           </div>
@@ -127,7 +138,15 @@ export function HomeSoccerShowcase() {
               }`}
             >
               <span className="w-4 h-4 rounded-xs bg-white p-0.5 flex items-center justify-center shrink-0">
-                <img src={lg.logo} alt="" className="w-full h-full object-contain" />
+                <img
+                  src={lg.logo}
+                  alt=""
+                  width={16}
+                  height={16}
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-full object-contain"
+                />
               </span>
               <span>{lg.shortName}</span>
             </button>
@@ -205,8 +224,11 @@ export function HomeSoccerShowcase() {
                       <img
                         src={m.awayTeam.logo}
                         alt={m.awayTeam.name}
+                        width={24}
+                        height={24}
                         className="w-6 h-6 object-contain shrink-0"
                         loading="lazy"
+                        decoding="async"
                       />
                       <span
                         className={`text-sm truncate ${
@@ -234,8 +256,11 @@ export function HomeSoccerShowcase() {
                       <img
                         src={m.homeTeam.logo}
                         alt={m.homeTeam.name}
+                        width={24}
+                        height={24}
                         className="w-6 h-6 object-contain shrink-0"
                         loading="lazy"
+                        decoding="async"
                       />
                       <span
                         className={`text-sm truncate ${

@@ -4,12 +4,14 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { SOCCER_LEAGUES, SOCCER_LEAGUES_LIST, type SoccerLeagueId } from "@/lib/soccer-leagues";
 import type { SoccerMatch } from "@/lib/soccer-service";
+import { SoccerMatchModal } from "@/components/SoccerMatchModal";
 import { Clock, Trophy, ChevronRight, Activity, Calendar } from "lucide-react";
 
 export function HomeSoccerShowcase() {
   const [selectedLeague, setSelectedLeague] = useState<SoccerLeagueId>("uefa.champions");
   const [matches, setMatches] = useState<SoccerMatch[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState<SoccerMatch | null>(null);
 
   const currentLeague = SOCCER_LEAGUES[selectedLeague] || SOCCER_LEAGUES["uefa.champions"];
 
@@ -84,7 +86,7 @@ export function HomeSoccerShowcase() {
               className="inline-flex items-center gap-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs px-3.5 py-2 transition shadow-xs cursor-pointer select-none active:scale-95"
             >
               <Trophy className="w-3.5 h-3.5 text-slate-950" />
-              <span>Ver Pizarra Completa y Posiciones ›</span>
+              <span>Ver Pizarra y Posiciones ›</span>
             </Link>
           </div>
         </div>
@@ -111,7 +113,7 @@ export function HomeSoccerShowcase() {
           })}
         </div>
 
-        {/* Matches Grid (Light-themed cards inside dark container for supreme readability) */}
+        {/* Matches Grid */}
         {loading && previewMatches.length === 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {[1, 2, 3, 4].map((n) => (
@@ -141,7 +143,8 @@ export function HomeSoccerShowcase() {
               return (
                 <article
                   key={m.id}
-                  className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm hover:shadow-md transition flex flex-col justify-between text-slate-900"
+                  onClick={() => setSelectedMatch(m)}
+                  className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm hover:shadow-md hover:border-amber-400 transition flex flex-col justify-between text-slate-900 cursor-pointer group select-none active:scale-[0.99]"
                 >
                   {/* Top Bar: Venue & Status */}
                   <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 text-xs">
@@ -188,7 +191,7 @@ export function HomeSoccerShowcase() {
                             : "text-slate-400 font-medium text-xs"
                         }`}
                       >
-                        {m.awayTeam.score ?? "–"}
+                        {isFinished || isLive ? (m.awayTeam.score ?? 0) : "–"}
                       </span>
                     </div>
 
@@ -216,7 +219,7 @@ export function HomeSoccerShowcase() {
                             : "text-slate-400 font-medium text-xs"
                         }`}
                       >
-                        {m.homeTeam.score ?? "–"}
+                        {isFinished || isLive ? (m.homeTeam.score ?? 0) : "–"}
                       </span>
                     </div>
                   </div>
@@ -225,15 +228,12 @@ export function HomeSoccerShowcase() {
                   <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500">
                     <span className="flex items-center gap-1 font-semibold text-slate-500">
                       <Clock className="w-3 h-3 text-slate-400 shrink-0" />
-                      <span>{m.timeCaracas} (Caracas)</span>
+                      <span>{m.timeCaracas}</span>
                     </span>
-                    <Link
-                      href={`/futbol?liga=${selectedLeague}`}
-                      className="font-black text-amber-600 hover:text-amber-700 flex items-center gap-0.5"
-                    >
-                      <span>Detalles</span>
-                      <ChevronRight className="w-3 h-3" />
-                    </Link>
+                    <span className="font-black text-amber-600 group-hover:text-amber-700 flex items-center gap-0.5">
+                      <span>Ver Detalle</span>
+                      <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                    </span>
                   </div>
                 </article>
               );
@@ -241,6 +241,15 @@ export function HomeSoccerShowcase() {
           </div>
         )}
       </div>
+
+      {/* Match Detail Modal */}
+      <SoccerMatchModal
+        match={selectedMatch}
+        onClose={() => setSelectedMatch(null)}
+        onViewStandings={() => {
+          window.location.href = `/futbol?liga=${selectedLeague}`;
+        }}
+      />
     </section>
   );
 }

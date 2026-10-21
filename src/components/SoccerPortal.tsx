@@ -11,6 +11,7 @@ import {
 } from "@/lib/soccer-leagues";
 import type { SoccerMatch, SoccerStandingRow } from "@/lib/soccer-service";
 import { AuthModal } from "@/components/AuthModal";
+import { SoccerMatchModal } from "@/components/SoccerMatchModal";
 import { UserProfile } from "@/lib/user-auth";
 import {
   Trophy,
@@ -59,6 +60,9 @@ export function SoccerPortal({
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [headerLeagueMenuOpen, setHeaderLeagueMenuOpen] = useState(false);
   const headerLeagueRef = useRef<HTMLDivElement>(null);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+  const [selectedMatch, setSelectedMatch] = useState<SoccerMatch | null>(null);
 
   // Auth modal states
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -84,6 +88,9 @@ export function SoccerPortal({
     const handleClickOutside = (e: MouseEvent) => {
       if (headerLeagueRef.current && !headerLeagueRef.current.contains(e.target as Node)) {
         setHeaderLeagueMenuOpen(false);
+      }
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setMoreMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -181,17 +188,15 @@ export function SoccerPortal({
 
           {/* Desktop Main Navigation - Centered, Flat & Clean with Fútbol Active */}
           <nav
-            className="hidden lg:flex items-center justify-center flex-1 h-15 sm:h-16 gap-6 xl:gap-8"
+            className="hidden lg:flex items-center justify-center flex-1 h-15 sm:h-16 gap-5 xl:gap-7"
             aria-label="Navegación Principal"
           >
             {[
               { key: "home", label: "Inicio", href: "/inicio" },
               { key: "resultados", label: "Resultados", href: "/resultados?liga=lvbp" },
-              { key: "calendario", label: "Calendario", href: "/calendario?liga=lvbp" },
               { key: "posiciones", label: "Posiciones", href: "/posiciones?liga=lvbp" },
-              { key: "lideres", label: "Líderes", href: "/lideres?liga=lvbp" },
-              { key: "equipos", label: "Equipos", href: "/teams?team=leones&liga=lvbp" },
-              { key: "futbol", label: "Fútbol ⚽", href: "/futbol" },
+              { key: "calendario", label: "Calendario", href: "/calendario?liga=lvbp" },
+              { key: "futbol", label: "Fútbol", href: "/futbol" },
               { key: "noticias", label: "Noticias", href: "/noticias" },
             ].map((item) => {
               const isActive = item.key === "futbol";
@@ -199,7 +204,7 @@ export function SoccerPortal({
                 <Link
                   key={item.key}
                   href={item.href}
-                  className={`h-full flex items-center relative text-xs font-black tracking-wider uppercase transition-colors select-none px-1 cursor-pointer ${
+                  className={`h-full flex items-center relative text-xs font-black tracking-wider uppercase transition-colors select-none px-1.5 cursor-pointer ${
                     isActive ? "text-white" : "text-slate-300 hover:text-white"
                   }`}
                 >
@@ -210,6 +215,44 @@ export function SoccerPortal({
                 </Link>
               );
             })}
+
+            {/* Dropdown "Más" for Líderes & Equipos to keep menu clean and uncluttered */}
+            <div className="relative h-full flex items-center" ref={moreMenuRef}>
+              <button
+                type="button"
+                onClick={() => setMoreMenuOpen((v) => !v)}
+                className="h-full flex items-center gap-1 text-xs font-black tracking-wider uppercase transition-colors select-none px-1.5 text-slate-300 hover:text-white cursor-pointer"
+              >
+                <span>Más</span>
+                <ChevronDown
+                  className={`w-3 h-3 text-slate-400 transition-transform ${
+                    moreMenuOpen ? "rotate-180 text-white" : ""
+                  }`}
+                />
+              </button>
+
+              {moreMenuOpen && (
+                <div
+                  className="absolute left-0 top-full mt-1 w-44 rounded-2xl bg-[#0c1322] border border-slate-800 shadow-2xl p-1.5 z-50 text-white animate-in fade-in duration-100"
+                  style={{ backgroundColor: "#0c1322", color: "#ffffff" }}
+                >
+                  <Link
+                    href="/lideres?liga=lvbp"
+                    onClick={() => setMoreMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition"
+                  >
+                    <span>Líderes</span>
+                  </Link>
+                  <Link
+                    href="/teams?team=leones&liga=lvbp"
+                    onClick={() => setMoreMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition"
+                  >
+                    <span>Equipos</span>
+                  </Link>
+                </div>
+              )}
+            </div>
           </nav>
 
           {/* Desktop Right Action Pills */}
@@ -437,7 +480,7 @@ export function SoccerPortal({
                   className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-black bg-rose-50 text-rose-950 border border-rose-300 shadow-2xs"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-base">⚽</span>
+                    <Trophy className="w-4.5 h-4.5 text-rose-600" />
                     <span>Fútbol Europeo</span>
                   </div>
                   <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white">
@@ -660,7 +703,8 @@ export function SoccerPortal({
                 return (
                   <article
                     key={m.id}
-                    className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs hover:shadow-md transition flex flex-col justify-between"
+                    onClick={() => setSelectedMatch(m)}
+                    className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs hover:shadow-md hover:border-amber-400 transition flex flex-col justify-between cursor-pointer group select-none active:scale-[0.99]"
                   >
                     {/* Card Header: Venue & Status */}
                     <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-100 text-xs">
@@ -702,12 +746,12 @@ export function SoccerPortal({
                               ? m.awayTeam.score !== undefined &&
                                 m.homeTeam.score !== undefined &&
                                 m.awayTeam.score > m.homeTeam.score
-                                ? "bg-slate-900 text-white"
+                                ? "bg-slate-900 text-white shadow-xs"
                                 : "bg-slate-100 text-slate-800"
                               : "text-slate-400 font-medium text-xs"
                           }`}
                         >
-                          {m.awayTeam.score ?? "–"}
+                          {isFinished || isLive ? (m.awayTeam.score ?? 0) : "–"}
                         </span>
                       </div>
 
@@ -730,23 +774,26 @@ export function SoccerPortal({
                               ? m.awayTeam.score !== undefined &&
                                 m.homeTeam.score !== undefined &&
                                 m.homeTeam.score > m.awayTeam.score
-                                ? "bg-slate-900 text-white"
+                                ? "bg-slate-900 text-white shadow-xs"
                                 : "bg-slate-100 text-slate-800"
                               : "text-slate-400 font-medium text-xs"
                           }`}
                         >
-                          {m.homeTeam.score ?? "–"}
+                          {isFinished || isLive ? (m.homeTeam.score ?? 0) : "–"}
                         </span>
                       </div>
                     </div>
 
-                    {/* Card Footer: Date Caracas */}
+                    {/* Card Footer: Date Caracas + Action Button */}
                     <div className="pt-2.5 mt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
                       <span className="flex items-center gap-1">
                         <Clock className="w-3.5 h-3.5 text-slate-400" />
                         <span>Hora Caracas: {m.timeCaracas}</span>
                       </span>
-                      <span className="text-slate-400">{m.dateCaracas}</span>
+                      <span className="inline-flex items-center gap-0.5 text-amber-600 font-black group-hover:text-amber-700">
+                        <span>Ver Detalle</span>
+                        <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                      </span>
                     </div>
                   </article>
                 );
@@ -756,7 +803,7 @@ export function SoccerPortal({
         </section>
 
         {/* SECTION 2: STANDINGS TABLE */}
-        <section className="space-y-3 pt-4">
+        <section className="space-y-3 pt-4" id="tabla-clasificacion">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <span className="text-[11px] font-black uppercase tracking-wider text-amber-600">
@@ -864,6 +911,16 @@ export function SoccerPortal({
           </div>
         </section>
       </main>
+
+      {/* Soccer Match Detail Modal */}
+      <SoccerMatchModal
+        match={selectedMatch}
+        onClose={() => setSelectedMatch(null)}
+        onViewStandings={() => {
+          const el = document.getElementById("tabla-clasificacion");
+          el?.scrollIntoView({ behavior: "smooth" });
+        }}
+      />
 
       {/* Auth Modal Integration */}
       <AuthModal

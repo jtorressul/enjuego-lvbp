@@ -70,6 +70,22 @@ function formatCaracasTime(isoDateStr: string): { dateCaracas: string; timeCarac
   }
 }
 
+function getCurrentYearMonthCaracas(): string {
+  try {
+    const d = new Date();
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Caracas",
+      year: "numeric",
+      month: "2-digit",
+    }).formatToParts(d);
+    const year = parts.find((p) => p.type === "year")?.value || "2026";
+    const month = parts.find((p) => p.type === "month")?.value || "10";
+    return `${year}${month}`;
+  } catch {
+    return "202610";
+  }
+}
+
 /**
  * Fetch matches / scoreboard from ESPN for a given soccer league
  */
@@ -77,7 +93,8 @@ export async function fetchSoccerScoreboard(
   leagueId: SoccerLeagueId,
   targetDate?: string // YYYYMMDD optional
 ): Promise<SoccerMatch[]> {
-  const cacheKey = `${leagueId}_${targetDate || "current"}`;
+  const currentMonth = getCurrentYearMonthCaracas();
+  const cacheKey = `${leagueId}_${targetDate || currentMonth}`;
   const now = Date.now();
   const cached = scoreboardCache.get(cacheKey);
 
@@ -86,7 +103,7 @@ export async function fetchSoccerScoreboard(
   }
 
   const leagueConfig = SOCCER_LEAGUES[leagueId] || SOCCER_LEAGUES["uefa.champions"];
-  const dateParam = targetDate ? `?dates=${targetDate.replace(/-/g, "")}` : "";
+  const dateParam = targetDate ? `?dates=${targetDate.replace(/-/g, "")}` : `?dates=${currentMonth}`;
   const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/${leagueId}/scoreboard${dateParam}`;
 
   try {
@@ -130,6 +147,8 @@ export async function fetchSoccerScoreboard(
         statusText = timeCaracas;
       }
 
+      const isScheduled = status === "SCHEDULED";
+
       return {
         id: String(ev.id || Math.random().toString(36).slice(2, 9)),
         date: ev.date || comp?.date || new Date().toISOString(),
@@ -147,7 +166,7 @@ export async function fetchSoccerScoreboard(
           shortName: homeComp?.team?.shortDisplayName || homeComp?.team?.name || "Local",
           abbreviation: homeComp?.team?.abbreviation || "LOC",
           logo: homeComp?.team?.logo || `https://a.espncdn.com/i/teamlogos/soccer/500/${homeComp?.team?.id}.png`,
-          score: homeComp?.score ?? (status === "SCHEDULED" ? "-" : 0),
+          score: isScheduled ? undefined : (homeComp?.score !== undefined && homeComp?.score !== "" ? Number(homeComp.score) : undefined),
         },
         awayTeam: {
           id: String(awayComp?.team?.id || "away"),
@@ -155,9 +174,32 @@ export async function fetchSoccerScoreboard(
           shortName: awayComp?.team?.shortDisplayName || awayComp?.team?.name || "Visitante",
           abbreviation: awayComp?.team?.abbreviation || "VIS",
           logo: awayComp?.team?.logo || `https://a.espncdn.com/i/teamlogos/soccer/500/${awayComp?.team?.id}.png`,
-          score: awayComp?.score ?? (status === "SCHEDULED" ? "-" : 0),
+          score: isScheduled ? undefined : (awayComp?.score !== undefined && awayComp?.score !== "" ? Number(awayComp.score) : undefined),
         },
       };
+    });
+
+    // Smart Sort:
+    // 1. Live games at top (IN_PROGRESS)
+    // 2. Scheduled games next (earliest kickoff first)
+    // 3. Finished games (most recently finished first, so latest results are seen immediately)
+    matches.sort((a, b) => {
+      const stateOrder = (st: SoccerMatch["status"]) => {
+        if (st === "IN_PROGRESS") return 0;
+        if (st === "SCHEDULED") return 1;
+        return 2;
+      };
+      const orderA = stateOrder(a.status);
+      const orderB = stateOrder(b.status);
+      if (orderA !== orderB) return orderA - orderB;
+
+      if (a.status === "SCHEDULED" && b.status === "SCHEDULED") {
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+      }
+      if (a.status === "FINISHED" && b.status === "FINISHED") {
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      }
+      return 0;
     });
 
     // Cache: 45s if has live games, 5 min otherwise

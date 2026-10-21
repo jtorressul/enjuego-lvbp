@@ -320,6 +320,8 @@ export function EnJuegoPortal({
   const teamsDropdownRef = useRef<HTMLDivElement>(null);
   const [headerLeagueMenuOpen, setHeaderLeagueMenuOpen] = useState(false);
   const headerLeagueRef = useRef<HTMLDivElement>(null);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
 
   // User Profile & Authentication State
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
@@ -394,12 +396,17 @@ export function EnJuegoPortal({
       if (!inHeaderLeague) {
         setHeaderLeagueMenuOpen(false);
       }
+      const inMoreMenu = moreMenuRef.current?.contains(target);
+      if (!inMoreMenu) {
+        setMoreMenuOpen(false);
+      }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setMobileDrawerOpen(false);
         setLeagueMenuOpen(false);
         setHeaderLeagueMenuOpen(false);
+        setMoreMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -1499,23 +1506,17 @@ export function EnJuegoPortal({
             </Link>
           </div>
 
-          {/* Desktop Main Navigation - Centered, Flat & Clean (Matching Reference Image) */}
+          {/* Desktop Main Navigation - Centered, Flat & Clean */}
           <nav
-            className="hidden lg:flex items-center justify-center flex-1 h-15 sm:h-16 gap-6 xl:gap-8"
+            className="hidden lg:flex items-center justify-center flex-1 h-15 sm:h-16 gap-5 xl:gap-7"
             aria-label="Navegación Principal"
           >
             {[
               { key: "home", label: "Inicio", href: "/inicio" },
               { key: "resultados", label: "Resultados", href: `/resultados?liga=${activeLeague}` },
-              { key: "calendario", label: "Calendario", href: `/calendario?liga=${activeLeague}` },
               { key: "posiciones", label: "Posiciones", href: `/posiciones?liga=${activeLeague}` },
-              { key: "lideres", label: "Líderes", href: `/lideres?liga=${activeLeague}` },
-              {
-                key: "equipos",
-                label: "Equipos",
-                href: `/teams?team=${activeTeamsCatalog?.[selectedTeamCode]?.slug || currentLeague.defaultTeamCode}&liga=${activeLeague || "lvbp"}`,
-              },
-              { key: "futbol", label: "Fútbol ⚽", href: "/futbol" },
+              { key: "calendario", label: "Calendario", href: `/calendario?liga=${activeLeague}` },
+              { key: "futbol", label: "Fútbol", href: "/futbol" },
               { key: "noticias", label: "Noticias", href: "/noticias" },
             ].map((item) => {
               const isActive = section === item.key;
@@ -1523,7 +1524,7 @@ export function EnJuegoPortal({
                 <Link
                   key={item.key}
                   href={item.href}
-                  className={`h-full flex items-center relative text-xs font-black tracking-wider uppercase transition-colors select-none px-1 cursor-pointer ${
+                  className={`h-full flex items-center relative text-xs font-black tracking-wider uppercase transition-colors select-none px-1.5 cursor-pointer ${
                     isActive
                       ? "text-white"
                       : "text-slate-300 hover:text-white"
@@ -1536,6 +1537,49 @@ export function EnJuegoPortal({
                 </Link>
               );
             })}
+
+            {/* Dropdown "Más" for Líderes & Equipos to keep menu clean and uncluttered */}
+            <div className="relative h-full flex items-center" ref={moreMenuRef}>
+              <button
+                type="button"
+                onClick={() => setMoreMenuOpen((v) => !v)}
+                className={`h-full flex items-center gap-1 text-xs font-black tracking-wider uppercase transition-colors select-none px-1.5 cursor-pointer ${
+                  section === "lideres" || section === "equipos" ? "text-white" : "text-slate-300 hover:text-white"
+                }`}
+              >
+                <span>Más</span>
+                <ChevronDown
+                  className={`w-3 h-3 text-slate-400 transition-transform ${
+                    moreMenuOpen ? "rotate-180 text-white" : ""
+                  }`}
+                />
+                {(section === "lideres" || section === "equipos") && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.75 bg-rose-600 rounded-full" />
+                )}
+              </button>
+
+              {moreMenuOpen && (
+                <div
+                  className="absolute left-0 top-full mt-1 w-44 rounded-2xl bg-[#0c1322] border border-slate-800 shadow-2xl p-1.5 z-50 text-white animate-in fade-in duration-100"
+                  style={{ backgroundColor: "#0c1322", color: "#ffffff" }}
+                >
+                  <Link
+                    href={`/lideres?liga=${activeLeague}`}
+                    onClick={() => setMoreMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition"
+                  >
+                    <span>Líderes</span>
+                  </Link>
+                  <Link
+                    href={`/teams?team=${activeTeamsCatalog?.[selectedTeamCode]?.slug || currentLeague.defaultTeamCode}&liga=${activeLeague || "lvbp"}`}
+                    onClick={() => setMoreMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition"
+                  >
+                    <span>Equipos</span>
+                  </Link>
+                </div>
+              )}
+            </div>
           </nav>
 
           {/* Desktop Right Action Pills: [ 🇻🇪 LVBP ⌄ ] [ Entrar ] [ Suscríbete ] (Matching Reference Image) */}
@@ -1603,7 +1647,7 @@ export function EnJuegoPortal({
                       className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-black text-rose-300 hover:text-white hover:bg-rose-950/40 border border-rose-500/30 transition cursor-pointer"
                     >
                       <span className="flex items-center gap-2">
-                        <span className="text-base">⚽</span>
+                        <Trophy className="w-3.5 h-3.5 text-rose-400 shrink-0" />
                         <span>Fútbol (Champions & Big 5)</span>
                       </span>
                       <ChevronRight className="w-3.5 h-3.5 text-rose-400" />
@@ -1819,7 +1863,7 @@ export function EnJuegoPortal({
                     className="flex items-center justify-between p-2 rounded-xl bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 border border-blue-500/40 text-white text-xs font-black shadow-xs transition hover:border-blue-400"
                   >
                     <span className="flex items-center gap-2">
-                      <span className="text-base">⚽</span>
+                      <Trophy className="w-3.5 h-3.5 text-rose-400 shrink-0" />
                       <span>Fútbol Europeo (Champions & Big 5)</span>
                     </span>
                     <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-rose-600 text-white animate-pulse">
@@ -2010,7 +2054,7 @@ export function EnJuegoPortal({
                 className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-black bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 border border-blue-800/60 text-white shadow-xs"
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-base">⚽</span>
+                  <Trophy className="w-4.5 h-4.5 text-rose-400 shrink-0" />
                   <div className="text-left">
                     <div className="leading-tight flex items-center gap-1.5">
                       <span>Fútbol Europeo</span>
@@ -2332,7 +2376,7 @@ export function EnJuegoPortal({
                       className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-black text-rose-300 hover:text-white hover:bg-rose-950/40 border border-rose-500/30 transition cursor-pointer"
                     >
                       <span className="flex items-center gap-2">
-                        <span className="text-base">⚽</span>
+                        <Trophy className="w-3.5 h-3.5 text-rose-400 shrink-0" />
                         <span>Fútbol (Champions & Big 5)</span>
                       </span>
                       <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-rose-600 text-white animate-pulse">
@@ -2535,7 +2579,7 @@ export function EnJuegoPortal({
                   href="/futbol"
                   className="flex-1 py-2 sm:py-2.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/90 hover:border-slate-300 text-slate-800 hover:text-slate-950 font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition group cursor-pointer select-none"
                 >
-                  <span className="text-base sm:text-lg group-hover:scale-115 transition-transform">⚽</span>
+                  <Trophy className="w-4 h-4 text-rose-600 shrink-0 group-hover:scale-110 transition-transform" />
                   <span>Fútbol Europeo</span>
                   <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white shadow-2xs animate-pulse">
                     Champions
@@ -3546,7 +3590,7 @@ export function EnJuegoPortal({
                     className="flex items-center justify-between p-2 rounded-xl bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 border border-blue-500/40 text-white text-xs font-black shadow-xs transition hover:border-blue-400"
                   >
                     <span className="flex items-center gap-2">
-                      <span className="text-base">⚽</span>
+                      <Trophy className="w-3.5 h-3.5 text-rose-400 shrink-0" />
                       <span>Fútbol Europeo (Champions & Big 5)</span>
                     </span>
                     <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-rose-600 text-white animate-pulse">

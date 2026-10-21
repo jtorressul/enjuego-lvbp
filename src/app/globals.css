@@ -190,6 +190,15 @@ header.portal-header,
   color: #ffffff !important;
 }
 
+.dark-pill {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+}
+
+.dark-pill * {
+  color: #ffffff !important;
+}
+
 /* Recessed Wells, Inputs & Table Headers (exempt headers, keep-dark, and translucent modal backdrops) */
 html[data-theme="light"] .bg-slate-950:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *),
 html[data-theme="light"] .bg-slate-950\/30:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *) {
@@ -235,7 +244,7 @@ html[data-theme="light"] .divide-slate-800\/60 > :not(:last-child) {
 }
 
 /* Typography in Light Mode */
-html[data-theme="light"] .text-white:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *):not(.bg-red-600):not(.bg-rose-600):not(.bg-rose-600\/90):not(.bg-emerald-600):not(.bg-orange-500):not(.bg-sky-600):not(.bg-blue-600) {
+html[data-theme="light"] .text-white:not(header):not(header *):not(.portal-header):not(.portal-header *):not(.drawer-header):not(.drawer-header *):not(.auth-header):not(.auth-header *):not(.keep-dark):not(.keep-dark *):not(.dark-pill):not(.dark-pill *):not(.bg-red-600):not(.bg-rose-600):not(.bg-rose-600\/90):not(.bg-emerald-600):not(.bg-orange-500):not(.bg-sky-600):not(.bg-blue-600) {
   color: #0f172a !important;
 }
 

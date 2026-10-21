@@ -1324,7 +1324,7 @@ export function EnJuegoPortal({
                 className={`text-base font-black px-2.5 py-0.5 rounded-lg min-w-[34px] text-center tabular-nums transition ${
                   played
                     ? awayWon
-                      ? "bg-slate-950 text-white shadow-xs"
+                      ? "dark-pill shadow-xs"
                       : "bg-slate-100 text-slate-800"
                     : "text-slate-400 font-medium text-xs"
                 }`}
@@ -1351,11 +1351,6 @@ export function EnJuegoPortal({
                     >
                       {game.homeTeam.nick}
                     </span>
-                    {homeWon && (
-                      <span className="text-[10px] font-black text-amber-600" title="Ganador">
-                        ◀
-                      </span>
-                    )}
                   </div>
                   <div className="text-[11px] font-semibold text-slate-500 flex items-center gap-1 truncate">
                     <span>{game.homeTeam.shortName} · ({game.homeTeam.wins}-{game.homeTeam.losses})</span>
@@ -1372,7 +1367,7 @@ export function EnJuegoPortal({
                 className={`text-base font-black px-2.5 py-0.5 rounded-lg min-w-[34px] text-center tabular-nums transition ${
                   played
                     ? homeWon
-                      ? "bg-slate-950 text-white shadow-xs"
+                      ? "dark-pill shadow-xs"
                       : "bg-slate-100 text-slate-800"
                     : "text-slate-400 font-medium text-xs"
                 }`}
@@ -1479,9 +1474,9 @@ export function EnJuegoPortal({
           paddingTop: "env(safe-area-inset-top, 0px)",
         }}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-15 sm:h-16 flex items-center justify-between gap-4">
-          {/* Brand Horizontal Logo + .online Pill */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-15 sm:h-16 flex items-center justify-between lg:grid lg:grid-cols-[1fr_auto_1fr] gap-4">
+          {/* Left Column: Brand Horizontal Logo + .online Pill */}
+          <div className="flex items-center justify-start gap-2 sm:gap-3 shrink-0">
             <Link
               href="/inicio"
               className="flex items-center gap-1.5 sm:gap-2 py-1 group cursor-pointer select-none"
@@ -1506,9 +1501,9 @@ export function EnJuegoPortal({
             </Link>
           </div>
 
-          {/* Desktop Main Navigation - Centered, Flat & Clean */}
+          {/* Center Column: Desktop Main Navigation (True Mathematical Center, Zero Dropdowns, Zero Emojis) */}
           <nav
-            className="hidden lg:flex items-center justify-center flex-1 h-15 sm:h-16 gap-5 xl:gap-7"
+            className="hidden lg:flex items-center justify-center h-15 sm:h-16 gap-5 xl:gap-6"
             aria-label="Navegación Principal"
           >
             {[
@@ -1516,6 +1511,12 @@ export function EnJuegoPortal({
               { key: "resultados", label: "Resultados", href: `/resultados?liga=${activeLeague}` },
               { key: "posiciones", label: "Posiciones", href: `/posiciones?liga=${activeLeague}` },
               { key: "calendario", label: "Calendario", href: `/calendario?liga=${activeLeague}` },
+              { key: "lideres", label: "Líderes", href: `/lideres?liga=${activeLeague}` },
+              {
+                key: "equipos",
+                label: "Equipos",
+                href: `/teams?team=${activeTeamsCatalog?.[selectedTeamCode]?.slug || currentLeague.defaultTeamCode}&liga=${activeLeague || "lvbp"}`,
+              },
               { key: "futbol", label: "Fútbol", href: "/futbol" },
               { key: "noticias", label: "Noticias", href: "/noticias" },
             ].map((item) => {
@@ -1524,7 +1525,7 @@ export function EnJuegoPortal({
                 <Link
                   key={item.key}
                   href={item.href}
-                  className={`h-full flex items-center relative text-xs font-black tracking-wider uppercase transition-colors select-none px-1.5 cursor-pointer ${
+                  className={`h-full flex items-center relative text-xs font-black tracking-wider uppercase transition-colors select-none px-1 cursor-pointer ${
                     isActive
                       ? "text-white"
                       : "text-slate-300 hover:text-white"
@@ -1537,126 +1538,10 @@ export function EnJuegoPortal({
                 </Link>
               );
             })}
-
-            {/* Dropdown "Más" for Líderes & Equipos to keep menu clean and uncluttered */}
-            <div className="relative h-full flex items-center" ref={moreMenuRef}>
-              <button
-                type="button"
-                onClick={() => setMoreMenuOpen((v) => !v)}
-                className={`h-full flex items-center gap-1 text-xs font-black tracking-wider uppercase transition-colors select-none px-1.5 cursor-pointer ${
-                  section === "lideres" || section === "equipos" ? "text-white" : "text-slate-300 hover:text-white"
-                }`}
-              >
-                <span>Más</span>
-                <ChevronDown
-                  className={`w-3 h-3 text-slate-400 transition-transform ${
-                    moreMenuOpen ? "rotate-180 text-white" : ""
-                  }`}
-                />
-                {(section === "lideres" || section === "equipos") && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.75 bg-rose-600 rounded-full" />
-                )}
-              </button>
-
-              {moreMenuOpen && (
-                <div
-                  className="absolute left-0 top-full mt-1 w-44 rounded-2xl bg-[#0c1322] border border-slate-800 shadow-2xl p-1.5 z-50 text-white animate-in fade-in duration-100"
-                  style={{ backgroundColor: "#0c1322", color: "#ffffff" }}
-                >
-                  <Link
-                    href={`/lideres?liga=${activeLeague}`}
-                    onClick={() => setMoreMenuOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition"
-                  >
-                    <span>Líderes</span>
-                  </Link>
-                  <Link
-                    href={`/teams?team=${activeTeamsCatalog?.[selectedTeamCode]?.slug || currentLeague.defaultTeamCode}&liga=${activeLeague || "lvbp"}`}
-                    onClick={() => setMoreMenuOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition"
-                  >
-                    <span>Equipos</span>
-                  </Link>
-                </div>
-              )}
-            </div>
           </nav>
 
-          {/* Desktop Right Action Pills: [ 🇻🇪 LVBP ⌄ ] [ Entrar ] [ Suscríbete ] (Matching Reference Image) */}
-          <div className="hidden lg:flex items-center gap-2 xl:gap-2.5 shrink-0">
-            {/* League Capsule Pill (Replicating [ Mundo ] from reference) */}
-            <div className="relative" ref={headerLeagueRef}>
-              <button
-                type="button"
-                onClick={() => setHeaderLeagueMenuOpen((prev) => !prev)}
-                className="rounded-full border border-slate-700/80 bg-slate-900/70 hover:bg-slate-800 text-slate-200 hover:text-white px-3 py-1.5 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
-                aria-expanded={headerLeagueMenuOpen}
-                aria-label="Seleccionar liga"
-              >
-                <span>{currentLeague.flag}</span>
-                <span>{currentLeague.shortName}</span>
-                <ChevronDown
-                  className={`w-3 h-3 text-slate-400 transition-transform duration-200 ${
-                    headerLeagueMenuOpen ? "rotate-180 text-white" : ""
-                  }`}
-                />
-              </button>
-
-              {headerLeagueMenuOpen && (
-                <div
-                  className="absolute right-0 top-full mt-2 w-56 rounded-2xl bg-[#0c1322] border border-slate-800 shadow-2xl p-2 z-50 text-white animate-in fade-in slide-in-from-top-2 duration-150"
-                  style={{ backgroundColor: "#0c1322", color: "#ffffff" }}
-                >
-                  <div className="px-2 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-800/80 mb-1">
-                    Béisbol
-                  </div>
-                  {LEAGUES_LIST.map((lg) => {
-                    const isSel = activeLeague === lg.id;
-                    return (
-                      <button
-                        key={lg.id}
-                        type="button"
-                        onClick={() => {
-                          switchLeague(lg.id);
-                          setHeaderLeagueMenuOpen(false);
-                          const target =
-                            section === "home"
-                              ? `/inicio?liga=${lg.id}`
-                              : `/${section}?liga=${lg.id}`;
-                          router.push(target);
-                        }}
-                        className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                          isSel
-                            ? "bg-amber-400 text-slate-950 font-black shadow-xs"
-                            : "text-slate-300 hover:text-white hover:bg-slate-800/80"
-                        }`}
-                      >
-                        <span className="flex items-center gap-2">
-                          <span className="text-base">{lg.flag}</span>
-                          <span>{lg.shortName}</span>
-                        </span>
-                        {isSel && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                      </button>
-                    );
-                  })}
-
-                  <div className="pt-1.5 mt-1.5 border-t border-slate-800">
-                    <Link
-                      href="/futbol"
-                      onClick={() => setHeaderLeagueMenuOpen(false)}
-                      className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-black text-rose-300 hover:text-white hover:bg-rose-950/40 border border-rose-500/30 transition cursor-pointer"
-                    >
-                      <span className="flex items-center gap-2">
-                        <Trophy className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                        <span>Fútbol (Champions & Big 5)</span>
-                      </span>
-                      <ChevronRight className="w-3.5 h-3.5 text-rose-400" />
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </div>
-
+          {/* Right Column: Desktop Action Pills [ Entrar ] [ Suscríbete ] */}
+          <div className="hidden lg:flex items-center justify-end gap-2 xl:gap-2.5 shrink-0">
             {/* Auth Buttons / Fan Profile matching [ Entrar ] [ Suscríbete ] */}
             {currentUser ? (
               <button
@@ -1844,14 +1729,13 @@ export function EnJuegoPortal({
                           router.push(targetPath);
                           setMobileDrawerOpen(false);
                         }}
-                        className={`flex flex-col items-center justify-center p-2 rounded-xl text-[11px] font-black transition cursor-pointer ${
+                        className={`flex flex-col items-center justify-center p-2.5 rounded-xl text-xs font-black transition cursor-pointer ${
                           isLgActive
                             ? "bg-amber-400 text-slate-950 shadow-xs"
                             : "bg-slate-800 text-slate-200 hover:bg-slate-700"
                         }`}
                       >
-                        <span className="text-base">{lg.flag}</span>
-                        <span className="leading-tight mt-0.5">{lg.shortName}</span>
+                        <span className="leading-tight tracking-wide">{lg.shortName}</span>
                       </button>
                     );
                   })}
@@ -2346,7 +2230,15 @@ export function EnJuegoPortal({
                         }}
                       >
                         <span style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          <span style={{ fontSize: "15px", lineHeight: 1 }}>{item.flag}</span>
+                          <span
+                            style={{
+                              width: "6px",
+                              height: "6px",
+                              borderRadius: "9999px",
+                              backgroundColor: isSelected ? "#fbbf24" : "#475569",
+                              flexShrink: 0,
+                            }}
+                          />
                           <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</span>
                         </span>
                         <span
@@ -2564,30 +2456,6 @@ export function EnJuegoPortal({
         {/* SECTION: HOME (/ & /inicio) */}
         {section === "home" && (
           <div className="space-y-6 sm:space-y-8">
-            {/* DUAL-SPORT SWITCHER BAR (BEISBOL & FUTBOL EUROPEO) - Immediate Visibility on Mobile & Desktop */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-1.5 sm:p-2 shadow-2xs flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5 sm:gap-2 flex-1">
-                {/* Baseball Active Pill */}
-                <div className="flex-1 py-2 sm:py-2.5 px-3 rounded-xl bg-slate-950 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs cursor-default select-none">
-                  <span className="text-base sm:text-lg">⚾</span>
-                  <span>Béisbol <span className="text-slate-300 font-semibold hidden sm:inline">· LVBP & MLB</span></span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse ml-0.5" />
-                </div>
-
-                {/* European Soccer Pill */}
-                <Link
-                  href="/futbol"
-                  className="flex-1 py-2 sm:py-2.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/90 hover:border-slate-300 text-slate-800 hover:text-slate-950 font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition group cursor-pointer select-none"
-                >
-                  <Trophy className="w-4 h-4 text-rose-600 shrink-0 group-hover:scale-110 transition-transform" />
-                  <span>Fútbol Europeo</span>
-                  <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white shadow-2xs animate-pulse">
-                    Champions
-                  </span>
-                </Link>
-              </div>
-            </div>
-
             {/* Favorite Team Selector Bar */}
             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
               <div className="flex items-center gap-2 text-xs">
@@ -2620,14 +2488,14 @@ export function EnJuegoPortal({
               </div>
             </div>
 
-            {/* 1. Pizarra de Juegos de la Jornada con Selector Limpio Arriba de la Jornada (Solo cambia la Jornada) */}
+            {/* 1. Pizarra de Juegos de la Jornada */}
             <section className="space-y-4">
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
                   <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600 block">
                     {jornadaLeague === "mlb"
-                      ? "⚾ Pizarra de Juegos · Grandes Ligas (MLB) 2026"
-                      : "🇻🇪 Pizarra de Juegos · Temporada LVBP 2026-2027"}
+                      ? "Pizarra de Juegos · Grandes Ligas (MLB) 2026"
+                      : `Pizarra de Juegos · Temporada ${currentLeague.shortName} 2026-2027`}
                   </span>
                   <h1 className="text-xl sm:text-2xl font-black text-slate-950 capitalize">
                     {jornadaDayFormatted.fullLabel}
@@ -3184,13 +3052,12 @@ export function EnJuegoPortal({
                     key={lg.id}
                     href={`/resultados?liga=${lg.id}`}
                     onClick={() => switchLeague(lg.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0 ${
                       isSel
-                        ? "bg-amber-400 text-slate-950 font-black shadow-2xs"
+                        ? "dark-pill bg-slate-950 text-white font-black shadow-2xs"
                         : "text-slate-600 hover:text-slate-950 hover:bg-slate-100"
                     }`}
                   >
-                    <span>{lg.flag}</span>
                     <span>{lg.shortName}</span>
                   </Link>
                 );
@@ -3199,8 +3066,8 @@ export function EnJuegoPortal({
 
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
-                  {currentLeague.flag} {currentLeague.name} · Pizarras C · H · E
+                <span className="text-[11px] font-extrabold uppercase tracking-widest text-amber-600">
+                  {currentLeague.name} · Pizarras C · H · E
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-950">
                   Resultados de la {currentLeague.shortName}
@@ -3259,8 +3126,8 @@ export function EnJuegoPortal({
               <div className="pt-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600 block">
-                      ⚾ Postemporada MLB 2026 · Rumbo a la Serie Mundial
+                    <span className="text-[11px] font-extrabold uppercase tracking-widest text-amber-600 block">
+                      Postemporada MLB 2026 · Rumbo a la Serie Mundial
                     </span>
                     <h2 className="text-lg sm:text-xl font-black text-slate-950">
                       Cuadro de Postemporada (MLB)
@@ -3285,13 +3152,12 @@ export function EnJuegoPortal({
                     key={lg.id}
                     href={`/calendario?liga=${lg.id}`}
                     onClick={() => switchLeague(lg.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0 ${
                       isSel
-                        ? "bg-amber-400 text-slate-950 font-black shadow-2xs"
+                        ? "dark-pill bg-slate-950 text-white font-black shadow-2xs"
                         : "text-slate-600 hover:text-slate-950 hover:bg-slate-100"
                     }`}
                   >
-                    <span>{lg.flag}</span>
                     <span>{lg.shortName}</span>
                   </Link>
                 );
@@ -3300,8 +3166,8 @@ export function EnJuegoPortal({
 
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
               <div>
-                <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
-                  {currentLeague.flag} {currentLeague.name} · Señales de TV y Estadios
+                <span className="text-[11px] font-extrabold uppercase tracking-widest text-amber-600">
+                  {currentLeague.name} · Señales de TV y Estadios
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-950">
                   Calendario de Juegos ({currentLeague.shortName})
@@ -3701,13 +3567,12 @@ export function EnJuegoPortal({
                     key={lg.id}
                     href={`/posiciones?liga=${lg.id}`}
                     onClick={() => switchLeague(lg.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0 ${
                       isSel
-                        ? "bg-amber-400 text-slate-950 font-black shadow-2xs"
+                        ? "dark-pill bg-slate-950 text-white font-black shadow-2xs"
                         : "text-slate-600 hover:text-slate-950 hover:bg-slate-100"
                     }`}
                   >
-                    <span>{lg.flag}</span>
                     <span>{lg.shortName}</span>
                   </Link>
                 );
@@ -3716,14 +3581,14 @@ export function EnJuegoPortal({
 
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
+                <span className="text-[11px] font-extrabold uppercase tracking-widest text-amber-600">
                   {activeLeague === "mlb"
-                    ? "⚾ Grandes Ligas (MLB) · 6 Divisiones Oficiales (AL y NL)"
+                    ? "Grandes Ligas (MLB) · 6 Divisiones Oficiales (AL y NL)"
                     : activeLeague === "lidom"
-                    ? "🇩🇴 Liga de Béisbol Profesional de la Rep. Dominicana · Serie Regular"
+                    ? "Liga de Béisbol Profesional de la Rep. Dominicana · Serie Regular"
                     : activeLeague === "lmp"
-                    ? "🇲🇽 Liga ARCO Mexicana del Pacífico · Temporada Regular"
-                    : "🇻🇪 Tabla de Clasificación LVBP · Rumbo al Round Robin"}
+                    ? "Liga ARCO Mexicana del Pacífico · Temporada Regular"
+                    : "Tabla de Clasificación LVBP · Rumbo al Round Robin"}
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-950">
                   Tabla de Posiciones ({currentLeague.shortName})
@@ -3745,7 +3610,7 @@ export function EnJuegoPortal({
                   <div className="inline-flex flex-wrap rounded-xl bg-white p-1 border border-slate-200 shadow-2xs gap-0.5">
                   {(
                     [
-                      ["PLAYOFFS", "🏆 Postemporada"],
+                      ["PLAYOFFS", "Postemporada"],
                       ["ALL", "6 Divisiones (30)"],
                       ["AL", "Liga Americana (AL)"],
                       ["NL", "Liga Nacional (NL)"],
@@ -3808,8 +3673,8 @@ export function EnJuegoPortal({
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
-                        <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600 block">
-                          ⚾ Postemporada MLB 2026 · Comodines, Serie Divisional, Campeonato y Serie Mundial
+                        <span className="text-[11px] font-extrabold uppercase tracking-widest text-amber-600 block">
+                          Postemporada MLB 2026 · Comodines, Serie Divisional, Campeonato y Serie Mundial
                         </span>
                         <h2 className="text-lg sm:text-xl font-black text-slate-950">
                           Cuadro de Postemporada (MLB 2026)
@@ -4167,13 +4032,12 @@ export function EnJuegoPortal({
                     key={lg.id}
                     href={`/lideres?liga=${lg.id}`}
                     onClick={() => switchLeague(lg.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0 ${
                       isSel
-                        ? "bg-amber-400 text-slate-950 font-black shadow-2xs"
+                        ? "dark-pill bg-slate-950 text-white font-black shadow-2xs"
                         : "text-slate-600 hover:text-slate-950 hover:bg-slate-100"
                     }`}
                   >
-                    <span>{lg.flag}</span>
                     <span>{lg.shortName}</span>
                   </Link>
                 );
@@ -4182,8 +4046,8 @@ export function EnJuegoPortal({
 
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600">
-                  {currentLeague.flag} Estadísticas de la {currentLeague.shortName}
+                <span className="text-[11px] font-extrabold uppercase tracking-widest text-amber-600">
+                  Estadísticas de la {currentLeague.shortName}
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-950">
                   Líderes Individuales de Bateo y Pitcheo ({currentLeague.shortName})

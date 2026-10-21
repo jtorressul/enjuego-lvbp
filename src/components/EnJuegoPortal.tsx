@@ -2019,12 +2019,8 @@ export function EnJuegoPortal({
               <section className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-2xs space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3.5 border-b border-slate-100">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200/90 p-1.5 flex items-center justify-center shrink-0">
-                      <img
-                        src={currentLeague.logo}
-                        alt={currentLeague.shortName}
-                        className="w-full h-full object-contain"
-                      />
+                    <div className="w-9 h-9 rounded-xl dark-pill flex items-center justify-center shrink-0 text-[10px] font-black tracking-tight">
+                      {currentLeague.shortName}
                     </div>
                     <div className="min-w-0">
                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">

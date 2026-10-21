@@ -25,6 +25,16 @@ export interface SoccerLeagueConfig {
   };
 }
 
+export function optimizeEspnLogoUrl(rawUrl?: string, size = 64): string {
+  if (!rawUrl) return "";
+  if (rawUrl.includes("/combiner/i?")) return rawUrl;
+  const match = rawUrl.match(/^https?:\/\/a\.espncdn\.com(\/i\/[^\s?]+)/i);
+  if (match && match[1]) {
+    return `https://a.espncdn.com/combiner/i?img=${match[1]}&h=${size}&w=${size}`;
+  }
+  return rawUrl;
+}
+
 export const SOCCER_LEAGUES: Record<SoccerLeagueId, SoccerLeagueConfig> = {
   "uefa.champions": {
     id: "uefa.champions",
@@ -33,7 +43,7 @@ export const SOCCER_LEAGUES: Record<SoccerLeagueId, SoccerLeagueConfig> = {
     shortName: "Champions League",
     country: "Europa",
     flag: "🏆",
-    logo: "https://a.espncdn.com/i/leaguelogos/soccer/500/2.png",
+    logo: "https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/2.png&h=64&w=64",
     accentColor: "#001489",
     totalTeams: 36,
     zones: {
@@ -49,7 +59,7 @@ export const SOCCER_LEAGUES: Record<SoccerLeagueId, SoccerLeagueConfig> = {
     shortName: "Premier League",
     country: "Inglaterra",
     flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
-    logo: "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png",
+    logo: "https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/23.png&h=64&w=64",
     accentColor: "#3d195b",
     totalTeams: 20,
     zones: {
@@ -66,7 +76,7 @@ export const SOCCER_LEAGUES: Record<SoccerLeagueId, SoccerLeagueConfig> = {
     shortName: "LaLiga",
     country: "España",
     flag: "🇪🇸",
-    logo: "https://a.espncdn.com/i/leaguelogos/soccer/500/15.png",
+    logo: "https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/15.png&h=64&w=64",
     accentColor: "#ea0029",
     totalTeams: 20,
     zones: {
@@ -83,7 +93,7 @@ export const SOCCER_LEAGUES: Record<SoccerLeagueId, SoccerLeagueConfig> = {
     shortName: "Serie A",
     country: "Italia",
     flag: "🇮🇹",
-    logo: "https://a.espncdn.com/i/leaguelogos/soccer/500/12.png",
+    logo: "https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/12.png&h=64&w=64",
     accentColor: "#024494",
     totalTeams: 20,
     zones: {
@@ -100,7 +110,7 @@ export const SOCCER_LEAGUES: Record<SoccerLeagueId, SoccerLeagueConfig> = {
     shortName: "Bundesliga",
     country: "Alemania",
     flag: "🇩🇪",
-    logo: "https://a.espncdn.com/i/leaguelogos/soccer/500/10.png",
+    logo: "https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/10.png&h=64&w=64",
     accentColor: "#d3010c",
     totalTeams: 18,
     zones: {
@@ -117,7 +127,7 @@ export const SOCCER_LEAGUES: Record<SoccerLeagueId, SoccerLeagueConfig> = {
     shortName: "Ligue 1",
     country: "Francia",
     flag: "🇫🇷",
-    logo: "https://a.espncdn.com/i/leaguelogos/soccer/500/9.png",
+    logo: "https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/9.png&h=64&w=64",
     accentColor: "#091c3e",
     totalTeams: 18,
     zones: {

@@ -1,4 +1,4 @@
-import { SOCCER_LEAGUES, type SoccerLeagueId } from "@/lib/soccer-leagues";
+import { optimizeEspnLogoUrl, SOCCER_LEAGUES, type SoccerLeagueId } from "@/lib/soccer-leagues";
 export type { SoccerLeagueId } from "@/lib/soccer-leagues";
 
 export interface SoccerTeam {
@@ -305,7 +305,10 @@ function parseRawEspnScoreboardEvents(
         name: homeComp?.team?.displayName || homeComp?.team?.name || "Local",
         shortName: homeComp?.team?.shortDisplayName || homeComp?.team?.name || "Local",
         abbreviation: homeComp?.team?.abbreviation || "LOC",
-        logo: homeComp?.team?.logo || `https://a.espncdn.com/i/teamlogos/soccer/500/${homeComp?.team?.id}.png`,
+        logo: optimizeEspnLogoUrl(
+          homeComp?.team?.logo || `https://a.espncdn.com/i/teamlogos/soccer/500/${homeComp?.team?.id}.png`,
+          64
+        ),
         score: isScheduled ? undefined : (homeComp?.score !== undefined && homeComp?.score !== "" ? Number(homeComp.score) : undefined),
         record: homeComp?.records?.[0]?.summary || undefined,
         form: translateForm(homeComp?.form),
@@ -315,7 +318,10 @@ function parseRawEspnScoreboardEvents(
         name: awayComp?.team?.displayName || awayComp?.team?.name || "Visitante",
         shortName: awayComp?.team?.shortDisplayName || awayComp?.team?.name || "Visitante",
         abbreviation: awayComp?.team?.abbreviation || "VIS",
-        logo: awayComp?.team?.logo || `https://a.espncdn.com/i/teamlogos/soccer/500/${awayComp?.team?.id}.png`,
+        logo: optimizeEspnLogoUrl(
+          awayComp?.team?.logo || `https://a.espncdn.com/i/teamlogos/soccer/500/${awayComp?.team?.id}.png`,
+          64
+        ),
         score: isScheduled ? undefined : (awayComp?.score !== undefined && awayComp?.score !== "" ? Number(awayComp.score) : undefined),
         record: awayComp?.records?.[0]?.summary || undefined,
         form: translateForm(awayComp?.form),
@@ -529,7 +535,10 @@ export async function fetchSoccerStandings(leagueId: SoccerLeagueId): Promise<So
           name: entry.team?.displayName || entry.team?.name || "Club",
           shortName: entry.team?.shortDisplayName || entry.team?.name || "Club",
           abbreviation: entry.team?.abbreviation || "",
-          logo: entry.team?.logos?.[0]?.href || `https://a.espncdn.com/i/teamlogos/soccer/500/${entry.team?.id}.png`,
+          logo: optimizeEspnLogoUrl(
+            entry.team?.logos?.[0]?.href || `https://a.espncdn.com/i/teamlogos/soccer/500/${entry.team?.id}.png`,
+            64
+          ),
         },
         gamesPlayed,
         wins,

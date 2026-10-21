@@ -77,6 +77,10 @@ function SingleLeaderCard({
                 <img
                   src={top.photo}
                   alt={top.name}
+                  width={44}
+                  height={44}
+                  loading="lazy"
+                  decoding="async"
                   onError={(e) => {
                     if (top.teamLogo) (e.currentTarget as HTMLImageElement).src = top.teamLogo;
                   }}
@@ -86,6 +90,10 @@ function SingleLeaderCard({
                   <img
                     src={top.teamLogo}
                     alt=""
+                    width={18}
+                    height={18}
+                    loading="lazy"
+                    decoding="async"
                     className="absolute -bottom-0.5 -right-0.5 w-4.5 h-4.5 rounded-full bg-white p-0.5 border border-slate-200 object-contain"
                   />
                 )}
@@ -125,6 +133,10 @@ function SingleLeaderCard({
                 <img
                   src={player.photo}
                   alt={player.name}
+                  width={28}
+                  height={28}
+                  loading="lazy"
+                  decoding="async"
                   onError={(e) => {
                     if (player.teamLogo) (e.currentTarget as HTMLImageElement).src = player.teamLogo;
                   }}

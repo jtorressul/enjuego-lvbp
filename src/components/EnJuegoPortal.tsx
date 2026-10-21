@@ -1471,7 +1471,9 @@ export function EnJuegoPortal({
                 alt="En Juego · Deportes en Vivo"
                 width={120}
                 height={40}
-                decoding="async"
+                fetchPriority="high"
+                loading="eager"
+                decoding="sync"
                 className="h-8 sm:h-9 md:h-9.5 w-auto object-contain transition-transform group-hover:scale-102 shrink-0"
               />
               <span
@@ -2185,7 +2187,15 @@ export function EnJuegoPortal({
                           <span className="inline-block rounded-md bg-slate-200/70 text-slate-700 px-2 py-0.5 text-[10px] font-black uppercase">
                             {item.category}
                           </span>
-                          <img src={item.winnerLogo} alt="" className="w-6 h-6 object-contain" />
+                          <img
+                            src={item.winnerLogo}
+                            alt=""
+                            width={24}
+                            height={24}
+                            loading="lazy"
+                            decoding="async"
+                            className="w-6 h-6 object-contain"
+                          />
                         </div>
                         <h3 className="text-sm font-black text-slate-950 leading-snug">
                           {item.title}

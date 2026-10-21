@@ -145,6 +145,7 @@ export default function RootLayout({
   return (
     <html lang="es" data-theme="light">
       <head>
+        <link rel="preload" as="image" href="/logo.png" fetchPriority="high" />
         <link rel="preconnect" href="https://a.espncdn.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://a.espncdn.com" />
         <script

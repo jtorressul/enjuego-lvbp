@@ -261,5 +261,5 @@ export function playerHeadshot(id?: number | string): string {
       )
     );
   }
-  return `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_160,q_auto:good,f_auto/v1/people/${id}/headshot/67/current`;
+  return `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_88,q_auto:eco,f_webp/v1/people/${id}/headshot/67/current`;
 }

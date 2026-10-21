@@ -159,16 +159,24 @@ export async function fetchWinterStandingsAndLeaders(
   const leagueId = leagueConfig?.mlbLeagueId || (league === "lidom" ? 131 : 132);
 
   try {
-    const url = `https://statsapi.mlb.com/api/v1/standings?leagueId=${leagueId}&season=${season}`;
-    const res = await fetch(url, {
-      headers: { "User-Agent": "EnJuego-WinterService/1.0" },
-      signal: AbortSignal.timeout(10_000),
-    });
+    const standingsUrl = `https://statsapi.mlb.com/api/v1/standings?leagueId=${leagueId}&season=${season}`;
+    const leadersUrl = `https://statsapi.mlb.com/api/v1/stats/leaders?leaderCategories=battingAverage,homeRuns,runsBattedIn,runs,earnedRunAverage,strikeouts,wins,saves&season=${season}&leagueId=${leagueId}&sportId=17&limit=5&hydrate=person,team`;
+
+    const [stdRes, leadRes] = await Promise.all([
+      fetch(standingsUrl, {
+        headers: { "User-Agent": "EnJuego-WinterService/1.0" },
+        signal: AbortSignal.timeout(10_000),
+      }).catch(() => null),
+      fetch(leadersUrl, {
+        headers: { "User-Agent": "EnJuego-WinterService/1.0" },
+        signal: AbortSignal.timeout(10_000),
+      }).catch(() => null),
+    ]);
 
     let standings: StandingRow[] = [];
 
-    if (res.ok) {
-      const json = await res.json();
+    if (stdRes && stdRes.ok) {
+      const json = await stdRes.json().catch(() => null);
       const records = json?.records?.[0]?.teamRecords || [];
       standings = records.map((r: any) => {
         const meta = resolveAnyBaseballTeam(r.team?.id, r.team?.name, league);
@@ -234,18 +242,72 @@ export async function fetchWinterStandingsAndLeaders(
       }));
     }
 
+    // Parse Live Leaders from MLB Stats API
+    let leaders: { hitting: LeaderCategory[]; pitching: LeaderCategory[] } = {
+      hitting: [],
+      pitching: [],
+    };
+
+    if (leadRes && leadRes.ok) {
+      const lJson = await leadRes.json().catch(() => null);
+      if (Array.isArray(lJson?.leagueLeaders)) {
+        const mapPlayers = (catKey: string, statGroup: string) => {
+          const found = lJson.leagueLeaders.find(
+            (c: any) => c.leaderCategory === catKey && c.statGroup === statGroup
+          );
+          if (!found || !Array.isArray(found.leaders) || found.leaders.length === 0) return [];
+          return found.leaders.slice(0, 5).map((item: any) => {
+            const meta = resolveAnyBaseballTeam(item.team?.id || item.team?.abbreviation, item.team?.name, league);
+            const p = item.person || {};
+            return {
+              id: Number(p.id || 0),
+              name: p.fullName || "Pelotero",
+              team: meta.code,
+              teamName: meta.nick || meta.shortName,
+              teamLogo: meta.logoSvg,
+              position: statGroup === "pitching" ? "P" : (p.primaryPosition?.abbreviation || "UTIL"),
+              photo: `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${p.id}/headshot/67/current`,
+              value: String(item.value || "0"),
+            };
+          });
+        };
+
+        const avg = mapPlayers("battingAverage", "hitting");
+        const hr = mapPlayers("homeRuns", "hitting");
+        const rbi = mapPlayers("runsBattedIn", "hitting");
+        const runs = mapPlayers("runs", "hitting");
+
+        const era = mapPlayers("earnedRunAverage", "pitching");
+        const so = mapPlayers("strikeouts", "pitching");
+        const wins = mapPlayers("wins", "pitching");
+        const saves = mapPlayers("saves", "pitching");
+
+        leaders = {
+          hitting: [
+            { key: "avg", label: "AVE", players: avg },
+            { key: "homeRuns", label: "HR", players: hr },
+            { key: "rbi", label: "CI", players: rbi },
+            { key: "runs", label: "C", players: runs },
+          ].filter((c) => c.players.length > 0),
+          pitching: [
+            { key: "era", label: "EFE", players: era },
+            { key: "strikeOuts", label: "K", players: so },
+            { key: "wins", label: "JG", players: wins },
+            { key: "saves", label: "JS", players: saves },
+          ].filter((c) => c.players.length > 0),
+        };
+      }
+    }
+
     const result = {
       standings,
-      leaders: {
-        hitting: [],
-        pitching: [],
-      },
+      leaders,
     };
 
     winterStdCache.set(cacheKey, { data: result, expiresAt: now + 300_000 });
     return result;
   } catch (err) {
-    console.warn(`[WinterService] Error fetching standings for ${league}:`, err);
+    console.warn(`[WinterService] Error fetching standings/leaders for ${league}:`, err);
     return cached?.data || { standings: [], leaders: { hitting: [], pitching: [] } };
   }
 }

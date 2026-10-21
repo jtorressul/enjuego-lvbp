@@ -1529,47 +1529,6 @@ export function EnJuegoPortal({
             </Link>
           </div>
 
-          {/* Global League Switcher Strip (Desktop & Tablet) */}
-          <div className="hidden md:flex items-center gap-1 p-1 rounded-xl bg-slate-900/90 border border-slate-800 shrink-0">
-            {LEAGUES_LIST.map((lg) => {
-              const isLgActive = activeLeague === lg.id;
-              return (
-                <button
-                  key={lg.id}
-                  type="button"
-                  onClick={() => {
-                    switchLeague(lg.id);
-                    setJornadaLeague(lg.id);
-                    const targetPath =
-                      section === "equipos"
-                        ? `/teams?team=${
-                            lg.id === "lidom"
-                              ? "licey"
-                              : lg.id === "lmp"
-                              ? "tomateros"
-                              : lg.id === "mlb"
-                              ? "yankees"
-                              : "leones"
-                          }&liga=${lg.id}`
-                        : section === "home"
-                        ? `/inicio?liga=${lg.id}`
-                        : `/${section}?liga=${lg.id}`;
-                    router.push(targetPath);
-                  }}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-black transition cursor-pointer ${
-                    isLgActive
-                      ? "bg-amber-400 text-slate-950 shadow-xs"
-                      : "text-slate-300 hover:text-white hover:bg-slate-800/80"
-                  }`}
-                  title={`Ver ${lg.name}`}
-                >
-                  <span className="text-sm">{lg.flag}</span>
-                  <span className="tracking-tight">{lg.shortName}</span>
-                </button>
-              );
-            })}
-          </div>
-
           {/* Desktop Main Navigation with Dropdowns per Section */}
           <nav
             ref={navMenuRef}
@@ -2113,45 +2072,6 @@ export function EnJuegoPortal({
           </div>
         </div>
 
-        {/* Mobile Sub-strip: Quick 4-League Switcher for Mobile & Small Screens */}
-        <div className="md:hidden border-t border-slate-800/80 bg-[#090e17] px-3 py-1.5 overflow-x-auto no-scrollbar flex items-center gap-1.5">
-          {LEAGUES_LIST.map((lg) => {
-            const isLgActive = activeLeague === lg.id;
-            return (
-              <button
-                key={lg.id}
-                type="button"
-                onClick={() => {
-                  switchLeague(lg.id);
-                  setJornadaLeague(lg.id);
-                  const targetPath =
-                    section === "equipos"
-                      ? `/teams?team=${
-                          lg.id === "lidom"
-                            ? "licey"
-                            : lg.id === "lmp"
-                            ? "tomateros"
-                            : lg.id === "mlb"
-                            ? "yankees"
-                            : "leones"
-                        }&liga=${lg.id}`
-                      : section === "home"
-                      ? `/inicio?liga=${lg.id}`
-                      : `/${section}?liga=${lg.id}`;
-                  router.push(targetPath);
-                }}
-                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black transition cursor-pointer shrink-0 ${
-                  isLgActive
-                    ? "bg-amber-400 text-slate-950 shadow-xs"
-                    : "bg-slate-900 text-slate-300 border border-slate-800 hover:text-white"
-                }`}
-              >
-                <span>{lg.flag}</span>
-                <span>{lg.shortName}</span>
-              </button>
-            );
-          })}
-        </div>
       </header>
 
       {/* MOBILE SLIDE-OVER DRAWER */}
@@ -2593,220 +2513,264 @@ export function EnJuegoPortal({
 
       {/* SCORE STRIP / TICKER BAR (SINGLE COMPACT HORIZONTAL ROW ON MOBILE & DESKTOP - HIDDEN IN GAMEDAY) */}
       {section !== "juego" && (
-        <section className="border-b border-slate-200 bg-slate-50/90 relative z-30">
-        <div className="max-w-7xl mx-auto px-2 sm:px-4 py-1.5 sm:py-2 flex items-center gap-2">
-          {/* 1. League Selector Dropdown (Trigger + Popover) */}
-          <div className="relative shrink-0" ref={leagueMenuRef}>
-            <button
-              type="button"
-              onClick={() => setLeagueMenuOpen((prev) => !prev)}
-              className="h-12 sm:h-14 px-2.5 sm:px-3.5 flex items-center gap-1.5 font-black text-slate-800 hover:text-slate-950 text-xs sm:text-sm tracking-tight cursor-pointer select-none transition border-r border-slate-200 hover:bg-slate-100/70 rounded-l-lg"
-              aria-expanded={leagueMenuOpen}
-              aria-haspopup="true"
-              title="Cambiar Liga"
-            >
-              <span className="uppercase">{currentJornadaLeague.toUpperCase()}</span>
-              {leagueMenuOpen ? (
-                <ChevronUp className="w-3.5 h-3.5 text-slate-500 stroke-[2.5]" />
-              ) : (
-                <ChevronDown className="w-3.5 h-3.5 text-slate-500 stroke-[2.5]" />
-              )}
-            </button>
+        <section className="border-b border-slate-200 bg-white relative z-30 shadow-2xs">
+          <div className="max-w-7xl mx-auto px-2 sm:px-4 py-1.5 sm:py-2 flex items-center gap-2">
+            {/* 1. League Selector Dropdown (Trigger + Popover matching reference) */}
+            <div className="relative shrink-0 flex items-center" ref={leagueMenuRef}>
+              <button
+                type="button"
+                onClick={() => setLeagueMenuOpen((prev) => !prev)}
+                className="h-16 px-3 sm:px-4 flex items-center gap-1.5 font-bold text-slate-700 hover:text-slate-950 text-sm tracking-wide cursor-pointer select-none transition border-r border-slate-200 hover:bg-slate-50"
+                aria-expanded={leagueMenuOpen}
+                aria-haspopup="true"
+                title="Seleccionar Liga"
+              >
+                <span>{currentJornadaLeague.toUpperCase()}</span>
+                {leagueMenuOpen ? (
+                  <ChevronUp className="w-3.5 h-3.5 text-slate-400 stroke-[2.5]" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 stroke-[2.5]" />
+                )}
+              </button>
 
-            {/* Dropdown Menu Popover (Dark Navy matching reference) */}
-            {leagueMenuOpen && (
-              <div className="absolute left-0 top-full mt-1.5 z-50 w-72 sm:w-80 bg-[#0c1527] text-white border border-slate-700/80 rounded-2xl shadow-2xl p-2 sm:p-2.5 space-y-1 animate-in fade-in duration-150">
-                <div className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 px-3 pt-1 pb-1">
-                  Ligas
-                </div>
-                {LEAGUE_MENU_ITEMS.map((item) => {
-                  const isSelected = currentJornadaLeague === item.id;
-                  const count =
-                    leagueGameCounts[item.id] ??
-                    (item.id === currentJornadaLeague
-                      ? jornadaSchedule.filter((g) => g.date === getTodayCaracasIso()).length
-                      : null);
+              {/* Dropdown Menu Popover (Exact reference: Dark navy, clean typography, no emoji clutter) */}
+              {leagueMenuOpen && (
+                <div
+                  className="keep-dark absolute left-0 top-full mt-1.5 z-50 w-72 rounded-2xl shadow-2xl p-2 border border-slate-800 animate-in fade-in duration-100"
+                  style={{ backgroundColor: "#0c1322", color: "#ffffff" }}
+                >
+                  <div
+                    style={{
+                      color: "#64748b",
+                      fontSize: "11px",
+                      fontWeight: 800,
+                      letterSpacing: "0.08em",
+                      padding: "6px 12px 4px 12px",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Ligas
+                  </div>
+                  {LEAGUE_MENU_ITEMS.map((item) => {
+                    const isSelected = currentJornadaLeague === item.id;
+                    const count =
+                      leagueGameCounts[item.id] ??
+                      (item.id === currentJornadaLeague
+                        ? jornadaSchedule.filter((g) => g.date === getTodayCaracasIso()).length
+                        : null);
 
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => {
-                        setLeagueMenuOpen(false);
-                        if (section === "home") {
-                          setJornadaLeague(item.id);
-                          switchLeague(item.id);
-                        } else {
-                          switchLeague(item.id);
-                          router.push(
-                            section === "equipos"
-                              ? `/teams?team=${
-                                  item.id === "lidom"
-                                    ? "licey"
-                                    : item.id === "lmp"
-                                    ? "tomateros"
-                                    : item.id === "mlb"
-                                    ? "yankees"
-                                    : "leones"
-                                }&liga=${item.id}`
-                              : `/${section}?liga=${item.id}`
-                          );
-                        }
-                      }}
-                      className={`w-full flex items-center justify-between px-3 py-2 sm:py-2.5 rounded-xl text-left transition cursor-pointer ${
-                        isSelected
-                          ? "bg-slate-800 text-white font-bold"
-                          : "text-slate-300 hover:text-white hover:bg-slate-800/60 font-medium"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-base shrink-0">{item.flag}</span>
-                        <span className="text-xs sm:text-sm truncate">
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          setLeagueMenuOpen(false);
+                          if (section === "home") {
+                            setJornadaLeague(item.id);
+                            switchLeague(item.id);
+                          } else {
+                            switchLeague(item.id);
+                            router.push(
+                              section === "equipos"
+                                ? `/teams?team=${
+                                    item.id === "lidom"
+                                      ? "licey"
+                                      : item.id === "lmp"
+                                      ? "tomateros"
+                                      : item.id === "mlb"
+                                      ? "yankees"
+                                      : "leones"
+                                  }&liga=${item.id}`
+                                : `/${section}?liga=${item.id}`
+                            );
+                          }
+                        }}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          width: "100%",
+                          padding: "8px 12px",
+                          borderRadius: "10px",
+                          textAlign: "left",
+                          backgroundColor: isSelected ? "rgba(255, 255, 255, 0.08)" : "transparent",
+                          color: isSelected ? "#ffffff" : "#94a3b8",
+                          fontWeight: isSelected ? 700 : 500,
+                          fontSize: "13px",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isSelected) {
+                            e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
+                            e.currentTarget.style.color = "#ffffff";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelected) {
+                            e.currentTarget.style.backgroundColor = "transparent";
+                            e.currentTarget.style.color = "#94a3b8";
+                          }
+                        }}
+                      >
+                        <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                           {item.label}
                         </span>
-                      </div>
-                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-800/90 text-slate-300 border border-slate-700/50 tabular-nums shrink-0">
-                        {count === null ? "–" : count === 1 ? "1 juego" : `${count} juegos`}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* 2. Compact Date Navigator */}
-          <div className="flex items-center gap-0.5 sm:gap-1 px-1 sm:px-2 border-r border-slate-200 shrink-0">
-            <button
-              type="button"
-              disabled={currentJornadaDateIdx <= 0}
-              onClick={() => stepJornadaDate(-1)}
-              className="p-1 rounded-lg hover:bg-slate-100 disabled:opacity-25 text-slate-600 transition cursor-pointer"
-              aria-label="Día anterior"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
-            <div className="text-center min-w-[46px] sm:min-w-[56px]">
-              <strong className="text-xs font-black text-slate-900 leading-tight block">
-                {jornadaDayFormatted.dayNum}{" "}
-                <small className="text-[10px] text-slate-500 font-bold uppercase">
-                  {jornadaDayFormatted.monthShort}
-                </small>
-              </strong>
-            </div>
-            <button
-              type="button"
-              disabled={currentJornadaDateIdx >= jornadaDates.length - 1}
-              onClick={() => stepJornadaDate(1)}
-              className="p-1 rounded-lg hover:bg-slate-100 disabled:opacity-25 text-slate-600 transition cursor-pointer"
-              aria-label="Día siguiente"
-            >
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-
-            {jornadaDates.length > 0 &&
-              jornadaDates[currentJornadaDateIdx] !== getTodayCaracasIso() &&
-              jornadaDates.includes(getTodayCaracasIso()) && (
-                <button
-                  type="button"
-                  onClick={resetJornadaToToday}
-                  className="hidden sm:inline-flex ml-1 px-1.5 py-0.5 rounded-md bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 text-[9px] font-black uppercase transition cursor-pointer"
-                  title="Ir a los juegos de hoy"
-                >
-                  Hoy
-                </button>
+                        <span
+                          style={{
+                            marginLeft: "10px",
+                            backgroundColor: "#1e293b",
+                            color: isSelected ? "#e2e8f0" : "#94a3b8",
+                            border: "1px solid rgba(255, 255, 255, 0.08)",
+                            borderRadius: "9999px",
+                            padding: "2px 10px",
+                            fontSize: "11px",
+                            fontWeight: 600,
+                            whiteSpace: "nowrap",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {count === null ? "–" : count === 1 ? "1 juego" : `${count} juegos`}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               )}
-          </div>
+            </div>
 
-          {/* 3. Horizontal Game Cards Strip */}
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1 min-w-0 py-0.5">
-            {jornadaGamesOfDay.length > 0 ? (
-              jornadaGamesOfDay.map((game) => {
-                const isPlayed = game.status === "IN_PROGRESS" || game.status === "FINISHED";
-                const isLive = game.status === "IN_PROGRESS";
-                const tvList = getGameTvChannels(game);
-                const isSelected = selectedGameId === game.id && (section as string) === "juego";
+            {/* 2. Compact Date Navigator */}
+            <div className="flex items-center gap-1 px-2 border-r border-slate-200 shrink-0 h-16">
+              <button
+                type="button"
+                disabled={currentJornadaDateIdx <= 0}
+                onClick={() => stepJornadaDate(-1)}
+                className="p-1 rounded-md hover:bg-slate-100 disabled:opacity-20 text-slate-500 hover:text-slate-900 transition cursor-pointer"
+                aria-label="Día anterior"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <div className="text-center min-w-[48px]">
+                <strong className="text-xs font-bold text-slate-800 leading-tight block">
+                  {jornadaDayFormatted.dayNum}{" "}
+                  <span className="text-[10px] text-slate-500 font-semibold uppercase">
+                    {jornadaDayFormatted.monthShort}
+                  </span>
+                </strong>
+              </div>
+              <button
+                type="button"
+                disabled={currentJornadaDateIdx >= jornadaDates.length - 1}
+                onClick={() => stepJornadaDate(1)}
+                className="p-1 rounded-md hover:bg-slate-100 disabled:opacity-20 text-slate-500 hover:text-slate-900 transition cursor-pointer"
+                aria-label="Día siguiente"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
 
-                return (
-                  <Link
-                    key={game.id}
-                    href={`/juego/${game.id}`}
-                    className={`flex flex-col justify-between rounded-xl px-2.5 py-1.5 sm:py-2 border text-left shrink-0 transition cursor-pointer shadow-2xs min-w-[145px] sm:min-w-[155px] ${
-                      isSelected
-                        ? "bg-amber-50/80 border-amber-400"
-                        : isLive
-                          ? "bg-white border-red-300 hover:border-red-400"
-                          : "bg-white border-slate-200 hover:border-amber-400"
-                    }`}
+              {jornadaDates.length > 0 &&
+                jornadaDates[currentJornadaDateIdx] !== getTodayCaracasIso() &&
+                jornadaDates.includes(getTodayCaracasIso()) && (
+                  <button
+                    type="button"
+                    onClick={resetJornadaToToday}
+                    className="ml-1 px-1.5 py-0.5 rounded-md bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 text-[9px] font-black uppercase transition cursor-pointer"
+                    title="Ir a los juegos de hoy"
                   >
-                    {/* Top status */}
-                    <div className="flex items-center justify-between gap-1 mb-1">
-                      <span
-                        className={`text-[10px] uppercase tracking-tight ${
-                          isLive
-                            ? "text-red-600 font-black flex items-center gap-1"
-                            : isPlayed
-                              ? "text-slate-600 font-bold"
-                              : "text-slate-500 font-semibold"
-                        }`}
-                      >
-                        {isLive && <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />}
-                        {isLive ? (game.inning || "En Vivo") : isPlayed ? "Finalizado" : game.time}
-                      </span>
-                      {tvList[0] && !isPlayed && (
-                        <span className="text-[9px] font-bold text-amber-800 bg-amber-50 border border-amber-200/60 px-1 rounded truncate max-w-[50px]">
-                          {tvList[0]}
-                        </span>
-                      )}
-                    </div>
+                    Hoy
+                  </button>
+                )}
+            </div>
 
-                    {/* Teams and Scores */}
-                    <div className="space-y-0.5 my-0.5">
-                      <div className="flex items-center justify-between gap-2 text-xs">
-                        <span className="flex items-center gap-1.5 font-bold text-slate-900 truncate">
-                          <img
-                            src={game.awayTeam.logoUrl}
-                            alt=""
-                            className="w-4 h-4 sm:w-4.5 sm:h-4.5 object-contain shrink-0"
-                          />
-                          <span className="truncate">{game.awayTeam.nick || game.awayTeam.shortName}</span>
-                        </span>
-                        <b className="text-slate-950 font-black tabular-nums text-xs sm:text-sm">
-                          {isPlayed ? game.awayScore : "–"}
-                        </b>
-                      </div>
-                      <div className="flex items-center justify-between gap-2 text-xs">
-                        <span className="flex items-center gap-1.5 font-bold text-slate-900 truncate">
-                          <img
-                            src={game.homeTeam.logoUrl}
-                            alt=""
-                            className="w-4 h-4 sm:w-4.5 sm:h-4.5 object-contain shrink-0"
-                          />
-                          <span className="truncate">{game.homeTeam.nick || game.homeTeam.shortName}</span>
-                        </span>
-                        <b className="text-slate-950 font-black tabular-nums text-xs sm:text-sm">
-                          {isPlayed ? game.homeScore : "–"}
-                        </b>
-                      </div>
-                    </div>
+            {/* 3. Horizontal Game Cards Strip */}
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1 min-w-0 py-1">
+              {jornadaGamesOfDay.length > 0 ? (
+                jornadaGamesOfDay.map((game) => {
+                  const isPlayed = game.status === "IN_PROGRESS" || game.status === "FINISHED";
+                  const isLive = game.status === "IN_PROGRESS";
+                  const tvList = getGameTvChannels(game);
+                  const isSelected = selectedGameId === game.id && (section as string) === "juego";
 
-                    {/* Bottom Link: BOX SCORE in red with underline */}
-                    <div className="pt-1 mt-1 border-t border-slate-100 text-center">
-                      <span className="text-[10px] font-black uppercase tracking-wide text-red-600 underline underline-offset-2 hover:text-red-700">
-                        {isLive ? "EN VIVO" : isPlayed ? "BOX SCORE" : "PREVIA"}
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })
-            ) : (
-              <span className="text-xs text-slate-500 py-2">
-                Cargando cartelera de juegos…
-              </span>
-            )}
+                  return (
+                    <Link
+                      key={game.id}
+                      href={`/juego/${game.id}`}
+                      className={`flex flex-col justify-between rounded-xl px-3 py-2 border text-left shrink-0 transition cursor-pointer shadow-2xs min-w-[150px] sm:min-w-[160px] h-16 ${
+                        isSelected
+                          ? "bg-amber-50/70 border-amber-400"
+                          : isLive
+                            ? "bg-white border-red-300 hover:border-red-400"
+                            : "bg-white border-slate-200 hover:border-slate-300"
+                      }`}
+                    >
+                      {/* Top status */}
+                      <div className="flex items-center justify-between gap-1 leading-none">
+                        <span
+                          className={`text-[10px] uppercase tracking-tight ${
+                            isLive
+                              ? "text-red-600 font-black flex items-center gap-1"
+                              : isPlayed
+                                ? "text-slate-700 font-semibold"
+                                : "text-slate-500 font-medium"
+                          }`}
+                        >
+                          {isLive && <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />}
+                          {isLive ? (game.inning || "En Vivo") : isPlayed ? "Finalizado" : game.time}
+                        </span>
+                        {tvList[0] && !isPlayed && (
+                          <span className="text-[9px] font-bold text-amber-800 bg-amber-50 border border-amber-200/60 px-1 rounded truncate max-w-[50px]">
+                            {tvList[0]}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Teams and Scores */}
+                      <div className="space-y-0.5 my-auto">
+                        <div className="flex items-center justify-between gap-2 text-xs">
+                          <span className="flex items-center gap-1.5 font-bold text-slate-800 truncate">
+                            <img
+                              src={game.awayTeam.logoUrl}
+                              alt=""
+                              className="w-4 h-4 object-contain shrink-0"
+                            />
+                            <span className="truncate">{game.awayTeam.nick || game.awayTeam.shortName}</span>
+                          </span>
+                          <b className="text-slate-950 font-black tabular-nums text-xs sm:text-sm">
+                            {isPlayed ? game.awayScore : "–"}
+                          </b>
+                        </div>
+                        <div className="flex items-center justify-between gap-2 text-xs">
+                          <span className="flex items-center gap-1.5 font-bold text-slate-800 truncate">
+                            <img
+                              src={game.homeTeam.logoUrl}
+                              alt=""
+                              className="w-4 h-4 object-contain shrink-0"
+                            />
+                            <span className="truncate">{game.homeTeam.nick || game.homeTeam.shortName}</span>
+                          </span>
+                          <b className="text-slate-950 font-black tabular-nums text-xs sm:text-sm">
+                            {isPlayed ? game.homeScore : "–"}
+                          </b>
+                        </div>
+                      </div>
+
+                      {/* Bottom Link: BOX SCORE in red with underline */}
+                      <div className="text-center leading-none">
+                        <span className="text-[9px] font-black uppercase tracking-wider text-red-700 underline underline-offset-2 hover:text-red-800">
+                          {isLive ? "EN VIVO" : isPlayed ? "BOX SCORE" : "PREVIA"}
+                        </span>
+                      </div>
+                    </Link>
+                  );
+                })
+              ) : (
+                <span className="text-xs text-slate-500 py-2">
+                  Cargando cartelera de juegos…
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
       )}
 
       {/* MAIN CONTENT CONTAINER */}

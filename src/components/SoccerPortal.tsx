@@ -39,12 +39,14 @@ interface SoccerPortalProps {
   initialLeague: SoccerLeagueId;
   initialMatches: SoccerMatch[];
   initialStandings: SoccerStandingRow[];
+  initialMatchId?: string | null;
 }
 
 export function SoccerPortal({
   initialLeague,
   initialMatches,
   initialStandings,
+  initialMatchId = null,
 }: SoccerPortalProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -60,9 +62,9 @@ export function SoccerPortal({
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
-  const [activeMatchId, setActiveMatchId] = useState<string | null>(() => {
-    return searchParams.get("partido") || searchParams.get("match") || null;
-  });
+  const [activeMatchId, setActiveMatchId] = useState<string | null>(
+    () => initialMatchId || searchParams.get("partido") || searchParams.get("match") || null
+  );
 
   // Auth modal states
   const [authModalOpen, setAuthModalOpen] = useState(false);

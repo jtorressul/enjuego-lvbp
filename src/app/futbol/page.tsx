@@ -35,10 +35,11 @@ export async function generateMetadata({
 export default async function FutbolPage({
   searchParams,
 }: {
-  searchParams: Promise<{ liga?: string; league?: string }>;
+  searchParams: Promise<{ liga?: string; league?: string; partido?: string; match?: string }>;
 }) {
   const sp = await searchParams;
   const leagueId = parseSoccerLeague(sp?.liga || sp?.league);
+  const matchId = sp?.partido || sp?.match || null;
 
   const [initialMatches, initialStandings] = await Promise.all([
     fetchSoccerScoreboard(leagueId),
@@ -50,6 +51,7 @@ export default async function FutbolPage({
       initialLeague={leagueId}
       initialMatches={initialMatches}
       initialStandings={initialStandings}
+      initialMatchId={matchId}
     />
   );
 }

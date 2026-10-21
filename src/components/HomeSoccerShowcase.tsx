@@ -84,7 +84,7 @@ export function HomeSoccerShowcase() {
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href={`/futbol?liga=${selectedLeague}#tabla-clasificacion`}
-            className="dark-pill inline-flex items-center gap-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-2 text-xs font-black transition cursor-pointer shadow-2xs"
+            className="dark-pill inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-black transition cursor-pointer shadow-2xs"
           >
             <Trophy className="w-3.5 h-3.5" />
             <span>Clasificación ›</span>

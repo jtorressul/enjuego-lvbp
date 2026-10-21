@@ -279,15 +279,18 @@ export function SoccerPortal({
           </div>
         </div>
 
-        {/* Mobile & Tablet Horizontal Quick Navigation Strip (<1024px) */}
-        <div className="lg:hidden border-t border-slate-800/80 bg-[#0d1526] px-3 py-1.5 overflow-x-auto no-scrollbar">
-          <div className="flex items-center gap-1.5 min-w-max">
+        {/* Mobile & Tablet Horizontal Section Tabs (<1024px) — Clean Editorial Underline Bar */}
+        <div
+          className="lg:hidden border-t overflow-x-auto no-scrollbar"
+          style={{ backgroundColor: "#0a1120", borderColor: "#1e293b" }}
+        >
+          <div className="flex items-center px-3 min-w-max gap-5">
             {[
               { key: "home", label: "Inicio", href: "/inicio" },
-              { key: "futbol", label: "Fútbol Europeo", href: "/futbol" },
               { key: "resultados", label: "Resultados", href: "/resultados?liga=lvbp" },
               { key: "posiciones", label: "Posiciones", href: "/posiciones?liga=lvbp" },
               { key: "calendario", label: "Calendario", href: "/calendario?liga=lvbp" },
+              { key: "futbol", label: "Fútbol", href: "/futbol" },
               { key: "lideres", label: "Líderes", href: "/lideres?liga=lvbp" },
               { key: "equipos", label: "Equipos", href: "/teams?team=leones&liga=lvbp" },
               { key: "noticias", label: "Noticias", href: "/noticias" },
@@ -297,13 +300,17 @@ export function SoccerPortal({
                 <Link
                   key={item.key}
                   href={item.href}
-                  className={`px-3 py-1 rounded-lg text-[11px] font-bold tracking-wide transition shrink-0 ${
-                    isActive
-                      ? "bg-amber-400 text-slate-950 font-black"
-                      : "text-slate-300 hover:text-white bg-slate-900/90 border border-slate-800"
+                  className={`relative py-2.5 text-xs font-bold tracking-wide transition shrink-0 select-none ${
+                    isActive ? "text-white font-black" : "text-slate-400 hover:text-white"
                   }`}
                 >
-                  {item.label}
+                  <span>{item.label}</span>
+                  {isActive && (
+                    <span
+                      className="absolute bottom-0 left-0 right-0 h-[2.5px] rounded-t-full"
+                      style={{ backgroundColor: "#f59e0b" }}
+                    />
+                  )}
                 </Link>
               );
             })}
@@ -348,54 +355,56 @@ export function SoccerPortal({
         </section>
       )}
 
-      {/* MOBILE SLIDE-OVER DRAWER */}
+      {/* MOBILE SLIDE-OVER DRAWER (Redesigned Clean Editorial Menu) */}
       {mobileDrawerOpen && (
         <div className="fixed inset-0 z-[200] flex justify-end lg:hidden animate-in fade-in duration-150">
           <div
-            className="fixed inset-0 bg-slate-950/65 backdrop-blur-xs transition-opacity z-[200]"
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity z-[200]"
             onClick={() => setMobileDrawerOpen(false)}
           />
 
-          <div className="relative w-full max-w-[86vw] sm:max-w-sm bg-white h-dvh shadow-2xl flex flex-col z-[201] overflow-hidden">
+          <div className="relative w-full max-w-[85vw] sm:max-w-sm bg-white h-dvh shadow-2xl flex flex-col z-[201] overflow-hidden border-l border-slate-200">
             <div
-              className="drawer-header px-4 py-3.5 border-b flex items-center justify-between text-white shrink-0 sticky top-0 z-20 shadow-xs"
+              className="drawer-header keep-dark px-4 py-3.5 border-b flex items-center justify-between text-white shrink-0 sticky top-0 z-20"
               style={{
-                backgroundColor: "#060a12",
+                backgroundColor: "#0a1120",
                 borderColor: "#1e293b",
-                paddingTop: "max(1rem, env(safe-area-inset-top, 1rem))",
+                paddingTop: "max(0.85rem, env(safe-area-inset-top, 0.85rem))",
               }}
             >
               <div className="flex items-center gap-2">
-                <img src="/logo.png" alt="En Juego" className="h-9 w-auto object-contain" />
+                <img src="/logo.png" alt="En Juego" className="h-8 w-auto object-contain" />
                 <span
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-black italic tracking-tight shadow-xs select-none -ml-0.5"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black tracking-tight select-none"
                   style={{
-                    background: "linear-gradient(135deg, #e11d48 0%, #be123c 100%)",
-                    color: "#ffffff",
-                    border: "1px solid rgba(251, 113, 133, 0.45)",
+                    backgroundColor: "#1e293b",
+                    color: "#fbbf24",
+                    border: "1px solid rgba(251, 191, 36, 0.35)",
                   }}
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse shrink-0" />
-                  <span style={{ color: "#ffffff" }}>.online</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                  <span>.online</span>
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setMobileDrawerOpen(false)}
-                className="p-2.5 rounded-xl text-slate-300 hover:text-white transition cursor-pointer active:scale-95"
-                style={{ backgroundColor: "#0f172a", border: "1px solid #1e293b" }}
+                className="p-2 rounded-xl text-slate-300 hover:text-white transition cursor-pointer active:scale-95"
+                style={{ backgroundColor: "#1e293b", border: "1px solid #334155" }}
                 aria-label="Cerrar Menú"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4.5 h-4.5" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto overscroll-contain pb-10">
+            <div className="flex-1 overflow-y-auto overscroll-contain divide-y divide-slate-200/80">
               {/* Quick Soccer Leagues Selector in Drawer (Official Logos, Zero Emojis) */}
-              <div className="keep-dark p-3 bg-slate-900 border-b border-slate-800">
-                <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-2 px-1 flex items-center justify-between">
+              <div className="p-4 bg-slate-50/80">
+                <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2.5 flex items-center justify-between">
                   <span>Competiciones Europeas</span>
-                  <span className="text-amber-400 font-bold">2026-27</span>
+                  <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-md">
+                    2026-27
+                  </span>
                 </div>
                 <div className="grid grid-cols-3 gap-1.5">
                   {SOCCER_LEAGUES_LIST.map((lg) => {
@@ -408,10 +417,10 @@ export function SoccerPortal({
                           handleSelectLeague(lg.id);
                           setMobileDrawerOpen(false);
                         }}
-                        className={`flex flex-col items-center justify-center p-2 rounded-xl text-[11px] font-black transition cursor-pointer ${
+                        className={`flex flex-col items-center justify-center p-2 rounded-xl text-[11px] font-black transition cursor-pointer border ${
                           isLgActive
-                            ? "bg-amber-400 text-slate-950 shadow-xs"
-                            : "bg-slate-800 text-slate-200 hover:bg-slate-700"
+                            ? "dark-pill border-slate-900 shadow-2xs"
+                            : "bg-white text-slate-800 border-slate-200/90 hover:border-slate-300"
                         }`}
                       >
                         <span className="w-5 h-5 rounded-xs bg-white p-0.5 flex items-center justify-center mb-1">
@@ -425,90 +434,65 @@ export function SoccerPortal({
               </div>
 
               {/* Navigation Links in Drawer */}
-              <div className="p-4 space-y-1.5 border-b border-slate-100">
-                <Link
-                  href="/futbol"
-                  onClick={() => setMobileDrawerOpen(false)}
-                  className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-black bg-amber-50 text-slate-950 border border-amber-300 shadow-2xs"
-                >
-                  <div className="flex items-center gap-3">
-                    <Trophy className="w-4.5 h-4.5 text-amber-600" />
-                    <span>Fútbol Europeo</span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-amber-400 text-slate-950">
-                    Activo
-                  </span>
-                </Link>
-
-                <Link
-                  href="/inicio"
-                  onClick={() => setMobileDrawerOpen(false)}
-                  className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-bold text-slate-800 hover:bg-slate-100 transition"
-                >
-                  <div className="flex items-center gap-3">
-                    <Home className="w-4.5 h-4.5 text-amber-600" />
-                    <span>Inicio</span>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-400" />
-                </Link>
-
-                <Link
-                  href="/resultados?liga=lvbp"
-                  onClick={() => setMobileDrawerOpen(false)}
-                  className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-bold text-slate-800 hover:bg-slate-100 transition"
-                >
-                  <div className="flex items-center gap-3">
-                    <Activity className="w-4.5 h-4.5 text-emerald-600" />
-                    <span>Resultados Béisbol</span>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-400" />
-                </Link>
-
-                <Link
-                  href="/posiciones?liga=lvbp"
-                  onClick={() => setMobileDrawerOpen(false)}
-                  className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-bold text-slate-800 hover:bg-slate-100 transition"
-                >
-                  <div className="flex items-center gap-3">
-                    <Trophy className="w-4.5 h-4.5 text-amber-500" />
-                    <span>Posiciones Béisbol</span>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-400" />
-                </Link>
-
-                <Link
-                  href="/calendario?liga=lvbp"
-                  onClick={() => setMobileDrawerOpen(false)}
-                  className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-bold text-slate-800 hover:bg-slate-100 transition"
-                >
-                  <div className="flex items-center gap-3">
-                    <Calendar className="w-4.5 h-4.5 text-sky-600" />
-                    <span>Calendario y TV</span>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-400" />
-                </Link>
-
-                <Link
-                  href="/noticias"
-                  onClick={() => setMobileDrawerOpen(false)}
-                  className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-bold text-slate-800 hover:bg-slate-100 transition"
-                >
-                  <div className="flex items-center gap-3">
-                    <Play className="w-4.5 h-4.5 text-rose-600 fill-rose-600" />
-                    <span>Noticias y Resúmenes</span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white">
-                    Video
-                  </span>
-                </Link>
+              <div className="p-3 bg-white space-y-0.5">
+                <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2.5 mb-1.5">
+                  Navegación Principal
+                </div>
+                {[
+                  { key: "home", label: "Inicio", sub: "Portada general y marcadores", Icon: Home, href: "/inicio", active: false },
+                  { key: "futbol", label: "Fútbol Europeo", sub: "Champions League y las 5 Grandes Ligas", Icon: Trophy, href: "/futbol", active: true },
+                  { key: "resultados", label: "Resultados Béisbol", sub: "LVBP · LIDOM · LMP · MLB", Icon: Activity, href: "/resultados?liga=lvbp", active: false },
+                  { key: "posiciones", label: "Tabla de Posiciones", sub: "Clasificación de Béisbol", Icon: Trophy, href: "/posiciones?liga=lvbp", active: false },
+                  { key: "calendario", label: "Calendario y TV", sub: "Próximos juegos y transmisión", Icon: Calendar, href: "/calendario?liga=lvbp", active: false },
+                  { key: "noticias", label: "Noticias y Videos", sub: "Actualidad y resúmenes oficiales", Icon: Play, href: "/noticias", active: false },
+                ].map((item) => {
+                  const ItemIcon = item.Icon;
+                  return (
+                    <Link
+                      key={item.key}
+                      href={item.href}
+                      onClick={() => setMobileDrawerOpen(false)}
+                      className={`flex items-center justify-between px-3 py-2.5 rounded-xl transition ${
+                        item.active
+                          ? "bg-slate-100 text-slate-950 font-black"
+                          : "text-slate-700 hover:bg-slate-50 font-bold"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${
+                            item.active
+                              ? "dark-pill border-slate-900"
+                              : "bg-slate-50 border-slate-200/80 text-slate-600"
+                          }`}
+                        >
+                          <ItemIcon className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-[13px] text-slate-900 leading-tight truncate">
+                            {item.label}
+                          </div>
+                          <div className="text-[11px] text-slate-400 font-medium truncate">
+                            {item.sub}
+                          </div>
+                        </div>
+                      </div>
+                      <ChevronRight
+                        className={`w-4 h-4 shrink-0 ${
+                          item.active ? "text-amber-600" : "text-slate-300"
+                        }`}
+                      />
+                    </Link>
+                  );
+                })}
               </div>
+            </div>
 
-              <div className="p-4 border-t border-slate-200 bg-slate-50 text-xs text-slate-500">
-                <p className="font-extrabold text-slate-800">EN JUEGO · DEPORTES EN VIVO</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Cobertura oficial de Béisbol y Fútbol Europeo.
-                </p>
-              </div>
+            <div className="p-3.5 border-t border-slate-200 bg-slate-50 text-xs text-slate-500 shrink-0">
+              <p className="font-extrabold text-slate-800">EN JUEGO · DEPORTES EN VIVO</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Cobertura oficial de Béisbol y Fútbol Europeo.
+              </p>
             </div>
           </div>
         </div>

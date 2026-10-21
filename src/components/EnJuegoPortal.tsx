@@ -2514,38 +2514,38 @@ export function EnJuegoPortal({
       {/* SCORE STRIP / TICKER BAR (SINGLE COMPACT HORIZONTAL ROW ON MOBILE & DESKTOP - HIDDEN IN GAMEDAY) */}
       {section !== "juego" && (
         <section className="border-b border-slate-200 bg-white relative z-30 shadow-2xs">
-          <div className="max-w-7xl mx-auto px-2 sm:px-4 py-1.5 sm:py-2 flex items-center gap-2">
+          <div className="max-w-7xl mx-auto px-2 sm:px-4 py-1 sm:py-1.5 flex items-center">
             {/* 1. League Selector Dropdown (Trigger + Popover matching reference) */}
             <div className="relative shrink-0 flex items-center" ref={leagueMenuRef}>
               <button
                 type="button"
                 onClick={() => setLeagueMenuOpen((prev) => !prev)}
-                className="h-16 px-3 sm:px-4 flex items-center gap-1.5 font-bold text-slate-700 hover:text-slate-950 text-sm tracking-wide cursor-pointer select-none transition border-r border-slate-200 hover:bg-slate-50"
+                className="h-14 sm:h-16 px-2 sm:px-3.5 flex items-center gap-1 sm:gap-1.5 font-bold text-slate-800 hover:text-slate-950 text-xs sm:text-sm tracking-wide cursor-pointer select-none transition hover:bg-slate-50 rounded-lg"
                 aria-expanded={leagueMenuOpen}
                 aria-haspopup="true"
                 title="Seleccionar Liga"
               >
                 <span>{currentJornadaLeague.toUpperCase()}</span>
                 {leagueMenuOpen ? (
-                  <ChevronUp className="w-3.5 h-3.5 text-slate-400 stroke-[2.5]" />
+                  <ChevronUp className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400 stroke-[2.5]" />
                 ) : (
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 stroke-[2.5]" />
+                  <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400 stroke-[2.5]" />
                 )}
               </button>
 
-              {/* Dropdown Menu Popover (Exact reference: Dark navy, clean typography, no emoji clutter) */}
+              {/* Dropdown Menu Popover (Exact reference: Dark navy, clean typography, safe width) */}
               {leagueMenuOpen && (
                 <div
-                  className="keep-dark absolute left-0 top-full mt-1.5 z-50 w-72 rounded-2xl shadow-2xl p-2 border border-slate-800 animate-in fade-in duration-100"
+                  className="keep-dark absolute left-0 top-full mt-1.5 z-50 w-[min(calc(100vw-1.5rem),280px)] rounded-2xl shadow-2xl p-2 border border-slate-800 animate-in fade-in duration-100"
                   style={{ backgroundColor: "#0c1322", color: "#ffffff" }}
                 >
                   <div
                     style={{
                       color: "#64748b",
-                      fontSize: "11px",
+                      fontSize: "10px",
                       fontWeight: 800,
                       letterSpacing: "0.08em",
-                      padding: "6px 12px 4px 12px",
+                      padding: "6px 10px 4px 10px",
                       textTransform: "uppercase",
                     }}
                   >
@@ -2590,11 +2590,11 @@ export function EnJuegoPortal({
                           alignItems: "center",
                           justifyContent: "space-between",
                           width: "100%",
-                          padding: "8px 12px",
+                          padding: "8px 10px",
                           borderRadius: "10px",
                           textAlign: "left",
                           backgroundColor: isSelected ? "rgba(255, 255, 255, 0.08)" : "transparent",
-                          color: isSelected ? "#ffffff" : "#94a3b8",
+                          color: isSelected ? "#ffffff" : "#cbd5e1",
                           fontWeight: isSelected ? 700 : 500,
                           fontSize: "13px",
                           cursor: "pointer",
@@ -2609,21 +2609,22 @@ export function EnJuegoPortal({
                         onMouseLeave={(e) => {
                           if (!isSelected) {
                             e.currentTarget.style.backgroundColor = "transparent";
-                            e.currentTarget.style.color = "#94a3b8";
+                            e.currentTarget.style.color = "#cbd5e1";
                           }
                         }}
                       >
-                        <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {item.label}
+                        <span style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <span style={{ fontSize: "15px", lineHeight: 1 }}>{item.flag}</span>
+                          <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</span>
                         </span>
                         <span
                           style={{
-                            marginLeft: "10px",
+                            marginLeft: "8px",
                             backgroundColor: "#1e293b",
                             color: isSelected ? "#e2e8f0" : "#94a3b8",
                             border: "1px solid rgba(255, 255, 255, 0.08)",
                             borderRadius: "9999px",
-                            padding: "2px 10px",
+                            padding: "2px 8px",
                             fontSize: "11px",
                             fontWeight: 600,
                             whiteSpace: "nowrap",
@@ -2639,19 +2640,22 @@ export function EnJuegoPortal({
               )}
             </div>
 
+            {/* Subtle Divider */}
+            <div className="h-7 sm:h-8 w-px bg-slate-200 shrink-0 mx-1 sm:mx-1.5" aria-hidden="true" />
+
             {/* 2. Compact Date Navigator */}
-            <div className="flex items-center gap-1 px-2 border-r border-slate-200 shrink-0 h-16">
+            <div className="flex items-center gap-0.5 sm:gap-1 px-1 sm:px-2 shrink-0 h-14 sm:h-16">
               <button
                 type="button"
                 disabled={currentJornadaDateIdx <= 0}
                 onClick={() => stepJornadaDate(-1)}
-                className="p-1 rounded-md hover:bg-slate-100 disabled:opacity-20 text-slate-500 hover:text-slate-900 transition cursor-pointer"
+                className="p-1 rounded-md hover:bg-slate-100 disabled:opacity-20 text-slate-400 hover:text-slate-700 transition cursor-pointer"
                 aria-label="Día anterior"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
-              <div className="text-center min-w-[48px]">
-                <strong className="text-xs font-bold text-slate-800 leading-tight block">
+              <div className="text-center min-w-[38px] sm:min-w-[48px]">
+                <strong className="text-xs sm:text-xs font-bold text-slate-800 leading-tight block">
                   {jornadaDayFormatted.dayNum}{" "}
                   <span className="text-[10px] text-slate-500 font-semibold uppercase">
                     {jornadaDayFormatted.monthShort}
@@ -2662,7 +2666,7 @@ export function EnJuegoPortal({
                 type="button"
                 disabled={currentJornadaDateIdx >= jornadaDates.length - 1}
                 onClick={() => stepJornadaDate(1)}
-                className="p-1 rounded-md hover:bg-slate-100 disabled:opacity-20 text-slate-500 hover:text-slate-900 transition cursor-pointer"
+                className="p-1 rounded-md hover:bg-slate-100 disabled:opacity-20 text-slate-400 hover:text-slate-700 transition cursor-pointer"
                 aria-label="Día siguiente"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -2674,7 +2678,7 @@ export function EnJuegoPortal({
                   <button
                     type="button"
                     onClick={resetJornadaToToday}
-                    className="ml-1 px-1.5 py-0.5 rounded-md bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 text-[9px] font-black uppercase transition cursor-pointer"
+                    className="ml-0.5 sm:ml-1 px-1 sm:px-1.5 py-0.5 rounded bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 text-[8px] sm:text-[9px] font-black uppercase transition cursor-pointer"
                     title="Ir a los juegos de hoy"
                   >
                     Hoy
@@ -2682,8 +2686,11 @@ export function EnJuegoPortal({
                 )}
             </div>
 
+            {/* Subtle Divider */}
+            <div className="h-7 sm:h-8 w-px bg-slate-200 shrink-0 mx-1 sm:mx-1.5" aria-hidden="true" />
+
             {/* 3. Horizontal Game Cards Strip */}
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1 min-w-0 py-1">
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1 min-w-0 py-1 pl-1 scroll-smooth overscroll-x-contain">
               {jornadaGamesOfDay.length > 0 ? (
                 jornadaGamesOfDay.map((game) => {
                   const isPlayed = game.status === "IN_PROGRESS" || game.status === "FINISHED";
@@ -2695,22 +2702,22 @@ export function EnJuegoPortal({
                     <Link
                       key={game.id}
                       href={`/juego/${game.id}`}
-                      className={`flex flex-col justify-between rounded-xl px-3 py-2 border text-left shrink-0 transition cursor-pointer shadow-2xs min-w-[150px] sm:min-w-[160px] h-16 ${
+                      className={`flex flex-col justify-between rounded-xl sm:rounded-2xl px-2.5 py-1.5 sm:px-3 sm:py-2 border text-left shrink-0 transition cursor-pointer shadow-2xs min-w-[136px] sm:min-w-[155px] md:min-w-[165px] h-[58px] sm:h-16 ${
                         isSelected
                           ? "bg-amber-50/70 border-amber-400"
                           : isLive
                             ? "bg-white border-red-300 hover:border-red-400"
-                            : "bg-white border-slate-200 hover:border-slate-300"
+                            : "bg-white border-slate-200/90 hover:border-slate-300 hover:shadow-xs"
                       }`}
                     >
-                      {/* Top status */}
+                      {/* Top status & TV channel */}
                       <div className="flex items-center justify-between gap-1 leading-none">
                         <span
-                          className={`text-[10px] uppercase tracking-tight ${
+                          className={`text-[9px] sm:text-[10px] uppercase tracking-tight ${
                             isLive
                               ? "text-red-600 font-black flex items-center gap-1"
                               : isPlayed
-                                ? "text-slate-700 font-semibold"
+                                ? "text-slate-600 font-semibold"
                                 : "text-slate-500 font-medium"
                           }`}
                         >
@@ -2718,54 +2725,54 @@ export function EnJuegoPortal({
                           {isLive ? (game.inning || "En Vivo") : isPlayed ? "Finalizado" : game.time}
                         </span>
                         {tvList[0] && !isPlayed && (
-                          <span className="text-[9px] font-bold text-amber-800 bg-amber-50 border border-amber-200/60 px-1 rounded truncate max-w-[50px]">
+                          <span className="text-[8px] sm:text-[9px] font-bold text-amber-900 bg-amber-50/90 border border-amber-200/80 px-1.5 py-0.2 rounded-full truncate max-w-[55px] sm:max-w-[70px] leading-tight shrink-0">
                             {tvList[0]}
                           </span>
                         )}
                       </div>
 
-                      {/* Teams and Scores */}
+                      {/* Teams and Scores (2 compact rows matching exact reference) */}
                       <div className="space-y-0.5 my-auto">
-                        <div className="flex items-center justify-between gap-2 text-xs">
-                          <span className="flex items-center gap-1.5 font-bold text-slate-800 truncate">
+                        {/* Away Team */}
+                        <div className="flex items-center justify-between gap-1.5 text-xs">
+                          <span className="flex items-center gap-1.5 font-bold text-slate-800 truncate min-w-0">
                             <img
                               src={game.awayTeam.logoUrl}
                               alt=""
-                              className="w-4 h-4 object-contain shrink-0"
+                              className="w-3.5 h-3.5 sm:w-4 sm:h-4 object-contain shrink-0"
                             />
-                            <span className="truncate">{game.awayTeam.nick || game.awayTeam.shortName}</span>
+                            <span className="truncate text-[11px] sm:text-xs">
+                              {game.awayTeam.nick || game.awayTeam.shortName}
+                            </span>
                           </span>
-                          <b className="text-slate-950 font-black tabular-nums text-xs sm:text-sm">
+                          <b className="text-slate-950 font-black tabular-nums text-xs sm:text-sm shrink-0">
                             {isPlayed ? game.awayScore : "–"}
                           </b>
                         </div>
-                        <div className="flex items-center justify-between gap-2 text-xs">
-                          <span className="flex items-center gap-1.5 font-bold text-slate-800 truncate">
+
+                        {/* Home Team */}
+                        <div className="flex items-center justify-between gap-1.5 text-xs">
+                          <span className="flex items-center gap-1.5 font-bold text-slate-800 truncate min-w-0">
                             <img
                               src={game.homeTeam.logoUrl}
                               alt=""
-                              className="w-4 h-4 object-contain shrink-0"
+                              className="w-3.5 h-3.5 sm:w-4 sm:h-4 object-contain shrink-0"
                             />
-                            <span className="truncate">{game.homeTeam.nick || game.homeTeam.shortName}</span>
+                            <span className="truncate text-[11px] sm:text-xs">
+                              {game.homeTeam.nick || game.homeTeam.shortName}
+                            </span>
                           </span>
-                          <b className="text-slate-950 font-black tabular-nums text-xs sm:text-sm">
+                          <b className="text-slate-950 font-black tabular-nums text-xs sm:text-sm shrink-0">
                             {isPlayed ? game.homeScore : "–"}
                           </b>
                         </div>
-                      </div>
-
-                      {/* Bottom Link: BOX SCORE in red with underline */}
-                      <div className="text-center leading-none">
-                        <span className="text-[9px] font-black uppercase tracking-wider text-red-700 underline underline-offset-2 hover:text-red-800">
-                          {isLive ? "EN VIVO" : isPlayed ? "BOX SCORE" : "PREVIA"}
-                        </span>
                       </div>
                     </Link>
                   );
                 })
               ) : (
                 <span className="text-xs text-slate-500 py-2">
-                  Cargando cartelera de juegos…
+                  No hay juegos programados para esta fecha.
                 </span>
               )}
             </div>

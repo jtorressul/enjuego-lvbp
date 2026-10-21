@@ -8,7 +8,7 @@ import type { PortalSeed } from "@/lib/portal-seed";
 import { LVBP_OFFICIAL_LOGO, LVBP_TEAMS, resolveLvbpTeam } from "@/lib/lvbp-teams";
 import { MLB_TEAMS, resolveMlbTeam, resolveAnyBaseballTeam } from "@/lib/mlb-teams";
 import { LIDOM_TEAMS, LMP_TEAMS } from "@/lib/winter-teams";
-import { LeagueId, LEAGUES, LEAGUES_LIST, parseLeague } from "@/lib/leagues";
+import { LeagueId, LEAGUES, LEAGUES_LIST, LEAGUE_MENU_ITEMS, parseLeague } from "@/lib/leagues";
 import { GamedayView } from "@/components/gameday/GamedayView";
 import { LeadersWidget } from "@/components/LeadersWidget";
 import { TeamRosterView } from "@/components/TeamRosterView";
@@ -30,6 +30,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  ChevronUp,
   Tv,
   MapPin,
   Trophy,
@@ -187,6 +188,14 @@ export function EnJuegoPortal({
   const [schedule, setSchedule] = useState<ScheduleGame[]>(initialSchedule);
   const [mlbJornadaGames, setMlbJornadaGames] = useState<ScheduleGame[]>([]);
   const [jornadaLeague, setJornadaLeague] = useState<LeagueId>("lvbp");
+  const [leagueMenuOpen, setLeagueMenuOpen] = useState(false);
+  const leagueMenuRef = useRef<HTMLDivElement>(null);
+  const [leagueGameCounts, setLeagueGameCounts] = useState<Record<LeagueId, number | null>>({
+    lvbp: null,
+    mlb: null,
+    lidom: null,
+    lmp: null,
+  });
   const [mlbDateIndex, setMlbDateIndex] = useState(0);
   const manualMlbDateRef = useRef(false);
   const [standings, setStandings] = useState<StandingRow[]>(initialStandings);
@@ -368,15 +377,19 @@ export function EnJuegoPortal({
   }, [pathname, searchParams, resolvedUrlTeam]);
 
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       const target = e.target as Node;
       const inDesktop = teamsDropdownRef.current?.contains(target);
       const inNavMenu = navMenuRef.current?.contains(target);
+      const inLeagueMenu = leagueMenuRef.current?.contains(target);
       if (!inDesktop) {
         setTeamsDropdownOpen(false);
       }
       if (!inNavMenu) {
         setOpenNavDropdown(null);
+      }
+      if (!inLeagueMenu) {
+        setLeagueMenuOpen(false);
       }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -384,13 +397,54 @@ export function EnJuegoPortal({
         setTeamsDropdownOpen(false);
         setMobileDrawerOpen(false);
         setOpenNavDropdown(null);
+        setLeagueMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
     document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
       document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  // Fetch today game counts across all Caribbean & MLB leagues for the dropdown badge
+  useEffect(() => {
+    let isMounted = true;
+    const todayIso = getTodayCaracasIso();
+
+    async function fetchAllLeagueCounts() {
+      try {
+        const results = await Promise.allSettled([
+          fetch("/api/lvbp/schedule?league=lvbp").then((r) => r.json()),
+          fetch("/api/lvbp/schedule?league=mlb").then((r) => r.json()),
+          fetch("/api/lvbp/schedule?league=lidom").then((r) => r.json()),
+          fetch("/api/lvbp/schedule?league=lmp").then((r) => r.json()),
+        ]);
+
+        if (!isMounted) return;
+
+        const getCount = (res: PromiseSettledResult<any>) => {
+          if (res.status === "fulfilled" && Array.isArray(res.value?.games)) {
+            return res.value.games.filter((g: any) => g.date === todayIso).length;
+          }
+          return 0;
+        };
+
+        setLeagueGameCounts({
+          lvbp: getCount(results[0]),
+          mlb: getCount(results[1]),
+          lidom: getCount(results[2]),
+          lmp: getCount(results[3]),
+        });
+      } catch {}
+    }
+
+    fetchAllLeagueCounts();
+    return () => {
+      isMounted = false;
     };
   }, []);
 
@@ -2539,158 +2593,207 @@ export function EnJuegoPortal({
 
       {/* SCORE STRIP / TICKER BAR (SINGLE COMPACT HORIZONTAL ROW ON MOBILE & DESKTOP - HIDDEN IN GAMEDAY) */}
       {section !== "juego" && (
-        <section className="border-b border-slate-200 bg-slate-50/90">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 flex items-center gap-2">
-          {/* Date Selector Box with League Selector right above the Jornada */}
-          <div className="flex flex-col items-center justify-center bg-white border border-slate-200 rounded-xl px-1.5 sm:px-2.5 py-1 shrink-0 shadow-2xs">
-            {/* Compact League Switcher right above Jornada */}
-            <div className="inline-flex items-center gap-0.5 bg-slate-100 rounded-lg p-0.5 mb-0.5 w-full justify-center">
-              {LEAGUES_LIST.map((lg) => {
-                const isSelected = currentJornadaLeague === lg.id;
-                return (
-                  <button
-                    key={lg.id}
-                    type="button"
-                    onClick={() => {
-                      if (section === "home") {
-                        setJornadaLeague(lg.id);
-                        switchLeague(lg.id);
-                      } else {
-                        switchLeague(lg.id);
-                        router.push(
-                          section === "equipos"
-                            ? `/teams?team=${
-                                lg.id === "lidom"
-                                  ? "licey"
-                                  : lg.id === "lmp"
-                                  ? "tomateros"
-                                  : lg.id === "mlb"
-                                  ? "yankees"
-                                  : "leones"
-                              }&liga=${lg.id}`
-                            : `/${section}?liga=${lg.id}`
-                        );
-                      }
-                    }}
-                    className={`flex-1 px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] font-black uppercase transition cursor-pointer flex items-center justify-center gap-1 ${
-                      isSelected
-                        ? "bg-amber-400 text-slate-950 shadow-2xs"
-                        : "text-slate-500 hover:text-slate-900"
-                    }`}
-                    title={`Ver Jornada ${lg.shortName}`}
-                  >
-                    <span>{lg.flag}</span>
-                    <span>{lg.shortName}</span>
-                  </button>
-                );
-              })}
-            </div>
+        <section className="border-b border-slate-200 bg-slate-50/90 relative z-30">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 py-1.5 sm:py-2 flex items-center gap-2">
+          {/* 1. League Selector Dropdown (Trigger + Popover) */}
+          <div className="relative shrink-0" ref={leagueMenuRef}>
+            <button
+              type="button"
+              onClick={() => setLeagueMenuOpen((prev) => !prev)}
+              className="h-12 sm:h-14 px-2.5 sm:px-3.5 flex items-center gap-1.5 font-black text-slate-800 hover:text-slate-950 text-xs sm:text-sm tracking-tight cursor-pointer select-none transition border-r border-slate-200 hover:bg-slate-100/70 rounded-l-lg"
+              aria-expanded={leagueMenuOpen}
+              aria-haspopup="true"
+              title="Cambiar Liga"
+            >
+              <span className="uppercase">{currentJornadaLeague.toUpperCase()}</span>
+              {leagueMenuOpen ? (
+                <ChevronUp className="w-3.5 h-3.5 text-slate-500 stroke-[2.5]" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5 text-slate-500 stroke-[2.5]" />
+              )}
+            </button>
 
-            <div className="flex items-center gap-1 sm:gap-1.5">
-              <button
-                type="button"
-                disabled={currentJornadaDateIdx <= 0}
-                onClick={() => stepJornadaDate(-1)}
-                className="p-0.5 rounded-lg hover:bg-slate-100 disabled:opacity-30 text-slate-700 cursor-pointer"
-                aria-label="Día anterior"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              <div className="text-center min-w-[54px] sm:min-w-[68px]">
-                <strong className="text-xs sm:text-sm font-black text-slate-900 leading-tight">
-                  {jornadaDayFormatted.dayNum}{" "}
-                  <small className="text-[10px] sm:text-xs text-slate-500">
-                    {jornadaDayFormatted.monthShort}
-                  </small>
-                </strong>
+            {/* Dropdown Menu Popover (Dark Navy matching reference) */}
+            {leagueMenuOpen && (
+              <div className="absolute left-0 top-full mt-1.5 z-50 w-72 sm:w-80 bg-[#0c1527] text-white border border-slate-700/80 rounded-2xl shadow-2xl p-2 sm:p-2.5 space-y-1 animate-in fade-in duration-150">
+                <div className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 px-3 pt-1 pb-1">
+                  Ligas
+                </div>
+                {LEAGUE_MENU_ITEMS.map((item) => {
+                  const isSelected = currentJornadaLeague === item.id;
+                  const count =
+                    leagueGameCounts[item.id] ??
+                    (item.id === currentJornadaLeague
+                      ? jornadaSchedule.filter((g) => g.date === getTodayCaracasIso()).length
+                      : null);
+
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setLeagueMenuOpen(false);
+                        if (section === "home") {
+                          setJornadaLeague(item.id);
+                          switchLeague(item.id);
+                        } else {
+                          switchLeague(item.id);
+                          router.push(
+                            section === "equipos"
+                              ? `/teams?team=${
+                                  item.id === "lidom"
+                                    ? "licey"
+                                    : item.id === "lmp"
+                                    ? "tomateros"
+                                    : item.id === "mlb"
+                                    ? "yankees"
+                                    : "leones"
+                                }&liga=${item.id}`
+                              : `/${section}?liga=${item.id}`
+                          );
+                        }
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 sm:py-2.5 rounded-xl text-left transition cursor-pointer ${
+                        isSelected
+                          ? "bg-slate-800 text-white font-bold"
+                          : "text-slate-300 hover:text-white hover:bg-slate-800/60 font-medium"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-base shrink-0">{item.flag}</span>
+                        <span className="text-xs sm:text-sm truncate">
+                          {item.label}
+                        </span>
+                      </div>
+                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-800/90 text-slate-300 border border-slate-700/50 tabular-nums shrink-0">
+                        {count === null ? "–" : count === 1 ? "1 juego" : `${count} juegos`}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
-              <button
-                type="button"
-                disabled={currentJornadaDateIdx >= jornadaDates.length - 1}
-                onClick={() => stepJornadaDate(1)}
-                className="p-0.5 rounded-lg hover:bg-slate-100 disabled:opacity-30 text-slate-700 cursor-pointer"
-                aria-label="Día siguiente"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-
-              {jornadaDates.length > 0 &&
-                jornadaDates[currentJornadaDateIdx] !== getTodayCaracasIso() &&
-                jornadaDates.includes(getTodayCaracasIso()) && (
-                  <button
-                    type="button"
-                    onClick={resetJornadaToToday}
-                    className="hidden sm:inline-flex ml-0.5 items-center gap-1 rounded-md bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 px-1.5 py-0.5 text-[9px] font-black uppercase transition cursor-pointer"
-                    title="Ir a los juegos de hoy"
-                  >
-                    Hoy
-                  </button>
-                )}
-            </div>
+            )}
           </div>
 
-          {/* Horizontal Livebugs Strip with Official Logos & Direct /juego/[id] Links */}
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1 min-w-0">
+          {/* 2. Compact Date Navigator */}
+          <div className="flex items-center gap-0.5 sm:gap-1 px-1 sm:px-2 border-r border-slate-200 shrink-0">
+            <button
+              type="button"
+              disabled={currentJornadaDateIdx <= 0}
+              onClick={() => stepJornadaDate(-1)}
+              className="p-1 rounded-lg hover:bg-slate-100 disabled:opacity-25 text-slate-600 transition cursor-pointer"
+              aria-label="Día anterior"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+            <div className="text-center min-w-[46px] sm:min-w-[56px]">
+              <strong className="text-xs font-black text-slate-900 leading-tight block">
+                {jornadaDayFormatted.dayNum}{" "}
+                <small className="text-[10px] text-slate-500 font-bold uppercase">
+                  {jornadaDayFormatted.monthShort}
+                </small>
+              </strong>
+            </div>
+            <button
+              type="button"
+              disabled={currentJornadaDateIdx >= jornadaDates.length - 1}
+              onClick={() => stepJornadaDate(1)}
+              className="p-1 rounded-lg hover:bg-slate-100 disabled:opacity-25 text-slate-600 transition cursor-pointer"
+              aria-label="Día siguiente"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+
+            {jornadaDates.length > 0 &&
+              jornadaDates[currentJornadaDateIdx] !== getTodayCaracasIso() &&
+              jornadaDates.includes(getTodayCaracasIso()) && (
+                <button
+                  type="button"
+                  onClick={resetJornadaToToday}
+                  className="hidden sm:inline-flex ml-1 px-1.5 py-0.5 rounded-md bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 text-[9px] font-black uppercase transition cursor-pointer"
+                  title="Ir a los juegos de hoy"
+                >
+                  Hoy
+                </button>
+              )}
+          </div>
+
+          {/* 3. Horizontal Game Cards Strip */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1 min-w-0 py-0.5">
             {jornadaGamesOfDay.length > 0 ? (
               jornadaGamesOfDay.map((game) => {
                 const isPlayed = game.status === "IN_PROGRESS" || game.status === "FINISHED";
                 const isLive = game.status === "IN_PROGRESS";
                 const tvList = getGameTvChannels(game);
+                const isSelected = selectedGameId === game.id && (section as string) === "juego";
+
                 return (
                   <Link
                     key={game.id}
                     href={`/juego/${game.id}`}
-                    className={`flex items-center gap-3 rounded-xl px-3 py-1.5 border text-left shrink-0 transition cursor-pointer shadow-2xs ${
-                      selectedGameId === game.id && (section as string) === "juego"
-                        ? "bg-amber-50 border-amber-400"
+                    className={`flex flex-col justify-between rounded-xl px-2.5 py-1.5 sm:py-2 border text-left shrink-0 transition cursor-pointer shadow-2xs min-w-[145px] sm:min-w-[155px] ${
+                      isSelected
+                        ? "bg-amber-50/80 border-amber-400"
                         : isLive
                           ? "bg-white border-red-300 hover:border-red-400"
                           : "bg-white border-slate-200 hover:border-amber-400"
                     }`}
                   >
-                    <div className="space-y-1 min-w-[100px]">
+                    {/* Top status */}
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <span
+                        className={`text-[10px] uppercase tracking-tight ${
+                          isLive
+                            ? "text-red-600 font-black flex items-center gap-1"
+                            : isPlayed
+                              ? "text-slate-600 font-bold"
+                              : "text-slate-500 font-semibold"
+                        }`}
+                      >
+                        {isLive && <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />}
+                        {isLive ? (game.inning || "En Vivo") : isPlayed ? "Finalizado" : game.time}
+                      </span>
+                      {tvList[0] && !isPlayed && (
+                        <span className="text-[9px] font-bold text-amber-800 bg-amber-50 border border-amber-200/60 px-1 rounded truncate max-w-[50px]">
+                          {tvList[0]}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Teams and Scores */}
+                    <div className="space-y-0.5 my-0.5">
                       <div className="flex items-center justify-between gap-2 text-xs">
-                        <span className="flex items-center gap-1.5 font-bold text-slate-900">
+                        <span className="flex items-center gap-1.5 font-bold text-slate-900 truncate">
                           <img
                             src={game.awayTeam.logoUrl}
                             alt=""
-                            className="w-5 h-5 object-contain"
+                            className="w-4 h-4 sm:w-4.5 sm:h-4.5 object-contain shrink-0"
                           />
-                          {game.awayTeam.shortName}
+                          <span className="truncate">{game.awayTeam.nick || game.awayTeam.shortName}</span>
                         </span>
-                        <b className="text-slate-950 font-black tabular-nums">
+                        <b className="text-slate-950 font-black tabular-nums text-xs sm:text-sm">
                           {isPlayed ? game.awayScore : "–"}
                         </b>
                       </div>
                       <div className="flex items-center justify-between gap-2 text-xs">
-                        <span className="flex items-center gap-1.5 font-bold text-slate-900">
+                        <span className="flex items-center gap-1.5 font-bold text-slate-900 truncate">
                           <img
                             src={game.homeTeam.logoUrl}
                             alt=""
-                            className="w-5 h-5 object-contain"
+                            className="w-4 h-4 sm:w-4.5 sm:h-4.5 object-contain shrink-0"
                           />
-                          {game.homeTeam.shortName}
+                          <span className="truncate">{game.homeTeam.nick || game.homeTeam.shortName}</span>
                         </span>
-                        <b className="text-slate-950 font-black tabular-nums">
+                        <b className="text-slate-950 font-black tabular-nums text-xs sm:text-sm">
                           {isPlayed ? game.homeScore : "–"}
                         </b>
                       </div>
                     </div>
 
-                    <div className="border-l border-slate-200 pl-2.5 text-right">
-                      <span
-                        className={`block text-[10px] font-black uppercase ${
-                          isLive
-                            ? "text-red-600"
-                            : game.status === "FINISHED"
-                              ? "text-amber-700"
-                              : "text-slate-600"
-                        }`}
-                      >
-                        {isLive ? "EN VIVO" : game.status === "FINISHED" ? "FINAL" : game.time}
-                      </span>
-                      <span className="text-[9px] font-bold text-slate-500 truncate max-w-[72px] inline-flex items-center gap-0.5">
-                        <Tv className="w-2.5 h-2.5 text-amber-600 shrink-0" /> {tvList[0]}
+                    {/* Bottom Link: BOX SCORE in red with underline */}
+                    <div className="pt-1 mt-1 border-t border-slate-100 text-center">
+                      <span className="text-[10px] font-black uppercase tracking-wide text-red-600 underline underline-offset-2 hover:text-red-700">
+                        {isLive ? "EN VIVO" : isPlayed ? "BOX SCORE" : "PREVIA"}
                       </span>
                     </div>
                   </Link>

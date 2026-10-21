@@ -76,6 +76,13 @@ export const LEAGUES: Record<LeagueId, LeagueConfig> = {
 
 export const LEAGUES_LIST = Object.values(LEAGUES);
 
+export const LEAGUE_MENU_ITEMS: { id: LeagueId; label: string; flag: string }[] = [
+  { id: "lvbp", label: "Liga Venezolana (LVBP)", flag: "🇻🇪" },
+  { id: "mlb", label: "Grandes Ligas (MLB)", flag: "🇺🇸" },
+  { id: "lidom", label: "Liga Dominicana (LIDOM)", flag: "🇩🇴" },
+  { id: "lmp", label: "Liga Mexicana (LMP)", flag: "🇲🇽" },
+];
+
 export function parseLeague(val?: string | null): LeagueId {
   if (!val) return "lvbp";
   const lower = val.trim().toLowerCase();

@@ -1,5 +1,3 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
-
 export interface GameVoteState {
   awayVotes: number;
   homeVotes: number;

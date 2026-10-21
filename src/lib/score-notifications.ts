@@ -18,16 +18,41 @@ export async function checkAndDispatchGameAlerts(games: ScheduleGame[]): Promise
   if (!Array.isArray(games) || games.length === 0) return;
 
   try {
-    const ctx = await getCloudflareContext({ async: true });
-    const kv = (ctx?.env as any)?.ENJUEGO_KV;
-    if (!kv) return;
+    let rawKv: any = null;
+    try {
+      const ctx = await getCloudflareContext({ async: true });
+      rawKv = (ctx?.env as any)?.ENJUEGO_KV;
+    } catch {
+      // Running on VPS Node.js
+    }
+
+    const getStoredAlert = async (k: string): Promise<string | null> => {
+      if (rawKv) return await rawKv.get(k);
+      try {
+        const { sqliteGet } = await import("@/lib/sqlite-store");
+        return sqliteGet(k);
+      } catch {
+        return null;
+      }
+    };
+
+    const putStoredAlert = async (k: string, val: string): Promise<void> => {
+      if (rawKv) {
+        await rawKv.put(k, val, { expirationTtl: 86400 * 2 });
+        return;
+      }
+      try {
+        const { sqlitePut } = await import("@/lib/sqlite-store");
+        sqlitePut(k, val);
+      } catch {}
+    };
 
     webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
     for (const game of games) {
       if (!game.id) continue;
       const key = `score_alert_state:${game.id}`;
-      const rawPrev = await kv.get(key);
+      const rawPrev = await getStoredAlert(key);
       const prev: SavedGameState | null = rawPrev ? JSON.parse(rawPrev) : null;
 
       const currentScore: SavedGameState = {
@@ -55,7 +80,7 @@ export async function checkAndDispatchGameAlerts(games: ScheduleGame[]): Promise
           }
         }
         currentScore.notifiedEvents = Array.from(initialEvents);
-        await kv.put(key, JSON.stringify(currentScore), { expirationTtl: 86400 * 2 });
+        await putStoredAlert(key, JSON.stringify(currentScore));
         continue;
       }
 
@@ -167,8 +192,8 @@ export async function checkAndDispatchGameAlerts(games: ScheduleGame[]): Promise
       // Keep recent notified events to prevent memory bloat in KV
       currentScore.notifiedEvents = Array.from(notifiedEvents).slice(-50);
 
-      // Save updated state in KV
-      await kv.put(key, JSON.stringify(currentScore), { expirationTtl: 86400 * 2 });
+      // Save updated state in KV or SQLite
+      await putStoredAlert(key, JSON.stringify(currentScore));
     }
   } catch (err) {
     console.warn("[ScoreAlerts] Error in checkAndDispatchGameAlerts:", err);

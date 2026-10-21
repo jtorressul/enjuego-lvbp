@@ -1546,6 +1546,7 @@ export function EnJuegoPortal({
                 label: "Equipos",
                 href: `/teams?team=${activeTeamsCatalog?.[selectedTeamCode]?.slug || currentLeague.defaultTeamCode}&liga=${activeLeague || "lvbp"}`,
               },
+              { key: "futbol", label: "Fútbol ⚽", href: "/futbol" },
               { key: "noticias", label: "Noticias", href: "/noticias" },
             ].map((item) => {
               const isActive = section === item.key;
@@ -1590,11 +1591,11 @@ export function EnJuegoPortal({
 
               {headerLeagueMenuOpen && (
                 <div
-                  className="absolute right-0 top-full mt-2 w-52 rounded-2xl bg-[#0c1322] border border-slate-800 shadow-2xl p-2 z-50 text-white animate-in fade-in slide-in-from-top-2 duration-150"
+                  className="absolute right-0 top-full mt-2 w-56 rounded-2xl bg-[#0c1322] border border-slate-800 shadow-2xl p-2 z-50 text-white animate-in fade-in slide-in-from-top-2 duration-150"
                   style={{ backgroundColor: "#0c1322", color: "#ffffff" }}
                 >
                   <div className="px-2 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-800/80 mb-1">
-                    Selecciona Liga
+                    Béisbol
                   </div>
                   {LEAGUES_LIST.map((lg) => {
                     const isSel = activeLeague === lg.id;
@@ -1611,7 +1612,7 @@ export function EnJuegoPortal({
                               : `/${section}?liga=${lg.id}`;
                           router.push(target);
                         }}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                        className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
                           isSel
                             ? "bg-amber-400 text-slate-950 font-black shadow-xs"
                             : "text-slate-300 hover:text-white hover:bg-slate-800/80"
@@ -1625,6 +1626,20 @@ export function EnJuegoPortal({
                       </button>
                     );
                   })}
+
+                  <div className="pt-1.5 mt-1.5 border-t border-slate-800">
+                    <Link
+                      href="/futbol"
+                      onClick={() => setHeaderLeagueMenuOpen(false)}
+                      className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-black text-rose-300 hover:text-white hover:bg-rose-950/40 border border-rose-500/30 transition cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="text-base">⚽</span>
+                        <span>Fútbol (Champions & Big 5)</span>
+                      </span>
+                      <ChevronRight className="w-3.5 h-3.5 text-rose-400" />
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>
@@ -1999,6 +2014,32 @@ export function EnJuegoPortal({
                 <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white">
                   Video
                 </span>
+              </Link>
+
+              {/* Fútbol Europeo (Champions & Big 5) in Drawer */}
+              <Link
+                href="/futbol"
+                onClick={() => {
+                  setMobileExpandedSection(null);
+                  setMobileDrawerOpen(false);
+                }}
+                className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-black bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 border border-blue-800/60 text-white shadow-xs"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-base">⚽</span>
+                  <div className="text-left">
+                    <div className="leading-tight flex items-center gap-1.5">
+                      <span>Fútbol Europeo</span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-rose-600 text-white font-extrabold uppercase">
+                        Nuevo
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-blue-200 font-medium">
+                      Champions, LaLiga, Premier...
+                    </div>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-blue-300" />
               </Link>
 
               {(

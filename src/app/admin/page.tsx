@@ -250,6 +250,40 @@ export default function AdminDashboardPage() {
   const [userSearch, setUserSearch] = useState("");
   const [newAdminPass, setNewAdminPass] = useState("");
   const [passChangeMsg, setPassChangeMsg] = useState("");
+  const [activeAdminPassword, setActiveAdminPassword] = useState("");
+  const [showActivePassword, setShowActivePassword] = useState(false);
+
+  // Security Question (Recovery & Config)
+  const [loginMode, setLoginMode] = useState<"password" | "recovery">("password");
+  const [securityQuestion, setSecurityQuestion] = useState(
+    "¿Cuál es tu superhéroe favorito?"
+  );
+  const [securityAnswerHint, setSecurityAnswerHint] = useState("s*******n");
+  const [hasCustomSecurityAnswer, setHasCustomSecurityAnswer] = useState(false);
+  const [recoveryAnswerInput, setRecoveryAnswerInput] = useState("");
+  const [recoveryNewPassInput, setRecoveryNewPassInput] = useState("");
+  const [configQuestionInput, setConfigQuestionInput] = useState(
+    "¿Cuál es tu superhéroe favorito?"
+  );
+  const [configAnswerInput, setConfigAnswerInput] = useState("");
+  const [securitySaveMsg, setSecuritySaveMsg] = useState("");
+  const [purgingCache, setPurgingCache] = useState(false);
+  const [purgeCacheMsg, setPurgeCacheMsg] = useState("");
+
+  useEffect(() => {
+    fetch("/api/admin?public_meta=1", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.securityQuestion) {
+          setSecurityQuestion(d.securityQuestion);
+          setConfigQuestionInput(d.securityQuestion);
+        }
+        if (typeof d?.hasCustomAnswer === "boolean") {
+          setHasCustomSecurityAnswer(d.hasCustomAnswer);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const fetchAdminData = useCallback(
     async (pwdToUse: string, silent = false) => {
@@ -286,6 +320,15 @@ export default function AdminDashboardPage() {
         if (data.presence) setPresence(data.presence);
         if (Array.isArray(data.registeredUsers)) setRegisteredUsers(data.registeredUsers);
         if (data.systemHealth) setSystemHealth(data.systemHealth);
+        if (typeof data.activeAdminPassword === "string") {
+          setActiveAdminPassword(data.activeAdminPassword);
+        }
+        if (data.securityQA) {
+          setSecurityQuestion(data.securityQA.question);
+          setConfigQuestionInput(data.securityQA.question);
+          setSecurityAnswerHint(data.securityQA.answerHint || "***");
+          setHasCustomSecurityAnswer(Boolean(data.securityQA.hasCustomAnswer));
+        }
       } catch {
         if (!silent) setAuthError("Error de red al consultar /api/admin");
       } finally {
@@ -315,6 +358,94 @@ export default function AdminDashboardPage() {
     e.preventDefault();
     setAuthError("");
     await fetchAdminData(password, false);
+  };
+
+  const handleRecoveryLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError("");
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "recover_with_question",
+          securityAnswer: recoveryAnswerInput,
+          newPassword: recoveryNewPassInput.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAuthError(data.error || "Respuesta de seguridad incorrecta.");
+        return;
+      }
+      const recoveredPwd = String(data.recoveredPassword || "");
+      setPassword(recoveredPwd);
+      setRecoveryAnswerInput("");
+      setRecoveryNewPassInput("");
+      await fetchAdminData(recoveredPwd, false);
+    } catch {
+      setAuthError("Error de red al verificar la respuesta de seguridad.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveSecurityQA = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSecuritySaveMsg("");
+    try {
+      const res = await fetch("/api/admin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": password,
+        },
+        body: JSON.stringify({
+          action: "update_security_qa",
+          question: configQuestionInput,
+          answer: configAnswerInput,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al guardar pregunta");
+      if (data.securityQA) {
+        setSecurityQuestion(data.securityQA.question);
+        setSecurityAnswerHint(data.securityQA.answerHint);
+        setHasCustomSecurityAnswer(Boolean(data.securityQA.hasCustomAnswer));
+      }
+      setConfigAnswerInput("");
+      setSecuritySaveMsg("Pregunta y respuesta secreta actualizadas correctamente.");
+    } catch (err: any) {
+      setSecuritySaveMsg(err?.message || "No se pudo guardar la pregunta");
+    }
+  };
+
+  const handlePurgeSportsCache = async () => {
+    setPurgingCache(true);
+    setPurgeCacheMsg("");
+    try {
+      const res = await fetch("/api/admin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-password": password,
+        },
+        body: JSON.stringify({
+          action: "purge_sports_cache",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al purgar caché");
+      setPurgeCacheMsg(
+        `Caché en vivo purgada con éxito (${data.clearedEntries || 0} bloques renovados).`
+      );
+      await fetchAdminData(password, true);
+    } catch (err: any) {
+      setPurgeCacheMsg(err?.message || "Error al purgar la caché");
+    } finally {
+      setPurgingCache(false);
+    }
   };
 
   const handleLogout = () => {
@@ -491,8 +622,9 @@ export default function AdminDashboardPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error al cambiar clave");
-      setPassword(newAdminPass);
-      window.localStorage.setItem("enjuego_admin_pwd", newAdminPass);
+      setPassword(newAdminPass.trim());
+      setActiveAdminPassword(newAdminPass.trim());
+      window.localStorage.setItem("enjuego_admin_pwd", newAdminPass.trim());
       setNewAdminPass("");
       setPassChangeMsg("¡Contraseña actualizada correctamente!");
     } catch (err: any) {
@@ -709,54 +841,174 @@ export default function AdminDashboardPage() {
             </p>
           </div>
 
-          <form onSubmit={handleLogin} className="p-6 space-y-4">
-            <div>
-              <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
-                Contraseña de Administrador
-              </label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <div className="px-6 pt-5">
+            <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200/80">
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginMode("password");
+                  setAuthError("");
+                }}
+                className={`py-2 px-3 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  loginMode === "password"
+                    ? "dark-pill bg-slate-900 text-white shadow-2xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Clave Maestra
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginMode("recovery");
+                  setAuthError("");
+                }}
+                className={`py-2 px-3 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  loginMode === "recovery"
+                    ? "dark-pill bg-slate-900 text-white shadow-2xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Pregunta Secreta
+              </button>
+            </div>
+          </div>
+
+          {loginMode === "password" ? (
+            <form onSubmit={handleLogin} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
+                  Contraseña de Administrador
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Ingresa tu clave maestra..."
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 bg-white text-sm font-bold text-slate-900 focus:outline-none focus:border-blue-600"
+                    required
+                  />
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-[11px] text-slate-500">
+                    Acceso exclusivo administrativo
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginMode("recovery");
+                      setAuthError("");
+                    }}
+                    className="text-[11px] font-bold text-blue-600 hover:text-blue-800 cursor-pointer"
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </button>
+                </div>
+              </div>
+
+              {authError && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs font-bold text-rose-700">
+                  {authError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="dark-pill w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 font-bold text-sm text-white shadow-md transition cursor-pointer active:scale-98"
+              >
+                {loading ? "Verificando acceso..." : "Entrar al Panel Admin"}
+              </button>
+
+              <div className="pt-2 text-center">
+                <Link
+                  href="/inicio"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" /> Volver a enjuego.online
+                </Link>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleRecoveryLogin} className="p-6 space-y-4">
+              <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200/80">
+                <span className="block text-[10px] font-extrabold uppercase tracking-wider text-blue-700">
+                  Pregunta de Seguridad Configurada
+                </span>
+                <p className="text-sm font-extrabold text-slate-900 mt-0.5">
+                  {securityQuestion}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
+                  Tu Respuesta Secreta
+                </label>
+                <div className="relative">
+                  <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={recoveryAnswerInput}
+                    onChange={(e) => setRecoveryAnswerInput(e.target.value)}
+                    placeholder="Escribe tu respuesta (ej. tu superhéroe)..."
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 bg-white text-sm font-bold text-slate-900 focus:outline-none focus:border-blue-600"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1.5">
+                  Nueva Contraseña Maestra (opcional si deseas cambiarla ahora)
+                </label>
                 <input
                   type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Ingresa tu clave maestra..."
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 bg-white text-sm font-bold text-slate-900 focus:outline-none focus:border-blue-600"
-                  required
+                  value={recoveryNewPassInput}
+                  onChange={(e) => setRecoveryNewPassInput(e.target.value)}
+                  placeholder="Dejar en blanco para mantener la actual..."
+                  minLength={4}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-600"
                 />
               </div>
-              <p className="text-[11px] text-slate-400 mt-1.5">
-                Clave inicial predeterminada:{" "}
-                <code className="font-mono font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded">
-                  enjuego2026
-                </code>{" "}
-                (puedes actualizarla dentro del panel).
-              </p>
-            </div>
 
-            {authError && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs font-bold text-rose-700">
-                {authError}
-              </div>
-            )}
+              {authError && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs font-bold text-rose-700">
+                  {authError}
+                </div>
+              )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="dark-pill w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 font-bold text-sm text-white shadow-md transition cursor-pointer active:scale-98"
-            >
-              {loading ? "Verificando acceso..." : "Entrar al Panel Admin"}
-            </button>
-
-            <div className="pt-2 text-center">
-              <Link
-                href="/inicio"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900"
+              <button
+                type="submit"
+                disabled={loading}
+                className="dark-pill w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 font-bold text-sm text-white shadow-md transition cursor-pointer active:scale-98"
               >
-                <ArrowLeft className="w-3.5 h-3.5" /> Volver a enjuego.online
-              </Link>
-            </div>
-          </form>
+                {loading
+                  ? "Verificando respuesta..."
+                  : "Recuperar y Entrar al Panel"}
+              </button>
+
+              <div className="pt-1 flex items-center justify-between text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginMode("password");
+                    setAuthError("");
+                  }}
+                  className="font-bold text-slate-600 hover:text-slate-900 cursor-pointer"
+                >
+                  Volver a Clave Maestra
+                </button>
+                <Link
+                  href="/inicio"
+                  className="inline-flex items-center gap-1 font-bold text-slate-500 hover:text-slate-900"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" /> Salir
+                </Link>
+              </div>
+            </form>
+          )}
         </div>
       </div>
     );
@@ -2352,90 +2604,245 @@ export default function AdminDashboardPage() {
            =================================================================== */}
         {activeTab === "system" && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="rounded-xl bg-white border border-slate-200/80 p-5 shadow-xs space-y-4">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-slate-500" />
-                <h2 className="text-sm font-semibold tracking-tight text-slate-900">
-                  Estado Técnico de enjuego.online
-                </h2>
+            <div className="space-y-6">
+              <div className="rounded-xl bg-white border border-slate-200/80 p-5 shadow-xs space-y-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-slate-500" />
+                    <h2 className="text-sm font-semibold tracking-tight text-slate-900">
+                      Estado Técnico y Caché en Vivo
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={purgingCache}
+                    onClick={handlePurgeSportsCache}
+                    className="dark-pill inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition cursor-pointer shadow-2xs disabled:opacity-50"
+                  >
+                    <RotateCcw
+                      className={`w-3.5 h-3.5 ${purgingCache ? "animate-spin" : ""}`}
+                    />
+                    <span>
+                      {purgingCache ? "Purgando..." : "Purgar Caché en Vivo"}
+                    </span>
+                  </button>
+                </div>
+
+                {purgeCacheMsg && (
+                  <p className="text-xs font-medium text-emerald-700 flex items-center gap-1.5 bg-emerald-50 border border-emerald-200/70 px-3 py-2 rounded-lg">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>{purgeCacheMsg}</span>
+                  </p>
+                )}
+
+                <div className="space-y-2.5 text-xs">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50/70 border border-slate-200/80">
+                    <span className="font-medium text-slate-700">
+                      Almacenamiento Híbrido (Edge Cache + KV)
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60 tabular-nums">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      {systemHealth?.kvConnected
+                        ? `Conectado (${systemHealth.storageType || "SQLite WAL"} · ${systemHealth.kvLatencyMs} ms)`
+                        : "Modo Local"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50/70 border border-slate-200/80">
+                    <span className="font-medium text-slate-700">
+                      Feed de Datos Béisbol y Fútbol (Live Sync)
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-medium border tabular-nums ${
+                        systemHealth?.mlbApiStatus === "online"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+                          : "bg-amber-50 text-amber-800 border-amber-200/60"
+                      }`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          systemHealth?.mlbApiStatus === "online"
+                            ? "bg-emerald-500 animate-pulse"
+                            : "bg-amber-500"
+                        }`}
+                      />
+                      {systemHealth?.mlbApiStatus === "online"
+                        ? `En Línea (${systemHealth.mlbLatencyMs} ms)`
+                        : "Latencia Alta"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50/70 border border-slate-200/80">
+                    <span className="font-medium text-slate-700">
+                      Hora del Servidor (Caracas VET)
+                    </span>
+                    <span className="font-mono font-medium text-slate-900 tabular-nums">
+                      {systemHealth?.serverTimeCaracas || "—"}
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-2.5 text-xs">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50/70 border border-slate-200/80">
-                  <span className="font-medium text-slate-700">
-                    Almacenamiento Híbrido (Edge Cache + KV)
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60 tabular-nums">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    {systemHealth?.kvConnected
-                      ? `Conectado (${systemHealth.storageType || "SQLite WAL"} · ${systemHealth.kvLatencyMs} ms)`
-                      : "Modo Local"}
-                  </span>
+              <div className="rounded-xl bg-white border border-slate-200/80 p-5 shadow-xs space-y-4">
+                <div className="flex items-center gap-2">
+                  <KeyRound className="w-4 h-4 text-slate-500" />
+                  <h2 className="text-sm font-semibold tracking-tight text-slate-900">
+                    Contraseña Maestra del Panel
+                  </h2>
                 </div>
 
-                <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50/70 border border-slate-200/80">
-                  <span className="font-medium text-slate-700">
-                    Feed de Datos Béisbol (StatsAPI)
-                  </span>
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-medium border tabular-nums ${
-                      systemHealth?.mlbApiStatus === "online"
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
-                        : "bg-amber-50 text-amber-800 border-amber-200/60"
-                    }`}
-                  >
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        systemHealth?.mlbApiStatus === "online"
-                          ? "bg-emerald-500 animate-pulse"
-                          : "bg-amber-500"
-                      }`}
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-3">
+                  <div>
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                      Contraseña Maestra Actual
+                    </span>
+                    <code className="text-sm font-mono font-extrabold text-slate-900">
+                      {showActivePassword
+                        ? activeAdminPassword || password
+                        : "••••••••••••"}
+                    </code>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setShowActivePassword((v) => !v)}
+                      className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold cursor-pointer transition"
+                    >
+                      {showActivePassword ? "Ocultar" : "Mostrar"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(
+                          activeAdminPassword || password
+                        );
+                        setPassChangeMsg("Contraseña actual copiada al portapapeles.");
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold cursor-pointer transition"
+                    >
+                      Copiar
+                    </button>
+                  </div>
+                </div>
+
+                <form onSubmit={handleChangePassword} className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                      Cambiar contraseña maestra para /admin
+                    </label>
+                    <input
+                      type="password"
+                      value={newAdminPass}
+                      onChange={(e) => setNewAdminPass(e.target.value)}
+                      placeholder="Escribe tu nueva contraseña..."
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-900 shadow-2xs"
+                      required
+                      minLength={4}
                     />
-                    {systemHealth?.mlbApiStatus === "online"
-                      ? `En Línea (${systemHealth.mlbLatencyMs} ms)`
-                      : "Latencia Alta"}
-                  </span>
-                </div>
+                  </div>
 
-                <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50/70 border border-slate-200/80">
-                  <span className="font-medium text-slate-700">
-                    Hora del Servidor (Caracas VET)
-                  </span>
-                  <span className="font-mono font-medium text-slate-900 tabular-nums">
-                    {systemHealth?.serverTimeCaracas || "—"}
-                  </span>
-                </div>
+                  {passChangeMsg && (
+                    <p className="text-xs font-medium text-emerald-700 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>{passChangeMsg}</span>
+                    </p>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="dark-pill px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition cursor-pointer shadow-xs"
+                  >
+                    Actualizar Contraseña
+                  </button>
+                </form>
               </div>
             </div>
 
             <div className="rounded-xl bg-white border border-slate-200/80 p-5 shadow-xs space-y-4">
-              <div className="flex items-center gap-2">
-                <KeyRound className="w-4 h-4 text-slate-500" />
-                <h2 className="text-sm font-semibold tracking-tight text-slate-900">
-                  Seguridad y Acceso al Panel
-                </h2>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-slate-500" />
+                  <div>
+                    <h2 className="text-sm font-semibold tracking-tight text-slate-900">
+                      Pregunta de Seguridad (Recuperación de Acceso)
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Si olvidas tu clave maestra, podrás entrar al panel respondiendo esta pregunta.
+                    </p>
+                  </div>
+                </div>
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/70 shrink-0">
+                  {hasCustomSecurityAnswer ? "Personalizada" : "Activa"}
+                </span>
               </div>
 
-              <form onSubmit={handleChangePassword} className="space-y-3">
+              <div className="p-3.5 rounded-xl bg-blue-50/60 border border-blue-200/80 space-y-1 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-blue-900">
+                    Pregunta actual:
+                  </span>
+                  <span className="font-mono text-[11px] text-blue-700">
+                    Pista de respuesta: {securityAnswerHint}
+                  </span>
+                </div>
+                <p className="font-semibold text-slate-800">{securityQuestion}</p>
+              </div>
+
+              <form onSubmit={handleSaveSecurityQA} className="space-y-3.5">
                 <div>
                   <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                    Nueva contraseña maestra para /admin
+                    Elige una pregunta rápida o escribe la tuya
                   </label>
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {[
+                      "¿Cuál es tu superhéroe favorito?",
+                      "¿Cuál es tu equipo deportivo favorito?",
+                      "¿Nombre de tu primera mascota?",
+                      "¿En qué ciudad naciste?",
+                    ].map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setConfigQuestionInput(preset)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition cursor-pointer ${
+                          configQuestionInput === preset
+                            ? "dark-pill bg-slate-900 text-white border-slate-900"
+                            : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                        }`}
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                  </div>
                   <input
-                    type="password"
-                    value={newAdminPass}
-                    onChange={(e) => setNewAdminPass(e.target.value)}
-                    placeholder="Escribe tu nueva contraseña..."
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-900 shadow-2xs"
+                    type="text"
+                    value={configQuestionInput}
+                    onChange={(e) => setConfigQuestionInput(e.target.value)}
+                    placeholder="Ej. ¿Cuál es tu superhéroe favorito?"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-900 shadow-2xs"
                     required
-                    minLength={4}
                   />
                 </div>
 
-                {passChangeMsg && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                    Respuesta secreta (no distingue mayúsculas ni acentos)
+                  </label>
+                  <input
+                    type="text"
+                    value={configAnswerInput}
+                    onChange={(e) => setConfigAnswerInput(e.target.value)}
+                    placeholder="Ej. Spiderman, Batman, Ironman..."
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-900 shadow-2xs"
+                    required
+                    minLength={2}
+                  />
+                </div>
+
+                {securitySaveMsg && (
                   <p className="text-xs font-medium text-emerald-700 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>{passChangeMsg}</span>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>{securitySaveMsg}</span>
                   </p>
                 )}
 
@@ -2443,7 +2850,7 @@ export default function AdminDashboardPage() {
                   type="submit"
                   className="dark-pill px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition cursor-pointer shadow-xs"
                 >
-                  Actualizar Contraseña
+                  Guardar Pregunta de Seguridad
                 </button>
               </form>
             </div>

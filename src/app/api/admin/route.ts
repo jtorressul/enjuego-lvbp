@@ -1,17 +1,23 @@
 import { NextResponse } from "next/server";
 import {
   AD_SLOTS_CATALOG,
+  clearAdClickLog,
   getAdCampaigns,
   getAdminKv,
+  getAdminPassword,
+  getAdminSecurityQA,
   getLivePresenceSummary,
   getRecentAdClickLog,
   getRegisteredUsersList,
   isAdCampaignLive,
   normalizeSlotKey,
+  purgeAllSportsMemCache,
   resetCampaignMetricsInStore,
   saveAdCampaigns,
   updateAdminPassword,
+  updateAdminSecurityQA,
   verifyAdminPassword,
+  verifyAdminSecurityAnswer,
   type AdCampaign,
 } from "@/lib/admin-store";
 
@@ -19,6 +25,16 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
+    const url = new URL(request.url);
+    if (url.searchParams.get("public_meta") === "1") {
+      const qa = await getAdminSecurityQA();
+      return NextResponse.json({
+        ok: true,
+        securityQuestion: qa.question,
+        hasCustomAnswer: qa.hasCustomAnswer,
+      });
+    }
+
     const adminPassword = request.headers.get("x-admin-password") || "";
     const isValid = await verifyAdminPassword(adminPassword);
     if (!isValid) {
@@ -35,12 +51,16 @@ export async function GET(request: Request) {
       presence,
       registeredUsers,
       clickLog,
+      securityQA,
+      activeAdminPassword,
     ] = await Promise.all([
       getAdminKv(),
       getAdCampaigns(),
       getLivePresenceSummary(),
       getRegisteredUsersList(),
       getRecentAdClickLog(),
+      getAdminSecurityQA(),
+      getAdminPassword(),
     ]);
 
     const gScope = globalThis as unknown as {
@@ -88,6 +108,8 @@ export async function GET(request: Request) {
       clickLog,
       presence,
       registeredUsers,
+      securityQA,
+      activeAdminPassword,
       systemHealth: {
         kvConnected: Boolean(storeInfo.isCloudflareKv || storeInfo.isSqliteConnected),
         storageType: storeInfo.storageType,
@@ -112,6 +134,33 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const action = body?.action;
+
+    if (action === "recover_with_question") {
+      const answer = String(body?.securityAnswer || "");
+      const newPassword = String(body?.newPassword || "").trim();
+      const isAnswerValid = await verifyAdminSecurityAnswer(answer);
+      if (!isAnswerValid) {
+        return NextResponse.json(
+          { error: "Respuesta secreta incorrecta. Verifica tu respuesta e intenta de nuevo." },
+          { status: 401 }
+        );
+      }
+      if (newPassword) {
+        if (newPassword.length < 4) {
+          return NextResponse.json(
+            { error: "La nueva contraseña debe tener al menos 4 caracteres." },
+            { status: 400 }
+          );
+        }
+        await updateAdminPassword(newPassword);
+      }
+      const activePassword = await getAdminPassword();
+      return NextResponse.json({
+        ok: true,
+        recoveredPassword: activePassword,
+      });
+    }
+
     const password =
       request.headers.get("x-admin-password") || body?.password || "";
 
@@ -247,7 +296,24 @@ export async function POST(request: Request) {
     if (action === "change_password") {
       const newPassword = String(body?.newPassword || "");
       await updateAdminPassword(newPassword);
-      return NextResponse.json({ ok: true });
+      return NextResponse.json({ ok: true, activeAdminPassword: newPassword.trim() });
+    }
+
+    if (action === "update_security_qa") {
+      const question = String(body?.question || "");
+      const answer = String(body?.answer || "");
+      const securityQA = await updateAdminSecurityQA(question, answer);
+      return NextResponse.json({ ok: true, securityQA });
+    }
+
+    if (action === "clear_click_log") {
+      const clickLog = await clearAdClickLog();
+      return NextResponse.json({ ok: true, clickLog });
+    }
+
+    if (action === "purge_sports_cache") {
+      const clearedEntries = purgeAllSportsMemCache();
+      return NextResponse.json({ ok: true, clearedEntries });
     }
 
     return NextResponse.json({ error: "Acción no reconocida" }, { status: 400 });

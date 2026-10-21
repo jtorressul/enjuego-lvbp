@@ -222,8 +222,17 @@ const TRAFFIC_HISTORY_KEY = "admin:traffic:history_v1";
 const MONTHLY_TRAFFIC_KEY = "admin:traffic:monthly_v1";
 const USERS_INDEX_KEY = "admin:users:index:v1";
 const ADMIN_PASS_KEY = "admin:config:password:v1";
+const ADMIN_SECURITY_QA_KEY = "admin:config:security_qa:v1";
 
 export const DEFAULT_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "enjuego2026";
+export const DEFAULT_SECURITY_QUESTION = "¿Cuál es tu superhéroe favorito?";
+export const DEFAULT_SECURITY_ANSWER = "spiderman";
+
+export interface AdminSecurityConfig {
+  question: string;
+  answer: string;
+  updatedAt?: number;
+}
 
 export function getTodayCaracasKey(): string {
   const d = new Date(Date.now() - 4 * 3600 * 1000);
@@ -328,6 +337,12 @@ export function isAdCampaignLive(ad: AdCampaign): boolean {
   return true;
 }
 
+export async function getAdminPassword(): Promise<string> {
+  const { kv } = await getAdminKv();
+  const savedPassword = await kv.get(ADMIN_PASS_KEY);
+  return (savedPassword && savedPassword.trim()) || DEFAULT_ADMIN_PASSWORD;
+}
+
 export async function verifyAdminPassword(inputPassword: string): Promise<boolean> {
   if (!inputPassword) return false;
   const { kv } = await getAdminKv();
@@ -348,6 +363,107 @@ export async function updateAdminPassword(newPassword: string): Promise<void> {
     expirationTtl: 86400 * 365,
     persistToKv: true,
   });
+}
+
+function normalizeSecretAnswer(raw: string): string {
+  return String(raw || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+export async function getAdminSecurityQA(): Promise<{
+  question: string;
+  answerHint: string;
+  hasCustomAnswer: boolean;
+}> {
+  const { kv } = await getAdminKv();
+  const raw = await kv.get(ADMIN_SECURITY_QA_KEY);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as AdminSecurityConfig;
+      if (parsed && parsed.question && parsed.answer) {
+        const cleanAns = parsed.answer.trim();
+        const hint =
+          cleanAns.length <= 2
+            ? "***"
+            : `${cleanAns[0]}${"*".repeat(Math.max(3, cleanAns.length - 2))}${cleanAns[cleanAns.length - 1]}`;
+        return {
+          question: parsed.question.trim(),
+          answerHint: hint,
+          hasCustomAnswer: true,
+        };
+      }
+    } catch {
+      // ignore parse error
+    }
+  }
+  return {
+    question: DEFAULT_SECURITY_QUESTION,
+    answerHint: "s*******n",
+    hasCustomAnswer: false,
+  };
+}
+
+export async function updateAdminSecurityQA(
+  question: string,
+  answer: string
+): Promise<{ question: string; answerHint: string; hasCustomAnswer: boolean }> {
+  const cleanQ = String(question || "").trim();
+  const cleanA = String(answer || "").trim();
+  if (cleanQ.length < 5) {
+    throw new Error("Escribe una pregunta de seguridad válida.");
+  }
+  if (cleanA.length < 2) {
+    throw new Error("La respuesta secreta debe tener al menos 2 caracteres.");
+  }
+  const { kv } = await getAdminKv();
+  const payload: AdminSecurityConfig = {
+    question: cleanQ,
+    answer: cleanA,
+    updatedAt: Date.now(),
+  };
+  await kv.put(ADMIN_SECURITY_QA_KEY, JSON.stringify(payload), {
+    expirationTtl: 86400 * 365,
+    persistToKv: true,
+  });
+  return getAdminSecurityQA();
+}
+
+export async function verifyAdminSecurityAnswer(inputAnswer: string): Promise<boolean> {
+  const normalizedInput = normalizeSecretAnswer(inputAnswer);
+  if (!normalizedInput) return false;
+  const { kv } = await getAdminKv();
+  const raw = await kv.get(ADMIN_SECURITY_QA_KEY);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as AdminSecurityConfig;
+      if (parsed?.answer) {
+        return normalizeSecretAnswer(parsed.answer) === normalizedInput;
+      }
+    } catch {
+      // fallback
+    }
+  }
+  return normalizeSecretAnswer(DEFAULT_SECURITY_ANSWER) === normalizedInput;
+}
+
+export function purgeAllSportsMemCache(): number {
+  let cleared = memoryCache.size;
+  memoryCache.clear();
+  const g = globalThis as Record<string, any>;
+  for (const k of Object.keys(g)) {
+    if (k.includes("SOCCER") || k.includes("LVBP") || k.includes("MLB") || k.includes("ENJUEGO")) {
+      const val = g[k];
+      if (val instanceof Map) {
+        cleared += val.size;
+        val.clear();
+      }
+    }
+  }
+  return cleared;
 }
 
 export interface StoredCampaignMetricEntry {
@@ -608,6 +724,15 @@ export async function getRecentAdClickLog(): Promise<AdClickLogEntry[]> {
   } catch {
     return [];
   }
+}
+
+export async function clearAdClickLog(): Promise<AdClickLogEntry[]> {
+  const { kv } = await getAdminKv();
+  await kv.put(CLICK_LOG_KEY, JSON.stringify([]), {
+    expirationTtl: 86400 * 30,
+    persistToKv: true,
+  });
+  return [];
 }
 
 // ============================================================================

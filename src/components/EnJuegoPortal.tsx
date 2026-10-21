@@ -17,6 +17,7 @@ import { AuthModal } from "@/components/AuthModal";
 import { PwaInstallModal } from "@/components/pwa/PwaInstallModal";
 import { PwaOnboardingModal } from "@/components/pwa/PwaOnboardingModal";
 import { AdBanner, AadsSkyscraperBanner } from "@/components/AdBanner";
+import { HomeSoccerShowcase } from "@/components/HomeSoccerShowcase";
 import MlbPlayoffBracket from "@/components/MlbPlayoffBracket";
 import { ShareGameBannerModal } from "@/components/ShareGameBannerModal";
 import { ShareStandingsModal } from "@/components/ShareStandingsModal";
@@ -1209,7 +1210,7 @@ export function EnJuegoPortal({
     if (firstInMonth) selectCalendarDate(firstInMonth);
   };
 
-  // Render a broadcast-quality Scoreboard Card for Pizarra del Día & Resultados
+  // Render a broadcast-quality Scoreboard Card for Pizarra del Día & Resultados (Matching Clean Soccer Card Layout)
   const renderScoreboardCard = (game: ScheduleGame) => {
     const played = game.status === "IN_PROGRESS" || game.status === "FINISHED";
     const isLive = game.status === "IN_PROGRESS";
@@ -1234,79 +1235,57 @@ export function EnJuegoPortal({
       <article
         key={game.id}
         onClick={() => openGameGameday(game.id)}
-        className={`rounded-2xl border bg-white hover:border-amber-500/80 transition-all flex flex-col justify-between overflow-hidden shadow-sm hover:shadow-md cursor-pointer group ${
+        className={`rounded-2xl border bg-white p-4 shadow-xs hover:shadow-md transition flex flex-col justify-between cursor-pointer group ${
           isFavGame ? "border-amber-400 ring-2 ring-amber-400/25" : "border-slate-200"
         }`}
       >
-        {/* Top Accent Strip */}
-        <div
-          className={`h-1 w-full ${
-            isLive
-              ? "bg-gradient-to-r from-red-500 via-orange-500 to-red-500"
-              : isFavGame
-                ? "bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-500"
-                : isFinal
-                  ? "bg-gradient-to-r from-amber-500 to-orange-500"
-                  : "bg-gradient-to-r from-sky-500 to-indigo-500"
-          }`}
-        />
-
-        <div className="p-4 flex-1 flex flex-col justify-between">
-          <div>
-            {/* Header: Status + Favorite Badge + C H E */}
-            <div className="flex items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-100">
-              <div className="flex items-center gap-1.5">
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wide ${
-                    isLive
-                      ? "bg-red-50 text-red-600 border border-red-200"
-                      : isFinal
-                        ? "bg-slate-100 text-slate-800 border border-slate-200"
-                        : "bg-amber-50 text-amber-800 border border-amber-200"
-                  }`}
-                >
-                  {isLive && <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />}
-                  {isLive ? (
-                    game.inning && !/^in\s*progress/i.test(game.inning) && !/^en vivo/i.test(game.inning)
-                      ? `EN VIVO · ${game.inning}`
-                      : "EN VIVO"
-                  ) : isFinal ? (
-                    game.inning
-                  ) : (
-                    <span className="inline-flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-amber-700" />
-                      {game.time}
-                    </span>
-                  )}
+        <div>
+          {/* Card Header: Venue (Left) & Status Badge (Right) - Clean Soccer Pattern */}
+          <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-100 text-xs">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="font-extrabold text-slate-500 text-[11px] truncate max-w-[160px] sm:max-w-[180px] flex items-center gap-1">
+                <MapPin className="w-3 h-3 text-amber-600 shrink-0" />
+                <span>{game.venueCity ? `${game.venueCity} · ${game.venue}` : (game.venue || currentLeague.shortName)}</span>
+              </span>
+              {isFavGame && (
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-400/20 text-amber-800 border border-amber-300 px-1.5 py-0.2 text-[9px] font-black shrink-0">
+                  <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" /> Tu Club
                 </span>
-                {isFavGame && (
-                  <span
-                    className="inline-flex items-center gap-1 rounded-full bg-amber-400/20 text-amber-800 border border-amber-300 px-2 py-0.5 text-[10px] font-black"
-                    title="Partido de tu Equipo Favorito"
-                  >
-                    <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" /> Tu Club
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-3 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
-                <span className="w-6 text-center text-slate-700">C</span>
-                <span className="w-5 text-center">H</span>
-                <span className="w-4 text-center">E</span>
-              </div>
+              )}
             </div>
 
-            {/* Away Team Row */}
-            <div
-              className={`flex items-center justify-between py-2 px-1.5 rounded-xl transition ${
-                awayWon ? "bg-amber-50/50" : ""
+            <span
+              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider shrink-0 ${
+                isLive
+                  ? "bg-emerald-500/15 text-emerald-700 border border-emerald-500/30 animate-pulse"
+                  : isFinal
+                  ? "bg-slate-100 text-slate-700 font-black"
+                  : "bg-amber-500/15 text-amber-800 font-extrabold"
               }`}
             >
-              <div className="flex items-center gap-3 min-w-0">
+              {isLive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+              <span>
+                {isLive
+                  ? game.inning && !/^in\s*progress/i.test(game.inning) && !/^en vivo/i.test(game.inning)
+                    ? game.inning
+                    : "EN VIVO"
+                  : isFinal
+                  ? (game.inning || "FINAL")
+                  : game.time}
+              </span>
+            </span>
+          </div>
+
+          {/* Teams & Scores (Crest + Names on left, Bold Pill on right) */}
+          <div className="space-y-3 py-1">
+            {/* Away Team Row */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <img
                   src={game.awayTeam.logoUrl}
                   alt={game.awayTeam.name}
-                  className="w-10 h-10 object-contain shrink-0 drop-shadow-sm"
+                  className="w-7 h-7 sm:w-8 sm:h-8 object-contain shrink-0 drop-shadow-xs"
+                  loading="lazy"
                 />
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
@@ -1323,44 +1302,38 @@ export function EnJuegoPortal({
                       </span>
                     )}
                   </div>
-                  <div className="text-[11px] font-semibold text-slate-500">
-                    {game.awayTeam.shortName} · ({game.awayTeam.wins}-{game.awayTeam.losses})
+                  <div className="text-[11px] font-semibold text-slate-500 flex items-center gap-1 truncate">
+                    <span>{game.awayTeam.shortName} · ({game.awayTeam.wins}-{game.awayTeam.losses})</span>
+                    {played && (
+                      <span className="text-slate-400 font-normal">
+                        · H: {game.awayHits} · E: {game.awayErrors}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 text-sm tabular-nums shrink-0">
-                <b
-                  className={`w-6 text-center text-base ${
-                    awayWon
-                      ? "font-black text-slate-950"
-                      : played
-                        ? "font-bold text-slate-700"
-                        : "font-semibold text-slate-400"
-                  }`}
-                >
-                  {played ? game.awayScore : "–"}
-                </b>
-                <span className="w-5 text-center text-xs font-semibold text-slate-500">
-                  {played ? game.awayHits : "–"}
-                </span>
-                <span className="w-4 text-center text-xs text-slate-400">
-                  {played ? game.awayErrors : "–"}
-                </span>
-              </div>
+              <span
+                className={`text-base font-black px-2.5 py-0.5 rounded-lg min-w-[34px] text-center tabular-nums transition ${
+                  played
+                    ? awayWon
+                      ? "bg-slate-950 text-white shadow-xs"
+                      : "bg-slate-100 text-slate-800"
+                    : "text-slate-400 font-medium text-xs"
+                }`}
+              >
+                {played ? game.awayScore : "–"}
+              </span>
             </div>
 
             {/* Home Team Row */}
-            <div
-              className={`flex items-center justify-between py-2 px-1.5 rounded-xl mt-1 transition ${
-                homeWon ? "bg-amber-50/50" : ""
-              }`}
-            >
-              <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <img
                   src={game.homeTeam.logoUrl}
                   alt={game.homeTeam.name}
-                  className="w-10 h-10 object-contain shrink-0 drop-shadow-sm"
+                  className="w-7 h-7 sm:w-8 sm:h-8 object-contain shrink-0 drop-shadow-xs"
+                  loading="lazy"
                 />
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
@@ -1377,65 +1350,63 @@ export function EnJuegoPortal({
                       </span>
                     )}
                   </div>
-                  <div className="text-[11px] font-semibold text-slate-500">
-                    {game.homeTeam.shortName} · ({game.homeTeam.wins}-{game.homeTeam.losses})
+                  <div className="text-[11px] font-semibold text-slate-500 flex items-center gap-1 truncate">
+                    <span>{game.homeTeam.shortName} · ({game.homeTeam.wins}-{game.homeTeam.losses})</span>
+                    {played && (
+                      <span className="text-slate-400 font-normal">
+                        · H: {game.homeHits} · E: {game.homeErrors}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 text-sm tabular-nums shrink-0">
-                <b
-                  className={`w-6 text-center text-base ${
-                    homeWon
-                      ? "font-black text-slate-950"
-                      : played
-                        ? "font-bold text-slate-700"
-                        : "font-semibold text-slate-400"
-                  }`}
-                >
-                  {played ? game.homeScore : "–"}
-                </b>
-                <span className="w-5 text-center text-xs font-semibold text-slate-500">
-                  {played ? game.homeHits : "–"}
-                </span>
-                <span className="w-4 text-center text-xs text-slate-400">
-                  {played ? game.homeErrors : "–"}
-                </span>
-              </div>
+              <span
+                className={`text-base font-black px-2.5 py-0.5 rounded-lg min-w-[34px] text-center tabular-nums transition ${
+                  played
+                    ? homeWon
+                      ? "bg-slate-950 text-white shadow-xs"
+                      : "bg-slate-100 text-slate-800"
+                    : "text-slate-400 font-medium text-xs"
+                }`}
+              >
+                {played ? game.homeScore : "–"}
+              </span>
             </div>
           </div>
 
-          {/* Broadcast Channels + Venue / Decisions + Share Button Footer */}
-          <div className="mt-3 pt-3 border-t border-slate-100 space-y-2.5">
-            {/* TV Broadcast Channels Row with Official Launcher */}
-            <BroadcastChannelsRow
-              channels={tvChannels}
-              gameTitle={`${game.awayTeam.nick} vs ${game.homeTeam.nick}`}
-              youtubeVideoId={game.youtubeVideoId}
-            />
+          {/* Pitching Decisions (if game finished) */}
+          {game.decisions?.winner && (
+            <div className="mt-2 pt-2 border-t border-slate-100 text-[11px] text-slate-600 truncate">
+              <b className="text-emerald-700">G:</b> {game.decisions.winner}
+              {game.decisions.loser && (
+                <>
+                  {" "}· <b className="text-rose-700">P:</b> {game.decisions.loser}
+                </>
+              )}
+              {game.decisions.save && (
+                <>
+                  {" "}· <b className="text-sky-700">S:</b> {game.decisions.save}
+                </>
+              )}
+            </div>
+          )}
+        </div>
 
-            {game.decisions?.winner ? (
-              <p className="text-[11px] text-slate-600 truncate">
-                <b className="text-emerald-700">G:</b> {game.decisions.winner}
-                {game.decisions.loser ? (
-                  <>
-                    {" "}
-                    · <b className="text-rose-700">P:</b> {game.decisions.loser}
-                  </>
-                ) : null}
-                {game.decisions.save ? (
-                  <>
-                    {" "}
-                    · <b className="text-sky-700">S:</b> {game.decisions.save}
-                  </>
-                ) : null}
-              </p>
-            ) : (
-              <p className="text-[11px] text-slate-500 truncate flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-amber-600 shrink-0" /> {game.venue} (
-                {game.venueCity})
-              </p>
-            )}
+        {/* Broadcast Channels + Actions Footer */}
+        <div className="mt-3 pt-2.5 border-t border-slate-100 space-y-2">
+          {/* TV Broadcast channels */}
+          <BroadcastChannelsRow
+            channels={tvChannels}
+            gameTitle={`${game.awayTeam.nick} vs ${game.homeTeam.nick}`}
+            youtubeVideoId={game.youtubeVideoId}
+          />
+
+          <div className="flex items-center justify-between text-xs text-slate-500 pt-0.5">
+            <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-500">
+              <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span>{game.time} (Caracas)</span>
+            </span>
 
             <div className="flex items-center gap-1.5">
               {hasLiveStream && !isFinal ? (
@@ -1444,41 +1415,39 @@ export function EnJuegoPortal({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="flex-1 rounded-xl bg-red-600 hover:bg-red-700 text-white py-2 px-3 text-xs font-black text-center transition truncate shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="rounded-xl bg-red-600 hover:bg-red-700 text-white py-1.5 px-2.5 text-[11px] font-black text-center transition shadow-2xs flex items-center gap-1 cursor-pointer"
                 >
-                  <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                  <span>▶ Ver Transmisión en Vivo ↗</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                  <span>En Vivo ↗</span>
                 </a>
               ) : (
-                <div className="flex-1 rounded-xl bg-slate-100 group-hover:bg-amber-400 text-slate-800 group-hover:text-slate-950 py-2 px-3 text-xs font-extrabold text-center transition truncate">
-                  {isLive
-                    ? "Seguir Gameday ›"
-                    : isFinal
-                      ? "Box Score y Jugadas ›"
-                      : "Previa y Alineación ›"}
-                </div>
+                <span className="text-[11px] font-extrabold text-amber-600 group-hover:text-amber-700 group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
+                  {isLive ? "Gameday ›" : isFinal ? "Box score ›" : "Previa ›"}
+                </span>
               )}
+
               {isFinal && (
                 <Link
                   href={`/noticias/${game.id}`}
                   onClick={(e) => e.stopPropagation()}
                   title="Ver resumen y highlights en video de este juego"
-                  className="inline-flex items-center gap-1 py-2 px-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-black transition cursor-pointer shrink-0"
+                  className="inline-flex items-center gap-1 py-1 px-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[10px] font-black transition cursor-pointer shrink-0"
                 >
-                  <Play className="w-3 h-3 fill-rose-600" />
-                  <span>Highlights</span>
+                  <Play className="w-2.5 h-2.5 fill-rose-600" />
+                  <span>Video</span>
                 </Link>
               )}
+
               <button
                 type="button"
                 onClick={(e) => handleShareGame(e, game)}
                 title="Compartir partido por WhatsApp"
-                className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition cursor-pointer shrink-0"
+                className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition cursor-pointer shrink-0"
               >
                 {copiedGameId === game.id ? (
-                  <Check className="w-3.5 h-3.5" />
+                  <Check className="w-3 h-3" />
                 ) : (
-                  <Share2 className="w-3.5 h-3.5" />
+                  <Share2 className="w-3 h-3" />
                 )}
               </button>
             </div>
@@ -1842,6 +1811,21 @@ export function EnJuegoPortal({
                       </button>
                     );
                   })}
+                </div>
+                <div className="mt-2.5 pt-2 border-t border-slate-800">
+                  <Link
+                    href="/futbol"
+                    onClick={() => setMobileDrawerOpen(false)}
+                    className="flex items-center justify-between p-2 rounded-xl bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 border border-blue-500/40 text-white text-xs font-black shadow-xs transition hover:border-blue-400"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="text-base">⚽</span>
+                      <span>Fútbol Europeo (Champions & Big 5)</span>
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-rose-600 text-white animate-pulse">
+                      Nuevo
+                    </span>
+                  </Link>
                 </div>
               </div>
 
@@ -2340,6 +2324,22 @@ export function EnJuegoPortal({
                       </button>
                     );
                   })}
+
+                  <div className="pt-1.5 mt-1.5 border-t border-slate-800">
+                    <Link
+                      href="/futbol"
+                      onClick={() => setLeagueMenuOpen(false)}
+                      className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-black text-rose-300 hover:text-white hover:bg-rose-950/40 border border-rose-500/30 transition cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="text-base">⚽</span>
+                        <span>Fútbol (Champions & Big 5)</span>
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-rose-600 text-white animate-pulse">
+                        Nuevo
+                      </span>
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>
@@ -2519,7 +2519,31 @@ export function EnJuegoPortal({
 
         {/* SECTION: HOME (/ & /inicio) */}
         {section === "home" && (
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8">
+            {/* DUAL-SPORT SWITCHER BAR (BEISBOL & FUTBOL EUROPEO) - Immediate Visibility on Mobile & Desktop */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-1.5 sm:p-2 shadow-2xs flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-1">
+                {/* Baseball Active Pill */}
+                <div className="flex-1 py-2 sm:py-2.5 px-3 rounded-xl bg-slate-950 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs cursor-default select-none">
+                  <span className="text-base sm:text-lg">⚾</span>
+                  <span>Béisbol <span className="text-slate-300 font-semibold hidden sm:inline">· LVBP & MLB</span></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse ml-0.5" />
+                </div>
+
+                {/* European Soccer Pill */}
+                <Link
+                  href="/futbol"
+                  className="flex-1 py-2 sm:py-2.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/90 hover:border-slate-300 text-slate-800 hover:text-slate-950 font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition group cursor-pointer select-none"
+                >
+                  <span className="text-base sm:text-lg group-hover:scale-115 transition-transform">⚽</span>
+                  <span>Fútbol Europeo</span>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white shadow-2xs animate-pulse">
+                    Champions
+                  </span>
+                </Link>
+              </div>
+            </div>
+
             {/* Favorite Team Selector Bar */}
             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
               <div className="flex items-center gap-2 text-xs">
@@ -2679,6 +2703,9 @@ export function EnJuegoPortal({
                 </div>
               )}
             </section>
+
+            {/* FÚTBOL EUROPEO SHOWCASE DIRECTLY ON /INICIO */}
+            <HomeSoccerShowcase />
 
             {/* 2. LÍDERES Y POSICIONES */}
             <section className="space-y-4">
@@ -3511,6 +3538,21 @@ export function EnJuegoPortal({
                       </Link>
                     );
                   })}
+                </div>
+                <div className="mt-2.5 pt-2 border-t border-slate-800">
+                  <Link
+                    href="/futbol"
+                    onClick={() => setMobileDrawerOpen(false)}
+                    className="flex items-center justify-between p-2 rounded-xl bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 border border-blue-500/40 text-white text-xs font-black shadow-xs transition hover:border-blue-400"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="text-base">⚽</span>
+                      <span>Fútbol Europeo (Champions & Big 5)</span>
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-rose-600 text-white animate-pulse">
+                      Nuevo
+                    </span>
+                  </Link>
                 </div>
               </div>
             ) : calendarAvailableDates.length > 0 ? (

@@ -1394,9 +1394,7 @@ export function EnJuegoPortal({
   };
 
   return (
-    <div
-      className="min-h-screen flex flex-col bg-[#f3f6fb] text-slate-900 max-md:pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))]"
-    >
+    <div className="min-h-screen flex flex-col bg-[#f3f6fb] text-slate-900">
       {/* BROADCAST EDITORIAL HEADER (#0A1120 Navy · 60-30-10 Color System · Zero Grey Boxes) */}
       <header
         className="portal-header keep-dark sticky top-0 z-40 border-b text-white shadow-sm transition-all"
@@ -1867,12 +1865,12 @@ export function EnJuegoPortal({
         </div>
       )}
 
-      {/* SUBHEADER COMPETITION & DATE BAR (Single Compact Row on Mobile & Desktop · Never Wraps Into 2 Rows) */}
+      {/* SUBHEADER COMPETITION & DATE BAR (Fits 100% on 360px Mobile & Desktop · Zero Overflow) */}
       {section !== "juego" && (
         <section className="border-b border-slate-200 bg-white relative z-30 shadow-2xs">
-          <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 flex items-center justify-between gap-1.5 sm:gap-2">
             {/* Left: Direct 1-Click League Selector Pills */}
-            <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+            <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mr-1 hidden md:inline">
                 Ligas:
               </span>
@@ -1911,7 +1909,7 @@ export function EnJuegoPortal({
                         }
                       }
                     }}
-                    className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-black transition flex items-center gap-1 sm:gap-1.5 cursor-pointer shrink-0 select-none ${
+                    className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-black transition flex items-center gap-1.5 cursor-pointer shrink-0 select-none ${
                       isSelected
                         ? "dark-pill shadow-xs"
                         : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/80"
@@ -1920,7 +1918,7 @@ export function EnJuegoPortal({
                     <span>{lg.shortName}</span>
                     {count !== null && count > 0 && (
                       <span
-                        className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full tabular-nums ${
+                        className={`hidden sm:inline-block text-[10px] font-bold px-1.5 py-0.2 rounded-full tabular-nums ${
                           isSelected
                             ? "bg-white/20 text-white"
                             : "bg-slate-200/80 text-slate-600"
@@ -1955,7 +1953,7 @@ export function EnJuegoPortal({
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
-              <div className="px-2 py-1 rounded-lg bg-slate-50 border border-slate-200/80 text-center min-w-[68px] sm:min-w-[78px]">
+              <div className="px-2 py-1 rounded-lg bg-slate-50 border border-slate-200/80 text-center min-w-[60px] sm:min-w-[76px]">
                 <strong className="text-[11px] sm:text-xs font-black text-slate-900 tabular-nums">
                   {jornadaDayFormatted.dayNum}{" "}
                   <span className="text-[10px] text-slate-500 font-bold uppercase">
@@ -1979,7 +1977,7 @@ export function EnJuegoPortal({
                   <button
                     type="button"
                     onClick={resetJornadaToToday}
-                    className="ml-0.5 px-2 py-1 rounded-lg dark-pill text-[10px] font-black uppercase transition cursor-pointer"
+                    className="hidden sm:inline-block ml-0.5 px-2 py-1 rounded-lg dark-pill text-[10px] font-black uppercase transition cursor-pointer"
                   >
                     Hoy
                   </button>
@@ -1989,12 +1987,9 @@ export function EnJuegoPortal({
         </section>
       )}
 
-      {/* MAIN CONTENT CONTAINER */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 pt-3 sm:pt-4 pb-28 md:pb-10">
-        {/* TOP LEADERBOARD SPONSOR BANNER (PRO STYLE) */}
-        <div className="mb-4 sm:mb-5">
-          <AdBanner slot="top-leaderboard" />
-        </div>
+      {/* MAIN CONTENT CONTAINER (Clean Padding · Zero Extra Empty Margin Before Footer) */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 pt-3.5 sm:pt-5 pb-6 sm:pb-8">
+        <AdBanner slot="top-leaderboard" />
         {/* SECTION: GAMEDAY (/juego/[id]) */}
         {section === "juego" && (
           <GamedayView
@@ -2012,23 +2007,23 @@ export function EnJuegoPortal({
 
         {/* SECTION: HOME (/ & /inicio) — Cohesive 12-Column Editorial Architecture (8 Main + 4 Sidebar) */}
         {section === "home" && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start">
             {/* LEFT MAIN FEED (8 Columns on Desktop): Baseball Scoreboard + European Soccer + Game Recaps */}
-            <div className="lg:col-span-8 space-y-5 lg:space-y-6 min-w-0">
+            <div className="lg:col-span-8 space-y-4 sm:space-y-6 min-w-0">
               {/* 1. PIZARRA DE BÉISBOL */}
-              <section className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-2xs space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3.5 border-b border-slate-100">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-9 h-9 rounded-xl dark-pill flex items-center justify-center shrink-0 text-[10px] font-black tracking-tight">
+              <section className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-5 shadow-2xs space-y-3.5 sm:space-y-4">
+                <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl dark-pill flex items-center justify-center shrink-0 text-[10px] font-black tracking-tight">
                       {currentLeague.shortName}
                     </div>
-                    <div className="min-w-0">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block truncate">
                         {jornadaLeague === "mlb"
-                          ? "Béisbol Profesional · Grandes Ligas"
-                          : `Béisbol Profesional · ${currentLeague.shortName}`}
+                          ? "Béisbol · Grandes Ligas"
+                          : `Béisbol · Temporada ${currentLeague.shortName}`}
                       </span>
-                      <h1 className="text-base sm:text-lg font-black text-slate-950 capitalize leading-tight truncate">
+                      <h1 className="text-sm sm:text-lg font-black text-slate-950 capitalize leading-tight truncate">
                         {jornadaDayFormatted.fullLabel}
                       </h1>
                     </div>
@@ -2039,7 +2034,7 @@ export function EnJuegoPortal({
                       <button
                         type="button"
                         onClick={() => setShowHomeMlbBracket((v) => !v)}
-                        className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-extrabold transition cursor-pointer ${
+                        className={`hidden sm:inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-extrabold transition cursor-pointer ${
                           showHomeMlbBracket
                             ? "dark-pill border-slate-900"
                             : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800"
@@ -2054,9 +2049,9 @@ export function EnJuegoPortal({
                       onClick={(e) =>
                         handleInstantSectionNav(e, "posiciones", `/posiciones?liga=${jornadaLeague}`)
                       }
-                      className="dark-pill inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black transition cursor-pointer shadow-2xs"
+                      className="dark-pill inline-flex items-center gap-1 rounded-xl px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-black transition cursor-pointer shadow-2xs"
                     >
-                      <Trophy className="w-3.5 h-3.5" />
+                      <Trophy className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                       <span>Tabla</span>
                     </Link>
                     <Link
@@ -2064,7 +2059,7 @@ export function EnJuegoPortal({
                       onClick={(e) =>
                         handleInstantSectionNav(e, "calendario", `/calendario?liga=${jornadaLeague}`)
                       }
-                      className="inline-flex items-center gap-1 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 px-3 py-1.5 text-xs font-extrabold transition cursor-pointer"
+                      className="inline-flex items-center gap-1 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-extrabold transition cursor-pointer"
                     >
                       <span>Calendario ›</span>
                     </Link>
@@ -3354,41 +3349,23 @@ export function EnJuegoPortal({
           />
         )}
 
-        {/* BOTTOM AD SLOT (Inicio · Abajo — like jugadaenvivo.com home_bottom) */}
-        <div className="pt-2">
-          <AdBanner slot="home-bottom" />
-        </div>
+        <AdBanner slot="home-bottom" />
       </main>
 
-      {/* MOBILE BOTTOM NAVIGATION BAR */}
+      {/* MOBILE BOTTOM NAVIGATION BAR (5 Equal Columns · Includes Fútbol · 0ms Instant Switching) */}
       <nav
-        className="fixed bottom-0 inset-x-0 z-40 md:hidden bg-white/98 backdrop-blur-md border-t border-slate-200 shadow-[0_-8px_24px_rgba(15,23,42,0.12)]"
-        style={{ paddingBottom: "max(0.45rem, env(safe-area-inset-bottom, 0.45rem))" }}
+        className="fixed bottom-0 inset-x-0 z-40 md:hidden bg-white/98 backdrop-blur-md border-t border-slate-200 shadow-[0_-6px_20px_rgba(15,23,42,0.08)]"
+        style={{ paddingBottom: "max(0.35rem, env(safe-area-inset-bottom, 0.35rem))" }}
         aria-label="Navegación Móvil"
       >
-        {/* 5 Main Mobile Navigation Tabs */}
-        <div className="px-1.5 pt-1.5 flex items-center justify-around">
+        <div className="grid grid-cols-5 px-1.5 pt-1.5 gap-1">
           {(
             [
               ["home", "/inicio", "Inicio", Home],
-              ["resultados", `/resultados?liga=${activeLeague}`, "Pizarra", Activity],
+              ["resultados", `/resultados?liga=${activeLeague}`, "Resultados", Activity],
+              ["futbol", "/futbol", "Fútbol", Trophy],
+              ["posiciones", `/posiciones?liga=${activeLeague}`, "Posiciones", BarChart3],
               ["calendario", `/calendario?liga=${activeLeague}`, "Calendario", Calendar],
-              ["posiciones", `/posiciones?liga=${activeLeague}`, "Posiciones", Trophy],
-              [
-                "equipos",
-                `/teams?liga=${activeLeague}&team=${
-                  activeTeamsCatalog[selectedTeamCode]?.slug ||
-                  (activeLeague === "lidom"
-                    ? "licey"
-                    : activeLeague === "lmp"
-                    ? "tomateros"
-                    : activeLeague === "mlb"
-                    ? "yankees"
-                    : "leones")
-                }`,
-                "Equipos",
-                Users,
-              ],
             ] as const
           ).map(([key, href, label, Icon]) => {
             const active = section === key || (section === "juego" && key === "resultados");
@@ -3397,72 +3374,79 @@ export function EnJuegoPortal({
                 key={key}
                 href={href}
                 onClick={(e) => handleInstantSectionNav(e, key, href)}
-                className={`relative flex flex-col items-center justify-center gap-0.5 py-1.5 px-3 rounded-xl text-[10px] font-black transition cursor-pointer ${
+                className={`relative flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl text-[10px] font-black transition cursor-pointer select-none ${
                   active
-                    ? "text-amber-700 bg-amber-50 border border-amber-200/80 shadow-2xs"
+                    ? "text-slate-950 bg-slate-100"
                     : "text-slate-500 hover:text-slate-900"
                 }`}
               >
                 <Icon
-                  className={`w-4.5 h-4.5 ${
+                  className={`w-4 h-4 ${
                     active ? "text-amber-600 stroke-[2.5]" : "text-slate-400"
                   }`}
                 />
-                <span className="leading-none">{label}</span>
+                <span className="leading-none truncate max-w-full">{label}</span>
               </Link>
             );
           })}
         </div>
       </nav>
 
-      {/* FOOTER */}
-      <footer className="border-t border-slate-200 bg-white py-5 mt-6 sm:mt-8">
+      {/* FOOTER (Flush to Bottom · Zero Empty Gap Above or Below on Mobile & Desktop) */}
+      <footer className="mt-auto border-t border-slate-200 bg-white pt-6 pb-[calc(5.25rem+env(safe-area-inset-bottom,0px))] md:pb-6">
         <div className="max-w-7xl mx-auto px-4 space-y-4 text-xs text-slate-500">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center p-0.5 shadow-2xs shrink-0">
+              <div className="w-7 h-7 rounded-lg dark-pill flex items-center justify-center p-1 shrink-0">
                 <img src={LVBP_OFFICIAL_LOGO} alt="En Juego" className="w-full h-full object-contain" />
               </div>
-              <span className="font-black text-slate-900">EN JUEGO</span>
-              <span>— Marcadores en vivo, jugada a jugada, transmisiones de TV y estadísticas.</span>
+              <div className="min-w-0">
+                <span className="font-black text-slate-900">EN JUEGO ONLINE</span>
+                <span className="text-slate-500">
+                  {" "}— Marcadores en vivo, jugada a jugada, transmisiones de TV y estadísticas.
+                </span>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-4 font-semibold">
-              <Link href="/inicio" className="hover:text-slate-900">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 font-bold text-slate-600">
+              <Link href="/inicio" className="hover:text-slate-950">
                 Inicio
               </Link>
-              <Link href="/resultados" className="hover:text-slate-900">
+              <Link href="/resultados" className="hover:text-slate-950">
                 Resultados
               </Link>
-              <Link href="/calendario" className="hover:text-slate-900">
+              <Link href="/futbol" className="hover:text-slate-950">
+                Fútbol Europeo
+              </Link>
+              <Link href="/calendario" className="hover:text-slate-950">
                 Calendario
               </Link>
-              <Link href="/posiciones" className="hover:text-slate-900">
+              <Link href="/posiciones" className="hover:text-slate-950">
                 Posiciones
               </Link>
-              <Link href="/lideres" className="hover:text-slate-900">
+              <Link href="/lideres" className="hover:text-slate-950">
                 Líderes
               </Link>
-              <Link href="/noticias" className="hover:text-slate-900">
+              <Link href="/noticias" className="hover:text-slate-950">
                 Noticias
               </Link>
-              <Link href="/teams?team=leones" className="hover:text-slate-900">
-                Equipos y Roster
+              <Link href="/teams?team=leones" className="hover:text-slate-950">
+                Equipos
               </Link>
-              <Link href="/quienes-somos" className="hover:text-slate-900">
+              <Link href="/quienes-somos" className="hover:text-slate-950">
                 Quiénes somos
               </Link>
-              <Link href="/contacto" className="hover:text-slate-900">
+              <Link href="/contacto" className="hover:text-slate-950">
                 Contacto
               </Link>
-              <Link href="/privacidad" className="hover:text-slate-900">
+              <Link href="/privacidad" className="hover:text-slate-950">
                 Privacidad
               </Link>
             </div>
           </div>
 
-          <div className="pt-4 border-t border-slate-100 text-[11px] text-slate-400 leading-relaxed">
+          <div className="pt-3.5 border-t border-slate-100 text-[11px] text-slate-400 leading-relaxed">
             <strong className="text-slate-600 font-bold">Aviso Legal y Descargo de Responsabilidad: </strong>
-            EnJuego es un portal deportivo independiente desarrollado con fines informativos y periodísticos para los aficionados del béisbol venezolano. No está afiliado, respaldado, autorizado ni patrocinado de manera alguna por la Liga Venezolana de Béisbol Profesional (LVBP), Major League Baseball (MLB) ni por ninguno de sus equipos u organizaciones asociadas. Todos los nombres de equipos, logotipos, emblemas y marcas comerciales exhibidas pertenecen exclusivamente a sus respectivos titulares y se utilizan únicamente para la identificación informativa de los clubes y juegos bajo el principio de uso legítimo (fair use).
+            EnJuego es un portal deportivo independiente desarrollado con fines informativos y periodísticos para los aficionados del béisbol y el fútbol. No está afiliado, respaldado, autorizado ni patrocinado de manera alguna por la LVBP, LIDOM, LMP, MLB, UEFA ni por ninguno de sus clubes u organizaciones asociadas. Todos los nombres de equipos, logotipos, emblemas y marcas comerciales exhibidas pertenecen exclusivamente a sus respectivos titulares y se utilizan únicamente para la identificación informativa bajo el principio de uso legítimo (fair use).
           </div>
         </div>
       </footer>

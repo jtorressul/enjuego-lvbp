@@ -25,6 +25,7 @@ import {
   X,
   Play,
   Home,
+  BarChart3,
 } from "lucide-react";
 
 interface SoccerPortalProps {
@@ -145,7 +146,7 @@ export function SoccerPortal({
   const liveCount = matches.filter((m) => m.status === "IN_PROGRESS").length;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f3f6fb] text-slate-900 pb-16">
+    <div className="min-h-screen flex flex-col bg-[#f3f6fb] text-slate-900">
       {/* 1. UNIFIED GLOBAL HEADER BAR (#0A1120 Navy · 60-30-10 Color System · Zero Grey Boxes) */}
       <header
         className="portal-header keep-dark sticky top-0 z-40 border-b text-white shadow-sm transition-all"
@@ -461,7 +462,7 @@ export function SoccerPortal({
       )}
 
       {/* 3. MAIN CONTENT CONTAINER (Exact 7xl Grid Matching Baseball) */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 pt-4 sm:pt-5 pb-16 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 pt-3.5 sm:pt-5 pb-6 sm:pb-8 space-y-5">
         {activeMatchId ? (
           <SoccerGamedayView
             matchId={activeMatchId}
@@ -794,6 +795,93 @@ export function SoccerPortal({
           </>
         )}
       </main>
+
+      {/* MOBILE BOTTOM NAVIGATION BAR (Unified 5-Column Bar Matching Béisbol) */}
+      <nav
+        className="fixed bottom-0 inset-x-0 z-40 md:hidden bg-white/98 backdrop-blur-md border-t border-slate-200 shadow-[0_-6px_20px_rgba(15,23,42,0.08)]"
+        style={{ paddingBottom: "max(0.35rem, env(safe-area-inset-bottom, 0.35rem))" }}
+        aria-label="Navegación Móvil"
+      >
+        <div className="grid grid-cols-5 px-1.5 pt-1.5 gap-1">
+          {(
+            [
+              ["home", "/inicio", "Inicio", Home, false],
+              ["resultados", "/resultados?liga=lvbp", "Resultados", Activity, false],
+              ["futbol", "/futbol", "Fútbol", Trophy, true],
+              ["posiciones", "/posiciones?liga=lvbp", "Posiciones", BarChart3, false],
+              ["calendario", "/calendario?liga=lvbp", "Calendario", Calendar, false],
+            ] as const
+          ).map(([key, href, label, Icon, active]) => (
+            <Link
+              key={key}
+              href={href}
+              className={`relative flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl text-[10px] font-black transition cursor-pointer select-none ${
+                active ? "text-slate-950 bg-slate-100" : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              <Icon
+                className={`w-4 h-4 ${
+                  active ? "text-amber-600 stroke-[2.5]" : "text-slate-400"
+                }`}
+              />
+              <span className="leading-none truncate max-w-full">{label}</span>
+            </Link>
+          ))}
+        </div>
+      </nav>
+
+      {/* FOOTER (Flush to Bottom · Zero Empty Gap Above or Below on Mobile & Desktop) */}
+      <footer className="mt-auto border-t border-slate-200 bg-white pt-6 pb-[calc(5.25rem+env(safe-area-inset-bottom,0px))] md:pb-6">
+        <div className="max-w-7xl mx-auto px-4 space-y-4 text-xs text-slate-500">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg dark-pill flex items-center justify-center p-1 shrink-0 text-[9px] font-black">
+                EJ
+              </div>
+              <div className="min-w-0">
+                <span className="font-black text-slate-900">EN JUEGO ONLINE</span>
+                <span className="text-slate-500">
+                  {" "}— Marcadores en vivo, jugada a jugada, transmisiones de TV y estadísticas.
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 font-bold text-slate-600">
+              <Link href="/inicio" className="hover:text-slate-950">
+                Inicio
+              </Link>
+              <Link href="/resultados" className="hover:text-slate-950">
+                Resultados
+              </Link>
+              <Link href="/futbol" className="hover:text-slate-950">
+                Fútbol Europeo
+              </Link>
+              <Link href="/calendario" className="hover:text-slate-950">
+                Calendario
+              </Link>
+              <Link href="/posiciones" className="hover:text-slate-950">
+                Posiciones
+              </Link>
+              <Link href="/noticias" className="hover:text-slate-950">
+                Noticias
+              </Link>
+              <Link href="/quienes-somos" className="hover:text-slate-950">
+                Quiénes somos
+              </Link>
+              <Link href="/contacto" className="hover:text-slate-950">
+                Contacto
+              </Link>
+              <Link href="/privacidad" className="hover:text-slate-950">
+                Privacidad
+              </Link>
+            </div>
+          </div>
+
+          <div className="pt-3.5 border-t border-slate-100 text-[11px] text-slate-400 leading-relaxed">
+            <strong className="text-slate-600 font-bold">Aviso Legal y Descargo de Responsabilidad: </strong>
+            EnJuego es un portal deportivo independiente desarrollado con fines informativos y periodísticos para los aficionados del béisbol y el fútbol. No está afiliado, respaldado, autorizado ni patrocinado de manera alguna por la LVBP, LIDOM, LMP, MLB, UEFA ni por ninguno de sus clubes u organizaciones asociadas.
+          </div>
+        </div>
+      </footer>
 
       {/* Auth Modal Integration */}
       <AuthModal

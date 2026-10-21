@@ -50,31 +50,31 @@ export function HomeSoccerShowcase() {
   return (
     <section
       id="bloque-futbol-europeo"
-      className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-2xs space-y-4"
+      className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-5 shadow-2xs space-y-3.5 sm:space-y-4"
     >
       {/* Editorial Section Header */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3.5 border-b border-slate-100">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200/90 p-1.5 flex items-center justify-center shrink-0">
+      <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-50 border border-slate-200/90 p-1.5 flex items-center justify-center shrink-0">
             <img
               src={currentLeague.logo}
               alt={currentLeague.name}
               className="w-full h-full object-contain"
             />
           </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 truncate">
                 Fútbol Europeo · {currentLeague.country}
               </span>
               {liveCount > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 border border-red-200 text-red-700 text-[10px] font-black uppercase">
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full bg-red-50 border border-red-200 text-red-700 text-[9px] font-black uppercase shrink-0">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
-                  <span>{liveCount} en vivo</span>
+                  <span>{liveCount}</span>
                 </span>
               )}
             </div>
-            <h2 className="text-base sm:text-lg font-black text-slate-950 leading-tight truncate">
+            <h2 className="text-sm sm:text-lg font-black text-slate-950 leading-tight truncate">
               {currentLeague.name}
             </h2>
           </div>
@@ -83,16 +83,16 @@ export function HomeSoccerShowcase() {
         <div className="flex items-center gap-1.5 shrink-0">
           <Link
             href={`/futbol?liga=${selectedLeague}#tabla-clasificacion`}
-            className="dark-pill inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black transition cursor-pointer shadow-2xs"
+            className="dark-pill inline-flex items-center gap-1 rounded-xl px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-black transition cursor-pointer shadow-2xs"
           >
-            <Trophy className="w-3.5 h-3.5" />
+            <Trophy className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             <span>Tabla</span>
           </Link>
           <Link
             href={`/futbol?liga=${selectedLeague}`}
-            className="inline-flex items-center gap-1 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 px-3 py-1.5 text-xs font-extrabold transition cursor-pointer"
+            className="inline-flex items-center gap-1 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-extrabold transition cursor-pointer"
           >
-            <span>Ver todos ›</span>
+            <span>Todos ›</span>
           </Link>
         </div>
       </div>

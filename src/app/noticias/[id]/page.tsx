@@ -28,22 +28,34 @@ export async function generateMetadata({
   const { id } = await params;
   const { recap } = await loadRecap(id);
   if (!recap) return { title: "Noticia · En Juego" };
-  const shareTitle = `🎥 Highlights: ${recap.headline} · En Juego`;
-  const shareDesc = `Revive en video las mejores jugadas de ${recap.away.nick} vs ${recap.home.nick}. ${recap.paragraphs[0]}`;
-  const teamLogo = recap.winnerSide === "away" ? recap.away.logo : recap.home.logo;
+  const shareTitle = `${recap.headline} · En Juego`;
+  const shareDesc = `${recap.scoreLine}. ${recap.paragraphs[0]}`;
+  const awayCode = (recap.away.code || "").toUpperCase();
+  const homeCode = (recap.home.code || "").toUpperCase();
+  const ogImageUrl =
+    awayCode && homeCode
+      ? `https://enjuego.online/og/matchups/${awayCode}-${homeCode}.png`
+      : "https://enjuego.online/og/lvbp-default.png";
 
   return {
     title: shareTitle,
     description: shareDesc,
+    alternates: {
+      canonical: `https://enjuego.online/noticias/${id}`,
+    },
     openGraph: {
       title: shareTitle,
       description: shareDesc,
+      url: `https://enjuego.online/noticias/${id}`,
+      siteName: "En Juego · Béisbol Venezolano",
+      type: "article",
       images: [
         {
-          url: teamLogo,
-          width: 512,
-          height: 512,
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
           alt: recap.headline,
+          type: "image/png",
         },
       ],
     },
@@ -51,6 +63,7 @@ export async function generateMetadata({
       card: "summary_large_image",
       title: shareTitle,
       description: shareDesc,
+      images: [ogImageUrl],
     },
   };
 }

@@ -1128,83 +1128,25 @@ export function EnJuegoPortal({
   const dayFormatted = formatCompactDay(activeDate);
   const jornadaDayFormatted = formatCompactDay(activeJornadaDate);
 
-  // Real-time visitor presence heartbeat for /admin monitor
+  // Sync user profile state for global visitor analytics
   useEffect(() => {
     if (typeof window === "undefined") return;
-
     try {
-      const search = window.location.search;
-      if (search) {
-        const params = new URLSearchParams(search);
-        if (params.get("admin") === "1") {
-          localStorage.setItem("es_admin", "true");
-        }
-      }
-      if (localStorage.getItem("es_admin") === "true") {
-        return; // Exclude admin from visitor and heartbeat analytics
+      if (currentUser?.id) {
+        localStorage.setItem(
+          "enjuego_user",
+          JSON.stringify({
+            id: currentUser.id,
+            name: currentUser.name,
+            handle: currentUser.handle,
+            favoriteTeam: currentUser.favoriteTeam || favoriteTeamCode || selectedTeamCode,
+          })
+        );
       }
     } catch {
-      // ignore storage errors
+      // ignore
     }
-
-    let sessionId = window.sessionStorage.getItem("enjuego_live_sid");
-    if (!sessionId) {
-      sessionId = `sid_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      window.sessionStorage.setItem("enjuego_live_sid", sessionId);
-    }
-
-    const getSectionLabel = () => {
-      if (section === "home") return "Inicio";
-      if (section === "resultados") return "Resultados / Pizarra";
-      if (section === "juego") return `Gameday #${selectedGameId || ""}`;
-      if (section === "calendario") return "Calendario";
-      if (section === "posiciones") return "Tabla de Posiciones";
-      if (section === "lideres") return "Líderes";
-      if (section === "equipos") return `Roster · ${selectedTeamCode}`;
-      return "Inicio";
-    };
-
-    const sendHeartbeat = async () => {
-      const { getHeartbeatClientPayload } = await import("@/lib/client-device-hints");
-      const client = await getHeartbeatClientPayload();
-
-      fetch("/api/banners", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "heartbeat",
-          sessionId,
-          userId: currentUser?.id,
-          userName: currentUser?.name || "Visitante",
-          userHandle: currentUser?.handle,
-          favoriteTeam: currentUser?.favoriteTeam || favoriteTeamCode || selectedTeamCode,
-          isRegistered: Boolean(currentUser?.id),
-          path: window.location.pathname + window.location.search,
-          sectionLabel: getSectionLabel(),
-          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          client,
-        }),
-      }).catch(() => {});
-    };
-
-    const hbTimeout = setTimeout(() => {
-      void import("@/lib/client-device-hints").then((m) => m.warmExtendedDeviceHints());
-      sendHeartbeat();
-    }, 1500);
-    const interval = setInterval(() => {
-      if (
-        typeof document !== "undefined" &&
-        document.visibilityState === "visible" &&
-        !document.hidden
-      ) {
-        sendHeartbeat();
-      }
-    }, 150_000);
-    return () => {
-      clearTimeout(hbTimeout);
-      clearInterval(interval);
-    };
-  }, [section, selectedGameId, selectedTeamCode, currentUser, favoriteTeamCode]);
+  }, [currentUser, favoriteTeamCode, selectedTeamCode]);
 
   // Filtered calendar games
   const filteredCalendarGames = useMemo(() => {

@@ -137,13 +137,23 @@ export async function getAdminKv(): Promise<{
 
       // 3. Fallback: Native SQLite WAL Store (VPS Node.js mode)
       if (!r2Bucket && !rawKv) {
+        const isDynamicTrafficKey =
+          key.startsWith("admin:presence") ||
+          key.startsWith("admin:traffic") ||
+          key.startsWith("presence:");
+
+        // If it's a dynamic presence/traffic key, bypass memoryCache so all PM2 cluster processes stay synchronized
+        if (!isDynamicTrafficKey && memEntry && now < memEntry.expiresAt) {
+          return memEntry.value;
+        }
+
         try {
           const { sqliteGet } = await import("@/lib/sqlite-store");
           const val = sqliteGet(key);
           if (val !== null && val !== undefined) {
             memoryCache.set(key, {
               value: val,
-              expiresAt: now + cacheTtlMs,
+              expiresAt: now + (isDynamicTrafficKey ? 500 : cacheTtlMs),
             });
             return val;
           }
@@ -194,7 +204,9 @@ export async function getAdminKv(): Promise<{
       }
 
       // Persist to Native SQLite WAL Store on VPS Node.js
-      if (!r2Bucket && !rawKv && isCritical) {
+      // In VPS mode, SQLite is the primary persistent store. Always save all writes
+      // (presence, traffic, audience, geo, campaigns) so PM2 workers and reloads never lose data.
+      if (!r2Bucket && !rawKv) {
         try {
           const { sqlitePut } = await import("@/lib/sqlite-store");
           sqlitePut(key, value);
@@ -832,7 +844,7 @@ export async function recordPresenceHeartbeat(
 
   await kv.put(PRESENCE_KEY, JSON.stringify(sessions), {
     expirationTtl: 3600,
-    persistToKv: false,
+    persistToKv: true,
   });
 
   const dateKey = getTodayCaracasKey();
@@ -874,7 +886,8 @@ export async function recordPresenceHeartbeat(
   if (!stats.countryHits) stats.countryHits = {};
   if (!stats.regionHits) stats.regionHits = {};
 
-  if (!stats.uniqueSessions.includes(input.sessionId) && stats.uniqueSessions.length < 5000) {
+  const isNewSession = !stats.uniqueSessions.includes(input.sessionId);
+  if (isNewSession && stats.uniqueSessions.length < 5000) {
     stats.uniqueSessions.push(input.sessionId);
     stats.osHits[resolvedOs] = (stats.osHits[resolvedOs] || 0) + 1;
     if (input.countryName) {
@@ -885,7 +898,16 @@ export async function recordPresenceHeartbeat(
       const rKey = input.countryCode === "VE" ? `🇻🇪 ${input.region}` : `${input.flag || "🌐"} ${input.region}`;
       stats.regionHits[rKey] = (stats.regionHits[rKey] || 0) + 1;
     }
+  } else if (input.countryName && Object.keys(stats.countryHits).length === 0) {
+    // Ensure country is seeded even if session was already counted
+    const cKey = `${input.flag || "🌐"} ${input.countryName}`;
+    stats.countryHits[cKey] = (stats.countryHits[cKey] || 0) + 1;
+    if (input.region) {
+      const rKey = input.countryCode === "VE" ? `🇻🇪 ${input.region}` : `${input.flag || "🌐"} ${input.region}`;
+      stats.regionHits[rKey] = (stats.regionHits[rKey] || 0) + 1;
+    }
   }
+
   if (input.device === "mobile") {
     if (!stats.mobileSessions.includes(input.sessionId) && stats.mobileSessions.length < 5000) {
       stats.mobileSessions.push(input.sessionId);
@@ -902,7 +924,7 @@ export async function recordPresenceHeartbeat(
 
   await kv.put(statsKey, JSON.stringify(stats), {
     expirationTtl: 86400 * 30,
-    persistToKv: false,
+    persistToKv: true,
   });
 
   // Update rolling traffic summary index (retaining up to 120 days)
@@ -939,7 +961,7 @@ export async function recordPresenceHeartbeat(
     }
     await kv.put(TRAFFIC_HISTORY_KEY, JSON.stringify(histMap), {
       expirationTtl: 86400 * 180,
-      persistToKv: false,
+      persistToKv: true,
     });
 
     // Update monthly traffic aggregation
@@ -1090,9 +1112,15 @@ export async function getLivePresenceSummary(): Promise<{
       osHits = stats.osHits || {};
       if (stats.countryHits && Object.keys(stats.countryHits).length > 0) {
         todayCountryHits = { ...stats.countryHits };
+        for (const [k, v] of Object.entries(liveCountryHits)) {
+          if (!todayCountryHits[k]) todayCountryHits[k] = v;
+        }
       }
       if (stats.regionHits && Object.keys(stats.regionHits).length > 0) {
         todayRegionHits = { ...stats.regionHits };
+        for (const [k, v] of Object.entries(liveRegionHits)) {
+          if (!todayRegionHits[k]) todayRegionHits[k] = v;
+        }
       }
     } catch {
       // ignore

@@ -143,9 +143,64 @@ export function normalizeVenezuelaState(regionRaw: string): string {
   return regionRaw;
 }
 
+let mmdbAvailable: boolean | null = null;
+const ipGeoCache = new Map<string, { country?: string; region?: string; city?: string }>();
+
+function lookupLocalMmdb(ip: string): { country?: string; region?: string; city?: string } | null {
+  if (
+    !ip ||
+    ip === "127.0.0.1" ||
+    ip === "::1" ||
+    ip.startsWith("192.168.") ||
+    ip.startsWith("10.") ||
+    ip.startsWith("172.16.")
+  ) {
+    return null;
+  }
+  if (ipGeoCache.has(ip)) {
+    return ipGeoCache.get(ip)!;
+  }
+  if (ipGeoCache.size > 5000) {
+    ipGeoCache.clear();
+  }
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fs = require("node:fs");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { execFileSync } = require("node:child_process");
+    const dbPath = "/usr/share/GeoIP/GeoLite2-City.mmdb";
+
+    if (mmdbAvailable === null) {
+      mmdbAvailable = fs.existsSync(dbPath);
+    }
+    if (!mmdbAvailable) return null;
+
+    const out = execFileSync("mmdblookup", ["--file", dbPath, "--ip", ip], {
+      encoding: "utf8",
+      timeout: 1000,
+    });
+
+    const countryMatch = out.match(/"country":[\s\S]*?"iso_code":\s*\n\s*"([A-Z]{2})"/);
+    const country = countryMatch?.[1];
+
+    const cityMatch = out.match(/"city":[\s\S]*?"names":[\s\S]*?"(?:es|en)":\s*\n\s*"([^"]+)"/);
+    const city = cityMatch?.[1];
+
+    const subMatch = out.match(/"subdivisions":[\s\S]*?"names":[\s\S]*?"(?:es|en)":\s*\n\s*"([^"]+)"/);
+    const region = subMatch?.[1];
+
+    const res = { country, region, city };
+    ipGeoCache.set(ip, res);
+    return res;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Resolves visitor geolocation (Country, State/Region, City)
- * using Cloudflare native request.cf and Cloudflare edge headers.
+ * using Cloudflare native request.cf, Cloudflare edge headers and local MMDB database.
  */
 export function resolveVisitorGeo(
   request: Request,
@@ -154,11 +209,22 @@ export function resolveVisitorGeo(
   const reqAny = request as any;
   const cf = reqAny.cf || {};
 
+  // 0. Extract client IP
+  const clientIp = (
+    request.headers.get("cf-connecting-ip") ||
+    request.headers.get("x-real-ip") ||
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    ""
+  ).trim();
+
+  const mmdbGeo = clientIp ? lookupLocalMmdb(clientIp) : null;
+
   // 1. Resolve Country
   let countryCode = (
     cf.country ||
     request.headers.get("cf-ipcountry") ||
     request.headers.get("x-country") ||
+    mmdbGeo?.country ||
     ""
   ).toUpperCase().trim();
 
@@ -186,6 +252,7 @@ export function resolveVisitorGeo(
     cf.regionCode ||
     request.headers.get("cf-region") ||
     request.headers.get("cf-region-code") ||
+    mmdbGeo?.region ||
     ""
   ).trim();
 
@@ -193,6 +260,7 @@ export function resolveVisitorGeo(
   const city = (
     cf.city ||
     request.headers.get("cf-ipcity") ||
+    mmdbGeo?.city ||
     ""
   ).trim();
 

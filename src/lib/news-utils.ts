@@ -35,9 +35,9 @@ export function cleanArticleTitle(rawTitle: string): string {
   t = t.replace(/\s+-\s+-\s+/g, " - ");
   t = t.replace(/\s+/g, " ");
 
-  const m = t.match(/^Resumen\s*-\s*(.+?)\s*-\s*(\d{1,2}\/\d{1,2}\/\d{4})/i);
+  const m = t.match(/^Resumen:?\s*(?:-\s*)?(.+?)\s*(?:-|–|\(|\|)\s*(\d{1,2}\/\d{1,2}\/\d{4})\)?/i);
   if (m) {
-    t = `Resumen: ${m[1]} (${m[2]})`;
+    t = `Resumen: ${m[1].trim()} (${m[2].trim()})`;
   }
   return t.charAt(0).toUpperCase() + t.slice(1);
 }

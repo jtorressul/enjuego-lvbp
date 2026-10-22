@@ -82,9 +82,9 @@ export const metadata: Metadata = {
     siteName: "En Juego · Resultados en Vivo",
     images: [
       {
-        url: "/logo.png",
-        width: 560,
-        height: 158,
+        url: "https://enjuego.online/og/lvbp-default.png",
+        width: 1200,
+        height: 630,
         alt: "En Juego · Resultados en Vivo",
       },
     ],
@@ -96,7 +96,7 @@ export const metadata: Metadata = {
     title: "Resultados en Vivo Hoy · Béisbol LVBP, MLB y Fútbol | En Juego",
     description:
       "Marcadores y resultados en vivo jugada a jugada de la LVBP, MLB y Fútbol Europeo, calendario de TV y tabla de posiciones.",
-    images: ["/logo.png"],
+    images: ["https://enjuego.online/og/lvbp-default.png"],
   },
 };
 

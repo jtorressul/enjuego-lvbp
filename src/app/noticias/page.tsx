@@ -28,6 +28,20 @@ export const metadata: Metadata = {
     title: "Noticias y Highlights LVBP · Resúmenes en Video",
     description: "Revive en video las mejores jugadas de cada partido de la LVBP.",
     url: "https://enjuego.online/noticias",
+    images: [
+      {
+        url: "https://enjuego.online/og/lvbp-default.png",
+        width: 1200,
+        height: 630,
+        alt: "Noticias y Highlights LVBP",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Noticias y Highlights LVBP · Resúmenes en Video",
+    description: "Revive en video las mejores jugadas de cada partido de la LVBP.",
+    images: ["https://enjuego.online/og/lvbp-default.png"],
   },
 };
 

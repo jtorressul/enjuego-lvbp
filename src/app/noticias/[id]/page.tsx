@@ -75,10 +75,28 @@ export async function generateMetadata({
   const shareDesc = `${recap.scoreLine}. ${recap.paragraphs[0]}`;
   const awayCode = (recap.away.code || "").toUpperCase();
   const homeCode = (recap.home.code || "").toUpperCase();
-  const ogImageUrl =
+
+  // Check if we have the real game action highlight thumbnail from YouTube
+  let ogImageUrl =
     awayCode && homeCode
       ? `https://enjuego.online/og/matchups/${awayCode}-${homeCode}.png`
       : "https://enjuego.online/og/lvbp-default.png";
+
+  try {
+    const highlight = await findGameHighlight({
+      id: recap.id,
+      date: recap.date,
+      awayName: recap.away.name,
+      homeName: recap.home.name,
+      awayNick: recap.away.nick,
+      homeNick: recap.home.nick,
+    });
+    if (highlight?.videoId) {
+      ogImageUrl = `https://i.ytimg.com/vi/${highlight.videoId}/maxresdefault.jpg`;
+    }
+  } catch {
+    // Fall back to matchup graphic
+  }
 
   return {
     title: shareTitle,

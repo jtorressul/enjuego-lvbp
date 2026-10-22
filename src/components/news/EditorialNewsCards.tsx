@@ -9,35 +9,30 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export function EditorialHeroCard({ article }: { article: EditorialArticle }) {
-  const badgeClass =
-    CATEGORY_COLORS[article.category] || "bg-slate-100 text-slate-700 border-slate-200";
-
   return (
     <article className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xs transition hover:border-amber-300">
       <Link href={`/noticias/${article.id}`} className="block">
-        <div className="relative aspect-[16/9] w-full overflow-hidden bg-slate-950 sm:aspect-[21/9]">
+        <div className="keep-dark relative aspect-[16/9] w-full overflow-hidden bg-slate-950 sm:aspect-[21/9]">
           <img
             src={article.imageUrl}
             alt={article.title}
             className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
             loading="eager"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-7 text-white">
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/60 to-transparent pointer-events-none" />
+          <div className="keep-dark absolute bottom-0 left-0 right-0 p-5 sm:p-7 text-white z-10">
             <div className="flex items-center gap-2">
-              <span
-                className={`inline-block rounded-lg border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${badgeClass}`}
-              >
+              <span className="inline-block rounded-lg px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider bg-amber-400 text-slate-950">
                 {article.category}
               </span>
-              <span className="text-xs text-slate-300">
+              <span className="text-xs font-bold text-slate-200 drop-shadow-xs">
                 {article.author} · {new Date(article.publishedAt).toLocaleDateString("es-VE")}
               </span>
             </div>
-            <h2 className="mt-2 text-xl sm:text-3xl font-black leading-tight text-white group-hover:text-amber-300 transition">
+            <h2 className="mt-2 text-xl sm:text-3xl font-black leading-tight text-white drop-shadow-md group-hover:text-amber-300 transition" style={{ color: '#ffffff' }}>
               {article.title}
             </h2>
-            <p className="mt-2 text-xs sm:text-sm text-slate-300 line-clamp-2 max-w-3xl">
+            <p className="mt-2 text-xs sm:text-sm text-slate-200 line-clamp-2 max-w-3xl drop-shadow-xs" style={{ color: '#e2e8f0' }}>
               {article.excerpt}
             </p>
           </div>

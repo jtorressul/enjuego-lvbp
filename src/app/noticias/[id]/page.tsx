@@ -76,11 +76,14 @@ export async function generateMetadata({
   const awayCode = (recap.away.code || "").toUpperCase();
   const homeCode = (recap.home.code || "").toUpperCase();
 
+  const LVBP_CODES = new Set(["ANZ", "ARA", "CAR", "LAG", "LAR", "MAG", "MAR", "ZUL"]);
+  const hasStaticMatchup =
+    Boolean(awayCode && homeCode && LVBP_CODES.has(awayCode) && LVBP_CODES.has(homeCode));
+
   // Check if we have the real game action highlight thumbnail from YouTube
-  let ogImageUrl =
-    awayCode && homeCode
-      ? `https://enjuego.online/og/matchups/${awayCode}-${homeCode}.png`
-      : "https://enjuego.online/og/lvbp-default.png";
+  let ogImageUrl = hasStaticMatchup
+    ? `https://enjuego.online/og/matchups/${awayCode}-${homeCode}.png`
+    : "https://enjuego.online/og/lvbp-default.png";
 
   try {
     const highlight = await findGameHighlight({

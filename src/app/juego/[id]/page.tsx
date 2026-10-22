@@ -51,11 +51,14 @@ export async function generateMetadata({
           ? `Marcador final: ${awayName} ${data.awayScore} - ${data.homeScore} ${homeName} en ${data.venue || "el estadio"}. Box score completo, estadísticas de bateo y pitcheo, decisiones y resumen del partido.`
           : `Partido oficial: ${awayName} vs ${homeName} a las ${data.time || "7:00 PM"} (VET) en ${data.venue || "Venezuela"}. Transmisión: ${tvList}. Alineaciones oficiales y pizarra en vivo.`;
 
-      // 1200x630 Matchup Open Graph Image
-      const ogImageUrl =
-        awayCode && homeCode
-          ? `https://enjuego.online/og/matchups/${awayCode}-${homeCode}.png`
-          : "https://enjuego.online/og/lvbp-default.png";
+      // 1200x630 Matchup Open Graph Image (Only existing LVBP matchups have static graphics)
+      const LVBP_CODES = new Set(["ANZ", "ARA", "CAR", "LAG", "LAR", "MAG", "MAR", "ZUL"]);
+      const hasStaticMatchup =
+        Boolean(awayCode && homeCode && LVBP_CODES.has(awayCode) && LVBP_CODES.has(homeCode));
+
+      const ogImageUrl = hasStaticMatchup
+        ? `https://enjuego.online/og/matchups/${awayCode}-${homeCode}.png`
+        : "https://enjuego.online/og/lvbp-default.png";
 
       return {
         title,

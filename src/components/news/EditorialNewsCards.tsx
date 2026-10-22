@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { EditorialArticle } from "@/lib/sqlite-store";
+import { cleanArticleTitle, decodeHtmlEntities } from "@/lib/news-utils";
 
 const CATEGORY_COLORS: Record<string, string> = {
   Movimientos: "bg-rose-500/10 text-rose-600 border-rose-200",
@@ -9,13 +10,16 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export function EditorialHeroCard({ article }: { article: EditorialArticle }) {
+  const title = cleanArticleTitle(article.title);
+  const excerpt = decodeHtmlEntities(article.excerpt);
+
   return (
     <article className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xs transition hover:border-amber-300">
       <Link href={`/noticias/${article.id}`} className="block">
         <div className="keep-dark relative aspect-[16/9] w-full overflow-hidden bg-slate-950 sm:aspect-[21/9]">
           <img
             src={article.imageUrl}
-            alt={article.title}
+            alt={title}
             className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
             loading="eager"
           />
@@ -30,10 +34,10 @@ export function EditorialHeroCard({ article }: { article: EditorialArticle }) {
               </span>
             </div>
             <h2 className="mt-2 text-xl sm:text-3xl font-black leading-tight text-white drop-shadow-md group-hover:text-amber-300 transition" style={{ color: '#ffffff' }}>
-              {article.title}
+              {title}
             </h2>
             <p className="mt-2 text-xs sm:text-sm text-slate-200 line-clamp-2 max-w-3xl drop-shadow-xs" style={{ color: '#e2e8f0' }}>
-              {article.excerpt}
+              {excerpt}
             </p>
           </div>
         </div>
@@ -45,6 +49,8 @@ export function EditorialHeroCard({ article }: { article: EditorialArticle }) {
 export function EditorialGridCard({ article }: { article: EditorialArticle }) {
   const badgeClass =
     CATEGORY_COLORS[article.category] || "bg-slate-100 text-slate-700 border-slate-200";
+  const title = cleanArticleTitle(article.title);
+  const excerpt = decodeHtmlEntities(article.excerpt);
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs transition hover:border-amber-300">
@@ -52,7 +58,7 @@ export function EditorialGridCard({ article }: { article: EditorialArticle }) {
         <div className="relative aspect-[16/9] w-full overflow-hidden bg-slate-100">
           <img
             src={article.imageUrl}
-            alt={article.title}
+            alt={title}
             className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
             loading="lazy"
           />
@@ -73,10 +79,10 @@ export function EditorialGridCard({ article }: { article: EditorialArticle }) {
               })}
             </p>
             <h3 className="mt-1 text-sm font-black leading-snug text-slate-950 group-hover:text-amber-600 transition">
-              {article.title}
+              {title}
             </h3>
             <p className="mt-1.5 text-xs text-slate-500 line-clamp-2">
-              {article.excerpt}
+              {excerpt}
             </p>
           </div>
           <p className="mt-4 text-[11px] font-extrabold text-amber-700 group-hover:underline">
@@ -95,7 +101,8 @@ export function EditorialArticleView({
   article: EditorialArticle;
   related?: EditorialArticle[];
 }) {
-  const shareText = encodeURIComponent(`${article.title} 👇`);
+  const title = cleanArticleTitle(article.title);
+  const shareText = encodeURIComponent(`${title} 👇`);
   const shareUrl = encodeURIComponent(`https://enjuego.online/noticias/${article.id}`);
   const twitterShareLink = `https://twitter.com/intent/tweet?text=${shareText}&url=${shareUrl}&hashtags=LVBP,BeisbolVenezolano`;
 
@@ -115,7 +122,7 @@ export function EditorialArticleView({
 
       <header className="space-y-3">
         <h1 className="text-2xl sm:text-4xl font-black leading-tight text-slate-950">
-          {article.title}
+          {title}
         </h1>
         <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
           <span className="font-extrabold text-slate-800">{article.author}</span>

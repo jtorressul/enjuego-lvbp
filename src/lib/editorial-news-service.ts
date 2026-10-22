@@ -4,9 +4,13 @@ import {
   sqliteGetArticles,
   sqliteSaveArticle,
 } from "./sqlite-store";
+import { decodeHtmlEntities, cleanArticleTitle } from "./news-utils";
+
+export { decodeHtmlEntities, cleanArticleTitle };
 
 function slugify(text: string): string {
-  return text
+  return decodeHtmlEntities(text)
+    .replace(/\|/g, "-")
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -58,17 +62,12 @@ function detectCategory(title: string, content: string): string {
 }
 
 function cleanHtmlText(html: string): string {
-  return html
+  const stripped = html
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
     .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
     .replace(/<h2[^>]*>.*?<\/h2>/gi, "") // strip sponsor banners inside h2
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&#8211;/g, "–")
-    .replace(/&#8217;/g, "'")
-    .replace(/&#8220;/g, "«")
-    .replace(/&#8221;/g, "»")
-    .replace(/&#8230;/g, "...")
+    .replace(/<[^>]+>/g, " ");
+  return decodeHtmlEntities(stripped)
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -87,17 +86,11 @@ function rewriteJournalistic(
     .map((s) => s.trim())
     .filter((s) => s.length > 20 && !s.toLowerCase().includes("suscribete") && !s.toLowerCase().includes("beisbolplay"));
 
-  const lead = sentences[0] || rawTitle;
+  const polishedTitle = cleanArticleTitle(rawTitle);
+  const lead = sentences[0] || polishedTitle;
   const second = sentences[1] || "";
   const third = sentences.slice(2, 4).join(" ") || "";
   const remaining = sentences.slice(4).join(" ") || "";
-
-  // Title polish
-  let polishedTitle = rawTitle
-    .replace(/^de esta manera\s+/i, "")
-    .replace(/^lvbp:\s*/i, "")
-    .replace(/^noticias:\s*/i, "");
-  polishedTitle = polishedTitle.charAt(0).toUpperCase() + polishedTitle.slice(1);
 
   // Paragraph 1: Headline event and direct context
   const p1 = `${lead} ${second ? second : "El acontecimiento marca la pauta en el desarrollo del campeonato invernal venezolano."}`;
@@ -117,7 +110,7 @@ function rewriteJournalistic(
   // Paragraph 4: Closing context
   const p4 = `La temporada 2026-2027 de la LVBP continúa a ritmo intenso en todos los estadios del país. Los aficionados pueden seguir de cerca la cobertura en vivo, la tabla de posiciones actualizada y los resúmenes de cada juego a través de En Juego.`;
 
-  const excerpt = `${lead.slice(0, 160)}...`;
+  const excerpt = `${decodeHtmlEntities(lead).slice(0, 160)}...`;
 
   return {
     title: polishedTitle,
@@ -162,7 +155,8 @@ export async function syncEditorialNews(maxItems = 10): Promise<{ added: number 
         continue;
       }
 
-      const slug = slugify(rawTitle);
+      const cleanTitle = cleanArticleTitle(rawTitle);
+      const slug = slugify(cleanTitle);
       if (!slug) continue;
 
       // Check if already in DB

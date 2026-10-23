@@ -47,6 +47,14 @@ export function StreamingTvGuide({ sport = "baseball", leagueId = "lvbp" }: Stre
           a: "Todos los equipos cuentan con circuitos radiales oficiales gratuitos que transmiten en vivo por radio FM/AM y streaming online: Leones del Caracas (Unión Radio 90.3 FM), Navegantes del Magallanes (La Mega 107.3 FM / Unión Radio), Tiburones de La Guaira (Onda 107.9 FM), Cardenales de Lara (Fiesta 89.1 FM), Águilas del Zulia (Urbe 96.3 FM), Tigres de Aragua (Aragüeña 99.5 FM), Caribes de Anzoátegui (Éxitos 95.3 FM) y Bravos de Margarita (Caribe 93.5 FM).",
         },
         {
+          q: "¿A qué hora se juegan los partidos de la LVBP en España e Italia?",
+          a: "En España e Italia (zona horaria CET/CEST) hay 6 horas de diferencia respecto al horario de Venezuela (5 horas en las Islas Canarias). Los juegos habituales de las 7:00 PM de Caracas inician a la 1:00 AM (madrugada) en Madrid, Barcelona, Roma y Milán. Los partidos diurnos de las 4:00 PM o 5:00 PM VET inician a las 10:00 PM o 11:00 PM en Europa. En EnJuego.online puedes seguir la pizarra minuto a minuto y consultar los resultados finales y boxscores completos de ayer al despertar.",
+        },
+        {
+          q: "¿Dónde ver o escuchar la LVBP en vivo desde España, Italia y el exterior?",
+          a: "Para la comunidad venezolana en España, Italia y el resto de Europa, la transmisión en streaming oficial está disponible a través de BeisbolPlay con cobertura internacional. Además, los circuitos radiales oficiales de cada equipo (Unión Radio 90.3 FM para Caracas, La Mega 107.3 FM para Magallanes, Onda para Tiburones, Fiesta para Cardenales) transmiten gratis por internet sin bloqueo geográfico. En EnJuego.online sigues la pizarra interactiva jugada a jugada gratis.",
+        },
+        {
           q: "¿Dónde ver los juegos de Grandes Ligas (MLB) hoy?",
           a: "En Venezuela y Latinoamérica, la MLB (Grandes Ligas) se transmite a través de ESPN, Disney+, IVC y MLB.TV. En EnJuego.online sigues cada jugada, cuadrangulares y estadísticas de bateadores venezolanos en las Mayores al instante.",
         },
@@ -159,6 +167,18 @@ export function StreamingTvGuide({ sport = "baseball", leagueId = "lvbp" }: Stre
               )}
             </p>
           </div>
+
+          {!isSoccer && (
+            <div className="sm:col-span-2 rounded-xl border border-amber-200/80 bg-amber-50/50 p-3.5 sm:p-4 space-y-1.5">
+              <div className="flex items-center gap-2 text-slate-950 font-black text-xs sm:text-sm">
+                <span className="text-base">🌍</span>
+                <span>Horarios en España, Italia y Europa (CET · +6 Horas respecto a Venezuela)</span>
+              </div>
+              <p className="text-xs text-slate-700 leading-relaxed">
+                Si te encuentras en <strong>España</strong> (Madrid, Barcelona, Valencia, Tenerife) o en <strong>Italia</strong> (Roma, Milán, Nápoles), los partidos de las <strong>7:00 PM (VET)</strong> inician a la <strong>1:00 AM de la madrugada</strong> (12:00 AM en Canarias). Puedes seguir el relato y boxscore pitcheo a pitcheo en vivo durante la noche o revisar la pizarra con resultados finales completos al despertar en <strong>EnJuego.online</strong>.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Sección FAQ Interactiva (Rich Snippets) */}

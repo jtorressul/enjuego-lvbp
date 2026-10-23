@@ -196,22 +196,25 @@ export function SoccerPortal({
   const handleSelectLeague = (id: SoccerLeagueId) => {
     setActiveMatchId(null);
     switchLeague(id);
+    const targetSlug = SOCCER_LEAGUES[id]?.slug || "futve";
     startTransition(() => {
-      router.push(`/futbol?liga=${id}`);
+      router.push(`/futbol/${targetSlug}`);
     });
   };
 
   const handleOpenMatch = (matchId: string) => {
     setActiveMatchId(matchId);
+    const targetSlug = currentLeague.slug || "futve";
     startTransition(() => {
-      router.push(`/futbol?liga=${activeLeague}&partido=${matchId}`, { scroll: false });
+      router.push(`/futbol/${targetSlug}?partido=${matchId}`, { scroll: false });
     });
   };
 
   const handleCloseMatch = () => {
     setActiveMatchId(null);
+    const targetSlug = currentLeague.slug || "futve";
     startTransition(() => {
-      router.push(`/futbol?liga=${activeLeague}`, { scroll: false });
+      router.push(`/futbol/${targetSlug}`, { scroll: false });
     });
   };
 
@@ -309,11 +312,11 @@ export function SoccerPortal({
           >
             {[
               { key: "home", label: "Inicio", href: "/inicio" },
-              { key: "resultados", label: "Resultados", href: "/resultados?liga=lvbp" },
-              { key: "posiciones", label: "Posiciones", href: "/posiciones?liga=lvbp" },
-              { key: "calendario", label: "Calendario", href: "/calendario?liga=lvbp" },
-              { key: "lideres", label: "Líderes", href: "/lideres?liga=lvbp" },
-              { key: "equipos", label: "Equipos", href: "/teams?team=leones&liga=lvbp" },
+              { key: "resultados", label: "Resultados", href: "/resultados" },
+              { key: "posiciones", label: "Posiciones", href: "/posiciones" },
+              { key: "calendario", label: "Calendario", href: "/calendario" },
+              { key: "lideres", label: "Líderes", href: "/lideres" },
+              { key: "equipos", label: "Equipos", href: "/teams/leones" },
               { key: "futbol", label: "Fútbol", href: "/futbol" },
               { key: "noticias", label: "Noticias", href: "/noticias" },
             ].map((item) => {
@@ -527,10 +530,10 @@ export function SoccerPortal({
                 </div>
                 {[
                   { key: "home", label: "Inicio", sub: "Portada general y marcadores", Icon: Home, href: "/inicio", active: false },
-                  { key: "futbol", label: "Fútbol Europeo", sub: "Champions League y las 5 Grandes Ligas", Icon: Trophy, href: "/futbol", active: true },
-                  { key: "resultados", label: "Resultados Béisbol", sub: "LVBP · LIDOM · LMP · MLB", Icon: Activity, href: "/resultados?liga=lvbp", active: false },
-                  { key: "posiciones", label: "Tabla de Posiciones", sub: "Clasificación de Béisbol", Icon: Trophy, href: "/posiciones?liga=lvbp", active: false },
-                  { key: "calendario", label: "Calendario y TV", sub: "Próximos juegos y transmisión", Icon: Calendar, href: "/calendario?liga=lvbp", active: false },
+                  { key: "futbol", label: "Fútbol y FUTVE", sub: "Liga FUTVE, Champions y Ligas Europeas", Icon: Trophy, href: "/futbol", active: true },
+                  { key: "resultados", label: "Resultados Béisbol", sub: "LVBP · LIDOM · LMP · MLB", Icon: Activity, href: "/resultados", active: false },
+                  { key: "posiciones", label: "Tabla de Posiciones", sub: "Clasificación de Béisbol", Icon: Trophy, href: "/posiciones", active: false },
+                  { key: "calendario", label: "Calendario y TV", sub: "Próximos juegos y transmisión", Icon: Calendar, href: "/calendario", active: false },
                   { key: "noticias", label: "Noticias y Videos", sub: "Actualidad y resúmenes oficiales", Icon: Play, href: "/noticias", active: false },
                 ].map((item) => {
                   const ItemIcon = item.Icon;
@@ -1277,10 +1280,10 @@ export function SoccerPortal({
           {(
             [
               ["home", "/inicio", "Inicio", Home, false],
-              ["resultados", "/resultados?liga=lvbp", "Resultados", Activity, false],
+              ["resultados", "/resultados", "Resultados", Activity, false],
               ["futbol", "/futbol", "Fútbol", Trophy, true],
-              ["posiciones", "/posiciones?liga=lvbp", "Posiciones", BarChart3, false],
-              ["calendario", "/calendario?liga=lvbp", "Calendario", Calendar, false],
+              ["posiciones", "/posiciones", "Posiciones", BarChart3, false],
+              ["calendario", "/calendario", "Calendario", Calendar, false],
             ] as const
           ).map(([key, href, label, Icon, active]) => (
             <Link

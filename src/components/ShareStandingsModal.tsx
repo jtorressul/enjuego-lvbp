@@ -51,7 +51,11 @@ export function ShareStandingsModal({
       : league === "lmp"
       ? "LMP Liga ARCO Mexicana"
       : "LVBP Béisbol Venezolano";
-  const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/posiciones?liga=${league}` : "https://enjuego.online/posiciones";
+  const sharePath = league === "lvbp" ? "/posiciones" : `/posiciones/${league}`;
+  const shareUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}${sharePath}`
+      : `https://enjuego.online${sharePath}`;
   const shareCaption = `📊 ¡Así marcha la Tabla de Posiciones de la ${league.toUpperCase()}! ⚾🔥 Sigue cada jugada en vivo y transmisiones oficiales en ${shareUrl}`;
 
   // Render social card to offscreen canvas and copy to preview

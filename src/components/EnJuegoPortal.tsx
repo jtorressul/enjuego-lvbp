@@ -985,12 +985,11 @@ export function EnJuegoPortal({
 
   const openTeamPage = (code: string) => {
     const meta = anyTeamsCatalog[code] || activeTeamsCatalog[code] || LVBP_TEAMS.CAR;
-    const teamLeague = MLB_TEAMS[meta.code] ? "mlb" : "lvbp";
     setSelectedTeamCode(meta.code);
     if (pathname?.startsWith("/equipos/")) {
-      router.push(`/equipos/${meta.slug}?liga=${teamLeague}`);
+      router.push(`/equipos/${meta.slug}`);
     } else {
-      router.push(`/teams?team=${meta.slug}&liga=${teamLeague}`);
+      router.push(`/teams/${meta.slug}`);
     }
   };
 
@@ -1464,11 +1463,15 @@ export function EnJuegoPortal({
                 label: "Calendario",
                 href: activeLeague === "lvbp" ? "/calendario" : `/calendario/${activeLeague}`,
               },
-              { key: "lideres", label: "Líderes", href: `/lideres?liga=${activeLeague}` },
+              {
+                key: "lideres",
+                label: "Líderes",
+                href: activeLeague === "lvbp" ? "/lideres" : `/lideres?liga=${activeLeague}`,
+              },
               {
                 key: "equipos",
                 label: "Equipos",
-                href: `/teams?team=${activeTeamsCatalog?.[selectedTeamCode]?.slug || currentLeague.defaultTeamCode}&liga=${activeLeague || "lvbp"}`,
+                href: `/teams/${activeTeamsCatalog?.[selectedTeamCode]?.slug || currentLeague.defaultTeamCode}`,
               },
               { key: "futbol", label: "Fútbol", href: "/futbol" },
               { key: "noticias", label: "Noticias", href: "/noticias" },
@@ -1640,7 +1643,7 @@ export function EnJuegoPortal({
                           setJornadaLeague(lg.id);
                           const targetPath =
                             section === "equipos"
-                              ? `/teams?team=${
+                              ? `/teams/${
                                   lg.id === "lidom"
                                     ? "licey"
                                     : lg.id === "lmp"
@@ -1648,10 +1651,12 @@ export function EnJuegoPortal({
                                     : lg.id === "mlb"
                                     ? "yankees"
                                     : "leones"
-                                }&liga=${lg.id}`
+                                }`
+                              : section === "resultados" || section === "posiciones" || section === "calendario"
+                              ? (lg.id === "lvbp" ? `/${section}` : `/${section}/${lg.id}`)
                               : section === "home"
-                              ? `/inicio?liga=${lg.id}`
-                              : `/${section}?liga=${lg.id}`;
+                              ? (lg.id === "lvbp" ? "/inicio" : `/inicio?liga=${lg.id}`)
+                              : (lg.id === "lvbp" ? `/${section}` : `/${section}?liga=${lg.id}`);
                           if (typeof window !== "undefined") {
                             window.history.replaceState(window.history.state, "", targetPath);
                           }
@@ -1683,35 +1688,35 @@ export function EnJuegoPortal({
                       label: "Resultados en Vivo",
                       sub: `Pizarra y boxscore ${currentLeague.shortName}`,
                       Icon: Activity,
-                      href: `/resultados?liga=${activeLeague}`,
+                      href: activeLeague === "lvbp" ? "/resultados" : `/resultados/${activeLeague}`,
                     },
                     {
                       key: "posiciones",
                       label: "Tabla de Posiciones",
                       sub: `Clasificación ${currentLeague.shortName}`,
                       Icon: Trophy,
-                      href: `/posiciones?liga=${activeLeague}`,
+                      href: activeLeague === "lvbp" ? "/posiciones" : `/posiciones/${activeLeague}`,
                     },
                     {
                       key: "calendario",
                       label: "Calendario y TV",
                       sub: "Próximos juegos y transmisión",
                       Icon: Calendar,
-                      href: `/calendario?liga=${activeLeague}`,
+                      href: activeLeague === "lvbp" ? "/calendario" : `/calendario/${activeLeague}`,
                     },
                     {
                       key: "lideres",
                       label: "Líderes Estadísticos",
                       sub: "Bateo y pitcheo individual",
                       Icon: BarChart3,
-                      href: `/lideres?liga=${activeLeague}`,
+                      href: activeLeague === "lvbp" ? "/lideres" : `/lideres?liga=${activeLeague}`,
                     },
                     {
                       key: "equipos",
                       label: "Equipos y Rosters",
                       sub: `Plantillas de la ${currentLeague.shortName}`,
                       Icon: Users,
-                      href: `/teams?team=${activeTeamsCatalog?.[selectedTeamCode]?.slug || currentLeague.defaultTeamCode}&liga=${activeLeague}`,
+                      href: `/teams/${activeTeamsCatalog?.[selectedTeamCode]?.slug || currentLeague.defaultTeamCode}`,
                     },
                     {
                       key: "futbol",
@@ -1789,7 +1794,7 @@ export function EnJuegoPortal({
                   {Object.values(activeTeamsCatalog).map((team) => (
                     <Link
                       key={team.code}
-                      href={`/teams?team=${team.slug}&liga=${activeLeague}`}
+                      href={`/teams/${team.slug}`}
                       onClick={() => {
                         openTeamPage(team.code);
                         setMobileDrawerOpen(false);
@@ -1919,18 +1924,26 @@ export function EnJuegoPortal({
                         switchLeague(lg.id);
                       } else {
                         switchLeague(lg.id);
-                        const nextUrl =
-                          section === "equipos"
-                            ? `/teams?team=${
-                                lg.id === "lidom"
-                                  ? "licey"
-                                  : lg.id === "lmp"
-                                  ? "tomateros"
-                                  : lg.id === "mlb"
-                                  ? "yankees"
-                                  : "leones"
-                              }&liga=${lg.id}`
-                            : `/${section}?liga=${lg.id}`;
+                        let nextUrl: string;
+                        if (section === "equipos") {
+                          const defaultSlug =
+                            lg.id === "lidom"
+                              ? "licey"
+                              : lg.id === "lmp"
+                              ? "tomateros"
+                              : lg.id === "mlb"
+                              ? "yankees"
+                              : "leones";
+                          nextUrl = `/teams/${defaultSlug}`;
+                        } else if (
+                          section === "resultados" ||
+                          section === "posiciones" ||
+                          section === "calendario"
+                        ) {
+                          nextUrl = lg.id === "lvbp" ? `/${section}` : `/${section}/${lg.id}`;
+                        } else {
+                          nextUrl = lg.id === "lvbp" ? `/${section}` : `/${section}?liga=${lg.id}`;
+                        }
                         if (typeof window !== "undefined") {
                           window.history.replaceState(window.history.state, "", nextUrl);
                         }
@@ -2021,7 +2034,9 @@ export function EnJuegoPortal({
         {section === "juego" && (
           <GamedayView
             gameId={selectedGameId}
-            onBack={() => router.push(`/resultados?liga=${activeLeague}`)}
+            onBack={() =>
+              router.push(activeLeague === "lvbp" ? "/resultados" : `/resultados/${activeLeague}`)
+            }
             onSelectTeam={openTeamPage}
             currentUser={currentUser}
             onRequireAuth={() => {
@@ -2073,9 +2088,13 @@ export function EnJuegoPortal({
                       </button>
                     )}
                     <Link
-                      href={`/posiciones?liga=${jornadaLeague}`}
+                      href={jornadaLeague === "lvbp" ? "/posiciones" : `/posiciones/${jornadaLeague}`}
                       onClick={(e) =>
-                        handleInstantSectionNav(e, "posiciones", `/posiciones?liga=${jornadaLeague}`)
+                        handleInstantSectionNav(
+                          e,
+                          "posiciones",
+                          jornadaLeague === "lvbp" ? "/posiciones" : `/posiciones/${jornadaLeague}`
+                        )
                       }
                       className="dark-pill inline-flex items-center gap-1 rounded-xl px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-black transition cursor-pointer shadow-2xs"
                     >
@@ -2083,9 +2102,13 @@ export function EnJuegoPortal({
                       <span>Tabla</span>
                     </Link>
                     <Link
-                      href={`/calendario?liga=${jornadaLeague}`}
+                      href={jornadaLeague === "lvbp" ? "/calendario" : `/calendario/${jornadaLeague}`}
                       onClick={(e) =>
-                        handleInstantSectionNav(e, "calendario", `/calendario?liga=${jornadaLeague}`)
+                        handleInstantSectionNav(
+                          e,
+                          "calendario",
+                          jornadaLeague === "lvbp" ? "/calendario" : `/calendario/${jornadaLeague}`
+                        )
                       }
                       className="inline-flex items-center gap-1 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-extrabold transition cursor-pointer"
                     >
@@ -2210,9 +2233,13 @@ export function EnJuegoPortal({
                       <span>Compartir</span>
                     </button>
                     <Link
-                      href={`/posiciones?liga=${activeLeague}`}
+                      href={activeLeague === "lvbp" ? "/posiciones" : `/posiciones/${activeLeague}`}
                       onClick={(e) =>
-                        handleInstantSectionNav(e, "posiciones", `/posiciones?liga=${activeLeague}`)
+                        handleInstantSectionNav(
+                          e,
+                          "posiciones",
+                          activeLeague === "lvbp" ? "/posiciones" : `/posiciones/${activeLeague}`
+                        )
                       }
                       className="text-xs font-extrabold text-slate-700 hover:text-amber-600"
                     >
@@ -2283,8 +2310,8 @@ export function EnJuegoPortal({
                 <div className="pt-3 mt-2 border-t border-slate-100 flex flex-wrap items-center gap-3 text-[10px] font-bold text-slate-500">
                   {activeLeague === "mlb" ? (
                     <Link
-                      href="/posiciones?liga=mlb"
-                      onClick={(e) => handleInstantSectionNav(e, "posiciones", "/posiciones?liga=mlb")}
+                      href="/posiciones/mlb"
+                      onClick={(e) => handleInstantSectionNav(e, "posiciones", "/posiciones/mlb")}
                       className="text-slate-700 hover:text-amber-600 font-extrabold"
                     >
                       Ver las 6 divisiones AL / NL ›
@@ -2327,9 +2354,13 @@ export function EnJuegoPortal({
                     Estadísticas ({currentLeague.shortName})
                   </span>
                   <Link
-                    href={`/lideres?liga=${activeLeague}`}
+                    href={activeLeague === "lvbp" ? "/lideres" : `/lideres?liga=${activeLeague}`}
                     onClick={(e) =>
-                      handleInstantSectionNav(e, "lideres", `/lideres?liga=${activeLeague}`)
+                      handleInstantSectionNav(
+                        e,
+                        "lideres",
+                        activeLeague === "lvbp" ? "/lideres" : `/lideres?liga=${activeLeague}`
+                      )
                     }
                     className="text-xs font-extrabold text-slate-700 hover:text-amber-600"
                   >
@@ -2498,7 +2529,9 @@ export function EnJuegoPortal({
                         onClick={() => {
                           manualDateRef.current = true;
                           setSelectedDateIndex(realIdx);
-                          const nextUrl = `/resultados?liga=${activeLeague}&fecha=${d}`;
+                          const base =
+                            activeLeague === "lvbp" ? "/resultados" : `/resultados/${activeLeague}`;
+                          const nextUrl = `${base}?fecha=${d}`;
                           window.history.replaceState(window.history.state, "", nextUrl);
                         }}
                         className={`px-3 py-1.5 rounded-xl text-xs font-extrabold border transition cursor-pointer shrink-0 ${
@@ -2637,7 +2670,9 @@ export function EnJuegoPortal({
                       calendarIntentRef.current = "";
                       setUserPickedCalendarDate(false);
                       setTeamFilter("");
-                      router.replace(`/calendario?liga=${activeLeague}`, { scroll: false });
+                      const calBase =
+                        activeLeague === "lvbp" ? "/calendario" : `/calendario/${activeLeague}`;
+                      router.replace(calBase, { scroll: false });
                     }}
                     className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-extrabold border transition shrink-0 cursor-pointer ${
                       teamFilter === ""
@@ -2659,10 +2694,10 @@ export function EnJuegoPortal({
                           calendarIntentRef.current = "";
                           const next = active ? "" : t.code;
                           setTeamFilter(next);
+                          const calBase =
+                            activeLeague === "lvbp" ? "/calendario" : `/calendario/${activeLeague}`;
                           router.replace(
-                            next
-                              ? `/calendario?liga=${activeLeague}&equipo=${t.slug}`
-                              : `/calendario?liga=${activeLeague}`,
+                            next ? `${calBase}?equipo=${t.slug}` : calBase,
                             { scroll: false }
                           );
                         }}
@@ -2747,7 +2782,7 @@ export function EnJuegoPortal({
                           Visitante: {awayCount}
                         </span>
                         <Link
-                          href={`/teams?liga=${activeLeague}&team=${club.slug}`}
+                          href={`/teams/${club.slug}`}
                           className="dark-pill rounded-xl bg-slate-950 text-white px-3 py-1.5 font-extrabold hover:bg-slate-800 transition"
                         >
                           Ver Roster de {club.nick} ›
@@ -3067,7 +3102,7 @@ export function EnJuegoPortal({
 
                 <div className="flex items-center gap-2">
                   <Link
-                    href={`/lideres?liga=${activeLeague}`}
+                    href={activeLeague === "lvbp" ? "/lideres" : `/lideres?liga=${activeLeague}`}
                     className="inline-flex items-center gap-1.5 rounded-xl bg-slate-50 border border-slate-200 px-3 py-1.5 text-xs font-extrabold text-slate-800 hover:bg-slate-100 transition"
                   >
                     <Trophy className="w-3.5 h-3.5 text-amber-600" />
@@ -3514,7 +3549,7 @@ export function EnJuegoPortal({
                   })}
                 </div>
                 <Link
-                  href={`/posiciones?liga=${activeLeague}`}
+                  href={activeLeague === "lvbp" ? "/posiciones" : `/posiciones/${activeLeague}`}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-slate-50 border border-slate-200 px-3 py-1.5 text-xs font-extrabold text-slate-800 hover:bg-slate-100 transition"
                 >
                   <Trophy className="w-3.5 h-3.5 text-amber-600" />
@@ -3555,19 +3590,19 @@ export function EnJuegoPortal({
               En <strong>EnJuego.online</strong> sigues todos los{" "}
               <strong>resultados en vivo</strong> y marcadores actualizados al instante segundo a segundo.
               Consulta la pizarra en vivo de la{" "}
-              <Link href="/resultados?liga=lvbp" className="font-bold text-slate-800 hover:underline">
+              <Link href="/resultados" className="font-bold text-slate-800 hover:underline">
                 Liga Venezolana de Béisbol Profesional (LVBP)
               </Link>
               ,{" "}
-              <Link href="/resultados?liga=mlb" className="font-bold text-slate-800 hover:underline">
+              <Link href="/resultados/mlb" className="font-bold text-slate-800 hover:underline">
                 Grandes Ligas (MLB)
               </Link>
               ,{" "}
-              <Link href="/resultados?liga=lidom" className="font-bold text-slate-800 hover:underline">
+              <Link href="/resultados/lidom" className="font-bold text-slate-800 hover:underline">
                 LIDOM
               </Link>
               ,{" "}
-              <Link href="/resultados?liga=lmp" className="font-bold text-slate-800 hover:underline">
+              <Link href="/resultados/lmp" className="font-bold text-slate-800 hover:underline">
                 LMP
               </Link>{" "}
               y los resultados de{" "}

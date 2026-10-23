@@ -124,7 +124,7 @@ const jsonLd = {
       "inLanguage": "es-VE",
       "potentialAction": {
         "@type": "SearchAction",
-        "target": "https://enjuego.online/resultados?liga={search_term_string}",
+        "target": "https://enjuego.online/resultados?q={search_term_string}",
         "query-input": "required name=search_term_string"
       }
     },

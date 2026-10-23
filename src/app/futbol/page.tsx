@@ -45,12 +45,12 @@ export async function generateMetadata({
           title,
           description,
           alternates: {
-            canonical: `https://enjuego.online/futbol?liga=${leagueId}&partido=${matchId}`,
+            canonical: `https://enjuego.online/futbol/${leagueId}?partido=${matchId}`,
           },
           openGraph: {
             title,
             description,
-            url: `https://enjuego.online/futbol?liga=${leagueId}&partido=${matchId}`,
+            url: `https://enjuego.online/futbol/${leagueId}?partido=${matchId}`,
             siteName: "En Juego · Deportes en Vivo",
             type: "article",
           },

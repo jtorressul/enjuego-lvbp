@@ -82,13 +82,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  // League result & soccer competition routes
+  // League result, standings, calendar & soccer competition clean routes
   const leagueRoutes: MetadataRoute.Sitemap = [
-    ...["lvbp", "mlb", "lidom", "lmp"].map((liga) => ({
-      url: `${baseUrl}/resultados?liga=${liga}`,
+    ...["mlb", "lidom", "lmp"].map((liga) => ({
+      url: `${baseUrl}/resultados/${liga}`,
       lastModified: now,
       changeFrequency: "always" as const,
       priority: 0.95,
+    })),
+    ...["mlb", "lidom", "lmp"].map((liga) => ({
+      url: `${baseUrl}/posiciones/${liga}`,
+      lastModified: now,
+      changeFrequency: "hourly" as const,
+      priority: 0.9,
+    })),
+    ...["mlb", "lidom", "lmp"].map((liga) => ({
+      url: `${baseUrl}/calendario/${liga}`,
+      lastModified: now,
+      changeFrequency: "hourly" as const,
+      priority: 0.9,
     })),
     ...SOCCER_LEAGUES_LIST.map((lg) => ({
       url: `${baseUrl}/futbol/${lg.slug}`,

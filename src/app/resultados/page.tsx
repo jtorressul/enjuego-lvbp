@@ -24,9 +24,10 @@ export async function generateMetadata({
     ? "Resultados del Béisbol Venezolano y LVBP de hoy en vivo en tiempo real: marcadores actualizados jugada a jugada, pizarra C·H·E, box score completo y juegos del día."
     : `Resultados en vivo de ${cfg.name} (${cfg.shortName}) hoy minuto a minuto: marcadores en directo, pizarras C·H·E, box score completo, lanzadores y jugadas clave en En Juego.`;
 
-  const canonical = rawLeague
-    ? `https://enjuego.online/resultados?liga=${leagueId}`
-    : "https://enjuego.online/resultados";
+  const canonical =
+    rawLeague && rawLeague !== "lvbp"
+      ? `https://enjuego.online/resultados/${leagueId}`
+      : "https://enjuego.online/resultados";
 
   return {
     title,

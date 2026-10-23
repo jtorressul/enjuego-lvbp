@@ -24,9 +24,10 @@ export async function generateMetadata({
     ? "Tabla de posiciones oficial de la LVBP y Béisbol Venezolano: juegos ganados, perdidos, porcentaje (PCT), diferencia de juegos (DIF) y racha actualizada al momento."
     : `Tabla de posiciones oficial de ${cfg.name} (${cfg.shortName}): juegos ganados, perdidos, porcentaje (PCT), diferencia (DIF) y racha actualizada.`;
 
-  const canonical = rawLeague
-    ? `https://enjuego.online/posiciones?liga=${leagueId}`
-    : "https://enjuego.online/posiciones";
+  const canonical =
+    rawLeague && rawLeague !== "lvbp"
+      ? `https://enjuego.online/posiciones/${leagueId}`
+      : "https://enjuego.online/posiciones";
 
   return {
     title,

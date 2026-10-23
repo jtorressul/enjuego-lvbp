@@ -178,6 +178,7 @@ export function EnJuegoPortal({
   initialSection = "home",
   initialTeamSlug,
   initialGameId,
+  initialLeague,
   initialSchedule = [],
   initialStandings = [],
   initialLeaders = { hitting: [], pitching: [] },
@@ -187,6 +188,7 @@ export function EnJuegoPortal({
   initialSection?: NavSection;
   initialTeamSlug?: string;
   initialGameId?: string;
+  initialLeague?: LeagueId;
   initialSchedule?: PortalSeed["schedule"];
   initialStandings?: PortalSeed["standings"];
   initialLeaders?: PortalSeed["leaders"];
@@ -308,6 +310,14 @@ export function EnJuegoPortal({
   }, [searchParams, initialTeamSlug]);
 
   const [activeLeague, setActiveLeague] = useState<LeagueId>(() => {
+    if (initialLeague) return initialLeague;
+    const pathParts = (pathname || "").split("/").filter(Boolean);
+    if (pathParts.length >= 2 && (pathParts[0] === "resultados" || pathParts[0] === "posiciones" || pathParts[0] === "calendario")) {
+      const seg = pathParts[1].toLowerCase();
+      if (seg === "mlb" || seg === "lidom" || seg === "lmp" || seg === "lvbp") {
+        return seg as LeagueId;
+      }
+    }
     const rawLeague = searchParams?.get("liga") || searchParams?.get("league");
     if (rawLeague) {
       return parseLeague(rawLeague);
@@ -1439,9 +1449,21 @@ export function EnJuegoPortal({
           >
             {[
               { key: "home", label: "Inicio", href: "/inicio" },
-              { key: "resultados", label: "Resultados", href: `/resultados?liga=${activeLeague}` },
-              { key: "posiciones", label: "Posiciones", href: `/posiciones?liga=${activeLeague}` },
-              { key: "calendario", label: "Calendario", href: `/calendario?liga=${activeLeague}` },
+              {
+                key: "resultados",
+                label: "Resultados",
+                href: activeLeague === "lvbp" ? "/resultados" : `/resultados/${activeLeague}`,
+              },
+              {
+                key: "posiciones",
+                label: "Posiciones",
+                href: activeLeague === "lvbp" ? "/posiciones" : `/posiciones/${activeLeague}`,
+              },
+              {
+                key: "calendario",
+                label: "Calendario",
+                href: activeLeague === "lvbp" ? "/calendario" : `/calendario/${activeLeague}`,
+              },
               { key: "lideres", label: "Líderes", href: `/lideres?liga=${activeLeague}` },
               {
                 key: "equipos",
@@ -3576,10 +3598,10 @@ export function EnJuegoPortal({
           {(
             [
               ["home", "/inicio", "Inicio", Home],
-              ["resultados", `/resultados?liga=${activeLeague}`, "Resultados", Activity],
+              ["resultados", activeLeague === "lvbp" ? "/resultados" : `/resultados/${activeLeague}`, "Resultados", Activity],
               ["futbol", "/futbol", "Fútbol", Trophy],
-              ["posiciones", `/posiciones?liga=${activeLeague}`, "Posiciones", BarChart3],
-              ["calendario", `/calendario?liga=${activeLeague}`, "Calendario", Calendar],
+              ["posiciones", activeLeague === "lvbp" ? "/posiciones" : `/posiciones/${activeLeague}`, "Posiciones", BarChart3],
+              ["calendario", activeLeague === "lvbp" ? "/calendario" : `/calendario/${activeLeague}`, "Calendario", Calendar],
             ] as const
           ).map(([key, href, label, Icon]) => {
             const active = section === key || (section === "juego" && key === "resultados");

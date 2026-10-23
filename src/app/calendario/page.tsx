@@ -24,9 +24,10 @@ export async function generateMetadata({
     ? "Calendario oficial de la LVBP y Béisbol Venezolano: horarios en Venezuela (VET), estadios, juegos de hoy, canales de transmisión en vivo (TVES, ByM Sport, IVC) y transmisiones."
     : `Calendario oficial de ${cfg.name} (${cfg.shortName}): horarios en Venezuela (VET), estadios, señales de transmisión en vivo y filtro por equipo.`;
 
-  const canonical = rawLeague
-    ? `https://enjuego.online/calendario?liga=${leagueId}`
-    : "https://enjuego.online/calendario";
+  const canonical =
+    rawLeague && rawLeague !== "lvbp"
+      ? `https://enjuego.online/calendario/${leagueId}`
+      : "https://enjuego.online/calendario";
 
   return {
     title,

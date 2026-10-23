@@ -1,15 +1,18 @@
 import { Suspense } from "react";
 import { EnJuegoPortal, type NavSection } from "@/components/EnJuegoPortal";
 import { loadLvbpPortalSeed } from "@/lib/portal-seed";
+import type { LeagueId } from "@/lib/leagues";
 
 export async function SeededPortal({
   initialSection,
   initialTeamSlug,
   initialGameId,
+  initialLeague,
 }: {
   initialSection: NavSection;
   initialTeamSlug?: string;
   initialGameId?: string;
+  initialLeague?: LeagueId;
 }) {
   const seed = await loadLvbpPortalSeed();
   const activeDate =
@@ -65,6 +68,7 @@ export async function SeededPortal({
           initialSection={initialSection}
           initialTeamSlug={initialTeamSlug}
           initialGameId={initialGameId}
+          initialLeague={initialLeague}
           initialSchedule={seed.schedule}
           initialStandings={seed.standings}
           initialLeaders={seed.leaders}

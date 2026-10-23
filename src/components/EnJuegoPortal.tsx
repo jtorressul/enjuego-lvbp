@@ -1564,7 +1564,13 @@ export function EnJuegoPortal({
               }}
             >
               <div className="flex items-center gap-2">
-                <img src="/logo.png" alt="En Juego" className="h-8 w-auto object-contain" />
+                <img
+                  src="/logo.png"
+                  alt="En Juego"
+                  width={96}
+                  height={32}
+                  className="h-8 w-auto object-contain"
+                />
                 <span
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black tracking-tight select-none"
                   style={{

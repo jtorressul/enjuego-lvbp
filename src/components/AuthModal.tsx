@@ -294,7 +294,13 @@ export function AuthModal({
           style={{ backgroundColor: "#060a12", borderColor: "#1e293b" }}
         >
           <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="En Juego" className="h-6 sm:h-7 w-auto object-contain" />
+            <img
+              src="/logo.png"
+              alt="En Juego"
+              width={84}
+              height={28}
+              className="h-6 sm:h-7 w-auto object-contain"
+            />
             <span
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black italic tracking-tight shadow-xs select-none"
               style={{

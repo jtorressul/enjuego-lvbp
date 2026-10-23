@@ -140,7 +140,7 @@ export function HomeSoccerShowcase({
               <span className="w-4 h-4 rounded-xs bg-white p-0.5 flex items-center justify-center shrink-0">
                 <img
                   src={lg.logo}
-                  alt=""
+                  alt={lg.name || "Logo Liga"}
                   width={16}
                   height={16}
                   loading="lazy"

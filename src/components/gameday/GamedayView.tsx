@@ -1138,7 +1138,7 @@ export function GamedayView({
                         : "bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    <img src={t.logoUrl} alt="" className="w-4 h-4 object-contain" />
+                    <img src={t.logoUrl} alt={t.nick || "Logo equipo"} className="w-4 h-4 object-contain" />
                     <span>{t.nick}</span>
                   </button>
                 );
@@ -1298,7 +1298,7 @@ export function GamedayView({
                         : "bg-slate-50 border-slate-200 hover:bg-slate-100/80 text-slate-800"
                     }`}
                   >
-                    <img src={team.logoUrl} alt="" className="w-9 h-9 mx-auto mb-1.5 object-contain" />
+                    <img src={team.logoUrl} alt={team.nick || "Logo equipo"} className="w-9 h-9 mx-auto mb-1.5 object-contain" />
                     <div className="text-xs font-black">{team.nick}</div>
                     <div className="text-lg font-black text-amber-700">{pct}%</div>
                     {picked && (
@@ -1655,7 +1655,7 @@ export function GamedayView({
                 return (
                   <tr key={side} className="hover:bg-slate-50/80 transition">
                     <th className="py-2.5 px-3 text-left font-black text-slate-900 flex items-center gap-2">
-                      <img src={team.logoUrl} alt="" className="w-5 h-5 object-contain" />
+                      <img src={team.logoUrl} alt={team.shortName || "Logo equipo"} className="w-5 h-5 object-contain" />
                       <span>{team.shortName}</span>
                     </th>
                     {game.box.innings.map((inn, idx) => {
@@ -1922,7 +1922,11 @@ export function GamedayView({
                         ? game.homeTeam.logoUrl
                         : game.awayTeam.logoUrl
                     }
-                    alt=""
+                    alt={
+                      game.homeScore > game.awayScore
+                        ? game.homeTeam.name || game.homeTeam.nick
+                        : game.awayTeam.name || game.awayTeam.nick
+                    }
                     className="w-10 h-10 object-contain"
                   />
                   <div>
@@ -1971,7 +1975,7 @@ export function GamedayView({
                         />
                         <strong className="text-sm font-black text-slate-900">{row.name}</strong>
                         <span className="text-[11px] font-medium text-slate-600 flex items-center gap-1.5 mt-0.5">
-                          <img src={team.logoUrl} alt="" className="w-3.5 h-3.5 object-contain" />
+                          <img src={team.logoUrl} alt={team.nick || "Logo equipo"} className="w-3.5 h-3.5 object-contain" />
                           {team.nick} · {row.pos}
                         </span>
                         <p
@@ -1997,12 +2001,12 @@ export function GamedayView({
                 <div className="rounded-xl bg-slate-50 border border-slate-200 p-3.5 space-y-2.5">
                   <div className="flex items-center justify-between text-xs font-bold text-slate-900 pb-1.5 border-b border-slate-200">
                     <span className="flex items-center gap-1.5">
-                      <img src={game.awayTeam.logoUrl} alt="" className="w-4 h-4 object-contain" />
+                      <img src={game.awayTeam.logoUrl} alt={game.awayTeam.nick || "Visitante"} className="w-4 h-4 object-contain" />
                       {game.awayTeam.nick}
                     </span>
                     <span className="flex items-center gap-1.5">
                       {game.homeTeam.nick}
-                      <img src={game.homeTeam.logoUrl} alt="" className="w-4 h-4 object-contain" />
+                      <img src={game.homeTeam.logoUrl} alt={game.homeTeam.nick || "Local"} className="w-4 h-4 object-contain" />
                     </span>
                   </div>
                   {(
@@ -2068,7 +2072,7 @@ export function GamedayView({
                           className="flex items-start justify-between gap-3 rounded-xl bg-slate-50 border border-slate-200 p-3 text-xs"
                         >
                           <div className="flex items-start gap-2.5">
-                            <img src={team.logoUrl} alt="" className="w-5 h-5 mt-0.5 shrink-0 object-contain" />
+                            <img src={team.logoUrl} alt={team.nick || "Logo equipo"} className="w-5 h-5 mt-0.5 shrink-0 object-contain" />
                             <div>
                               <span className="font-black text-amber-700 mr-2">
                                 {play.top ? "Alta" : "Baja"} {play.inning}°
@@ -2252,7 +2256,7 @@ export function GamedayView({
                             }`}
                           >
                             <div className="flex items-center gap-2.5">
-                              <img src={team.logoUrl} alt="" className="w-5 h-5 object-contain" />
+                              <img src={team.logoUrl} alt={team.shortName || "Logo equipo"} className="w-5 h-5 object-contain" />
                               <b className="text-slate-900 font-black">
                                 {grp.top ? "Alta" : "Baja"} del {grp.inning}°
                               </b>
@@ -2407,7 +2411,7 @@ export function GamedayView({
                               : "text-slate-600 hover:text-slate-900"
                           }`}
                         >
-                          <img src={t.logoUrl} alt="" className="w-4 h-4 object-contain" />
+                          <img src={t.logoUrl} alt={t.nick || "Logo equipo"} className="w-4 h-4 object-contain" />
                           {t.name}
                         </button>
                       );
@@ -2531,7 +2535,7 @@ export function GamedayView({
                         className="rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 space-y-2.5"
                       >
                         <h3 className="text-sm font-black text-slate-900 flex items-center gap-2 border-b border-slate-200 pb-2">
-                          <img src={team.logoUrl} alt="" className="w-5 h-5 object-contain" />
+                          <img src={team.logoUrl} alt={team.shortName || "Logo equipo"} className="w-5 h-5 object-contain" />
                           {team.name}
                         </h3>
                         <ol className="divide-y divide-slate-200/70 text-xs">
@@ -2544,7 +2548,7 @@ export function GamedayView({
                                 <span className="w-5 text-slate-400 font-black">{r.order}.</span>
                                 <img
                                   src={playerHeadshot(r.id)}
-                                  alt=""
+                                  alt={r.name || "Foto jugador"}
                                   className="w-7 h-7 rounded-full object-cover bg-slate-100 border border-slate-200 shadow-2xs"
                                 />
                                 <div>

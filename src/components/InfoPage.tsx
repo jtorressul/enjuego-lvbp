@@ -32,7 +32,7 @@ export function InfoPage({
         <div className={`mx-auto px-4 py-4 flex items-center justify-between gap-4 ${wide ? "max-w-6xl" : "max-w-3xl"}`}>
           <Link href="/inicio" className="flex items-center gap-2.5">
             <span className="w-8 h-8 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center p-0.5">
-              <img src={LVBP_OFFICIAL_LOGO} alt="" className="w-full h-full object-contain" />
+              <img src={LVBP_OFFICIAL_LOGO} alt="Logo Oficial LVBP" className="w-full h-full object-contain" />
             </span>
             <span className="font-black tracking-tight">EN JUEGO</span>
           </Link>

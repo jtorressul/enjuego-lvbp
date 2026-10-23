@@ -299,7 +299,7 @@ export function PwaOnboardingModal({ isOpen, onClose, onComplete }: PwaOnboardin
                           : "border-slate-200 bg-white hover:bg-slate-100 text-slate-700"
                       }`}
                     >
-                      <img src={t.logoSvg} alt="" className="w-7 h-7 object-contain shrink-0" />
+                      <img src={t.logoSvg} alt={t.nick || t.name || "Logo equipo"} className="w-7 h-7 object-contain shrink-0" />
                       <div className="min-w-0 flex-1">
                         <div className="text-[11px] font-black text-slate-900 leading-tight truncate">
                           {t.nick || t.name}

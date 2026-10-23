@@ -89,7 +89,7 @@ function SingleLeaderCard({
                 {top.teamLogo && (
                   <img
                     src={top.teamLogo}
-                    alt=""
+                    alt={top.team || "Logo equipo"}
                     width={18}
                     height={18}
                     loading="lazy"

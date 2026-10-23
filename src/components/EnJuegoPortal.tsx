@@ -533,7 +533,7 @@ export function EnJuegoPortal({
       } catch {}
     }
 
-    const deferTimer = setTimeout(fetchAllLeagueCounts, 2500);
+    const deferTimer = setTimeout(fetchAllLeagueCounts, 7000);
     return () => {
       isMounted = false;
       clearTimeout(deferTimer);
@@ -2181,7 +2181,7 @@ export function EnJuegoPortal({
                           </span>
                           <img
                             src={item.winnerLogo}
-                            alt=""
+                            alt={item.title || "Logo equipo"}
                             width={24}
                             height={24}
                             loading="lazy"
@@ -2291,7 +2291,7 @@ export function EnJuegoPortal({
                           <td className="py-2 text-left font-bold text-slate-900 flex items-center gap-2">
                             <img
                               src={row.team.logoUrl}
-                              alt=""
+                              alt={row.team.name || row.team.nick || "Logo equipo"}
                               className="w-5 h-5 object-contain shrink-0"
                             />
                             <span className="truncate">{row.team.nick}</span>
@@ -2942,7 +2942,7 @@ export function EnJuegoPortal({
                               <div className="flex items-center gap-2">
                                 <img
                                   src={game.awayTeam.logoUrl}
-                                  alt=""
+                                  alt={game.awayTeam.name || game.awayTeam.nick || "Equipo visitante"}
                                   className="w-7 h-7 object-contain shrink-0"
                                 />
                                 <span className="text-xs sm:text-sm font-black text-slate-900">
@@ -2962,7 +2962,7 @@ export function EnJuegoPortal({
                               <div className="flex items-center gap-2">
                                 <img
                                   src={game.homeTeam.logoUrl}
-                                  alt=""
+                                  alt={game.homeTeam.name || game.homeTeam.nick || "Equipo local"}
                                   className="w-7 h-7 object-contain shrink-0"
                                 />
                                 <span className="text-xs sm:text-sm font-black text-slate-900">
@@ -3277,7 +3277,7 @@ export function EnJuegoPortal({
                                           <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
                                             <img
                                               src={row.team.logoUrl}
-                                              alt=""
+                                              alt={row.team.name || row.team.shortName || "Logo equipo"}
                                               className="w-6 h-6 sm:w-7 sm:h-7 object-contain shrink-0"
                                             />
                                             <span className="truncate max-w-[115px] sm:max-w-none">
@@ -3442,7 +3442,7 @@ export function EnJuegoPortal({
                                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                                   <img
                                     src={row.team.logoUrl}
-                                    alt=""
+                                    alt={row.team.name || row.team.shortName || "Logo equipo"}
                                     className="w-6 h-6 sm:w-8 sm:h-8 object-contain shrink-0"
                                   />
                                   <span className="truncate max-w-[115px] sm:max-w-none">

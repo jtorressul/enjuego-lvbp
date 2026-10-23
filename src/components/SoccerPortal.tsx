@@ -422,7 +422,7 @@ export function SoccerPortal({
                     }`}
                   >
                     <span className="w-4 h-4 rounded-xs bg-white p-0.5 flex items-center justify-center shrink-0">
-                      <img src={lg.logo} alt="" className="w-full h-full object-contain" />
+                      <img src={lg.logo} alt={lg.name || "Logo Liga"} className="w-full h-full object-contain" />
                     </span>
                     <span>{lg.shortName}</span>
                   </button>
@@ -515,7 +515,7 @@ export function SoccerPortal({
                         }`}
                       >
                         <span className="w-5 h-5 rounded-xs bg-white p-0.5 flex items-center justify-center mb-1">
-                          <img src={lg.logo} alt="" className="w-full h-full object-contain" />
+                          <img src={lg.logo} alt={lg.name || "Logo Liga"} className="w-full h-full object-contain" />
                         </span>
                         <span className="leading-tight truncate max-w-full">{lg.shortName}</span>
                       </button>
@@ -721,7 +721,7 @@ export function SoccerPortal({
                                 : "bg-white text-slate-700 border-slate-200 hover:border-slate-300"
                             }`}
                           >
-                            <img src={row.team.logo} alt="" className="w-3.5 h-3.5 object-contain" />
+                            <img src={row.team.logo} alt={row.team.name || row.team.shortName || "Logo equipo"} className="w-3.5 h-3.5 object-contain" />
                             <span>{row.team.shortName}</span>
                           </button>
                         );
@@ -983,7 +983,7 @@ export function SoccerPortal({
                                   <div className="flex items-center gap-2 min-w-0">
                                     <img
                                       src={row.team.logo}
-                                      alt=""
+                                      alt={row.team.name || row.team.shortName || "Logo equipo"}
                                       className="w-5 h-5 object-contain shrink-0"
                                       loading="lazy"
                                     />

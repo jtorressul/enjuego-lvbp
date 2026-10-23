@@ -1404,7 +1404,7 @@ export function SoccerGamedayView({
                           <div className="flex items-center gap-2 flex-wrap">
                             <img
                               src={ev.isHome ? match.homeTeam.logo : match.awayTeam.logo}
-                              alt=""
+                              alt={ev.isHome ? match.homeTeam.shortName : match.awayTeam.shortName}
                               className="w-4 h-4 object-contain shrink-0"
                             />
                             <span className="text-xs font-black text-slate-950">
@@ -1699,9 +1699,9 @@ export function SoccerGamedayView({
                 Estadísticas del Partido
               </span>
               <div className="flex items-center gap-2">
-                <img src={match.homeTeam.logo} alt="" className="w-4 h-4 object-contain" />
+                <img src={match.homeTeam.logo} alt={match.homeTeam.shortName || "Local"} className="w-4 h-4 object-contain" />
                 <span className="text-[10px] font-bold text-slate-400">vs</span>
-                <img src={match.awayTeam.logo} alt="" className="w-4 h-4 object-contain" />
+                <img src={match.awayTeam.logo} alt={match.awayTeam.shortName || "Visitante"} className="w-4 h-4 object-contain" />
               </div>
             </div>
 

@@ -7,7 +7,7 @@ import { AdBanner } from "@/components/AdBanner";
 function TeamMark({ side, won, align = "start" }: { side: RecapSide; won: boolean; align?: "start" | "end" }) {
   return (
     <div className={`flex items-center gap-2.5 min-w-0 flex-1 ${align === "end" ? "flex-row-reverse text-right" : ""}`}>
-      <img src={side.logo} alt="" className="w-11 h-11 sm:w-14 sm:h-14 object-contain shrink-0" />
+      <img src={side.logo} alt={side.nick || "Logo equipo"} className="w-11 h-11 sm:w-14 sm:h-14 object-contain shrink-0" />
       <div className="min-w-0">
         <p className={`truncate text-sm sm:text-base font-black ${won ? "text-white" : "text-slate-300"}`}>
           {side.nick}
@@ -23,7 +23,7 @@ function TeamMark({ side, won, align = "start" }: { side: RecapSide; won: boolea
 function LightTeam({ side, won, align = "start" }: { side: RecapSide; won: boolean; align?: "start" | "end" }) {
   return (
     <div className={`flex items-center gap-2 min-w-0 flex-1 ${align === "end" ? "flex-row-reverse text-right" : ""}`}>
-      <img src={side.logo} alt="" className="w-9 h-9 object-contain shrink-0" />
+      <img src={side.logo} alt={side.nick || "Logo equipo"} className="w-9 h-9 object-contain shrink-0" />
       <div className="min-w-0">
         <p className="truncate text-xs font-black text-slate-950">{side.nick}</p>
         <p className={`text-xl font-black tabular-nums leading-none ${won ? "text-slate-950" : "text-slate-400"}`}>
@@ -37,7 +37,7 @@ function LightTeam({ side, won, align = "start" }: { side: RecapSide; won: boole
 function StandingChip({ standing, logo }: { standing: RecapStanding; logo: string }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-3 flex items-center gap-3">
-      <img src={logo} alt="" className="w-10 h-10 object-contain" />
+      <img src={logo} alt={standing.name || "Logo equipo"} className="w-10 h-10 object-contain" />
       <div>
         <p className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700">
           {standing.leading ? "Líder" : `${standing.place}° lugar`}

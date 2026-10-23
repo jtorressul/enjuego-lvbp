@@ -4,22 +4,28 @@ import { SeededPortal } from "@/components/SeededPortal";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Resultados en Vivo Hoy · Béisbol LVBP, MLB y Fútbol en Directo | En Juego",
+  title: "Resultados en Vivo Hoy · Béisbol Venezolano LVBP, MLB y Fútbol | En Juego",
   description:
-    "Resultados en vivo hoy en tiempo real: marcadores jugada a jugada de la LVBP, Grandes Ligas (MLB) y Fútbol Europeo (Champions League, LaLiga, Premier League), tabla de posiciones y juegos de hoy.",
+    "Resultados del Béisbol Venezolano y LVBP hoy en vivo en tiempo real: pizarra jugada a jugada, marcadores de Grandes Ligas (MLB) y Fútbol Europeo, posiciones y canales de TV.",
   alternates: {
     canonical: "https://enjuego.online",
   },
   keywords: [
     "resultados en vivo",
     "resultados en vivo hoy",
-    "marcadores en vivo",
-    "resultados de hoy en vivo",
+    "resultados beisbol venezolano hoy vivo",
+    "resultado del beisbol venezolano de hoy en vivo",
+    "resultados beisbol venezolano",
+    "pizarra beisbol venezolano",
+    "pizarra en vivo",
     "resultados lvbp",
     "resultados lvbp en vivo",
-    "lvbp hoy",
+    "marcador lvbp",
     "juegos de hoy lvbp",
-    "pizarra en vivo",
+    "score lvbp hoy",
+    "partidos de beisbol venezolano hoy en vivo",
+    "caracas vs la guaira hoy en vivo",
+    "leones del caracas hoy en vivo",
     "resultados beisbol en vivo",
     "resultados futbol en vivo",
     "en juego",

@@ -284,7 +284,7 @@ function parseRawEspnScoreboardEvents(
     const rawBroadcast =
       comp?.broadcasts?.[0]?.names?.[0] ||
       comp?.geoBroadcasts?.[0]?.media?.shortName ||
-      undefined;
+      (leagueId === "ven.1" ? "Televen · Liga FUTVE YouTube · GOLTV" : undefined);
 
     return {
       id: String(ev.id || Math.random().toString(36).slice(2, 9)),
@@ -685,7 +685,7 @@ export async function fetchSoccerMatchDetail(
     const broadcast =
       comp?.broadcasts?.[0]?.names?.join(", ") ||
       comp?.geoBroadcasts?.[0]?.media?.shortName ||
-      "ESPN / Disney+";
+      (leagueId === "ven.1" ? "Televen · Liga FUTVE YouTube · GOLTV" : "ESPN / Disney+");
 
     // Key Events: Goals, Cards, Substitutions
     const rawEvents: any[] = json.keyEvents || [];

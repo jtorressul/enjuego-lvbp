@@ -1,4 +1,5 @@
 export type SoccerLeagueId =
+  | "ven.1"
   | "uefa.champions"
   | "eng.1"
   | "esp.1"
@@ -36,6 +37,22 @@ export function optimizeEspnLogoUrl(rawUrl?: string, size = 64): string {
 }
 
 export const SOCCER_LEAGUES: Record<SoccerLeagueId, SoccerLeagueConfig> = {
+  "ven.1": {
+    id: "ven.1",
+    slug: "futve",
+    name: "Liga FUTVE",
+    shortName: "Liga FUTVE",
+    country: "Venezuela",
+    flag: "🇻🇪",
+    logo: "https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/1947.png&h=64&w=64",
+    accentColor: "#6b0f24",
+    totalTeams: 14,
+    zones: {
+      champions: 4,          // Cuadrangulares finales / Copa Libertadores
+      europa: [5, 6, 7, 8],  // Copa Sudamericana
+      relegation: 14,        // Descenso
+    },
+  },
   "uefa.champions": {
     id: "uefa.champions",
     slug: "champions",
@@ -144,6 +161,16 @@ export const SOCCER_LEAGUES_LIST = Object.values(SOCCER_LEAGUES);
 export function parseSoccerLeague(val?: string | null): SoccerLeagueId {
   if (!val) return "uefa.champions";
   const lower = val.trim().toLowerCase();
+  if (
+    lower === "futve" ||
+    lower === "ven" ||
+    lower === "venezuela" ||
+    lower === "ven.1" ||
+    lower === "liga-futve" ||
+    lower === "ligafutve" ||
+    lower === "liga futve"
+  )
+    return "ven.1";
   if (lower === "champions" || lower === "ucl" || lower === "uefa" || lower === "uefa.champions") return "uefa.champions";
   if (lower === "premier" || lower === "pl" || lower === "england" || lower === "eng.1") return "eng.1";
   if (lower === "laliga" || lower === "espana" || lower === "spain" || lower === "esp.1") return "esp.1";

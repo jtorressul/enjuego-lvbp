@@ -14,49 +14,55 @@ export function StreamingTvGuide({ sport = "baseball", leagueId = "lvbp" }: Stre
 
   const isSoccer = sport === "soccer";
 
+  // Respuestas honestas: EnJuego NO transmite video. Solo ofrece pizarra, jugada a jugada,
+  // estadisticas y la guia de donde ver/escuchar cada juego por vias oficiales.
   const faqs = isSoccer
     ? [
         {
-          q: "¿Dónde ver la Champions League hoy gratis por internet y televisión?",
-          a: "En Venezuela y Latinoamérica, la UEFA Champions League se transmite oficialmente por ESPN y Disney+. En televisión abierta nacional, Televen transmite partidos seleccionados de la jornada sin costo. Para seguir el relato minuto a minuto, jugadas clave, mapa de tiros xG y estadísticas en vivo segundo a segundo sin costo, puedes seguir la cobertura completa en directo en EnJuego.online.",
+          q: "¿Dónde ver la Champions League hoy por TV y streaming?",
+          a: "En Venezuela y buena parte de Latinoamérica la UEFA Champions League se transmite por los canales y plataformas con derechos oficiales (principalmente ESPN y Disney+). La disponibilidad puede variar según el país y el partido, así que conviene confirmar en la guía de tu operador. EnJuego.online no transmite video: ofrece el marcador en vivo, goles, tarjetas, alineaciones y estadísticas de cada partido.",
         },
         {
           q: "¿Qué canales transmiten la Liga FUTVE en Venezuela?",
-          a: "La Liga FUTVE se transmite en señal abierta por Televen y a través del canal oficial de YouTube de la Liga FUTVE y GolTV Play en streaming. En EnJuego puedes consultar resultados en tiempo real, alineaciones y tabla de clasificación actualizada al instante.",
+          a: "La Liga FUTVE se transmite por los canales y plataformas con los derechos de la temporada, que pueden cambiar de un año a otro. Te recomendamos revisar los anuncios oficiales de la liga. En EnJuego puedes consultar resultados en tiempo real, alineaciones y la tabla de clasificación.",
         },
         {
           q: "¿Dónde ver LaLiga de España, Premier League y Serie A?",
-          a: "La Premier League y la Serie A se transmiten por ESPN y Disney+. LaLiga española se transmite por DSports (DIRECTV) y Disney+. En EnJuego.online cuentas con la pizarra minuto a minuto con alineaciones confirmadas y goleadores en directo de las 5 grandes ligas europeas.",
+          a: "Cada liga tiene sus propios derechos de transmisión por país (por ejemplo ESPN, Disney+ o DSports en Latinoamérica). Consulta la programación de tu operador para el partido que quieres ver. En EnJuego.online tienes el minuto a minuto, alineaciones confirmadas y goleadores en directo de las grandes ligas europeas.",
         },
         {
-          q: "¿Cómo seguir los partidos de fútbol en vivo si no tengo televisión por cable?",
-          a: "Puedes seguir cada partido en vivo gratis en EnJuego.online a través de nuestra cobertura jugada a jugada con relatos en directo, tiempos adicionales, sustituciones, tarjetas y estadísticas oficiales sin necesidad de suscripción ni descargas.",
+          q: "¿Puedo ver los partidos en video en EnJuego?",
+          a: "No. EnJuego.online no transmite ni enlaza señales de video. Lo que ofrecemos gratis es el seguimiento en vivo: marcador, eventos del partido (goles, tarjetas, cambios), estadísticas y tablas, sin registro ni descargas. Para ver el video usa los canales o plataformas oficiales de tu país.",
         },
       ]
     : [
         {
-          q: "¿Dónde ver la LVBP hoy gratis por internet y señal abierta?",
-          a: "Los juegos de la Liga Venezolana de Béisbol Profesional (LVBP) se transmiten en televisión abierta gratuita en Venezuela a través de Televen (Canal 10), Venevisión (Canal 4) y TVES (Canal 2), según la programación rotativa del día. En streaming digital oficial, la plataforma BeisbolPlay transmite el 100% de los encuentros. Además, en EnJuego.online puedes seguir la pizarra en vivo jugada a jugada con boxscores, pitcheo a pitcheo y corredores en base al segundo.",
+          q: "¿Dónde ver la LVBP hoy gratis por señal abierta?",
+          a: "En Venezuela algunos juegos de la LVBP se transmiten en televisión abierta gratuita (por ejemplo Televen o Venevisión), según la programación de cada día. En la ficha de cada juego en EnJuego.online indicamos los canales anunciados para ese partido. Para ver todos los juegos por internet, la plataforma de streaming oficial es BeisbolPlay (de pago).",
+        },
+        {
+          q: "¿Puedo ver los juegos en video en EnJuego?",
+          a: "No. EnJuego.online no transmite ni enlaza señales de video. Lo que ofrecemos gratis es la pizarra en vivo jugada a jugada, el boxscore, la tabla de posiciones, el calendario y la guía de canales y emisoras de cada juego. Para ver el video usa la TV o BeisbolPlay, y para escucharlo, la radio oficial de cada equipo.",
         },
         {
           q: "¿Qué canales transmiten el béisbol venezolano en cable y TV paga?",
-          a: "En televisión por cable y satélite, la LVBP es transmitida por IVC Networks, ByM Sport (disponible en Inter y SimpleTV) y 1Baseball Network. Cada juego cuenta con la señal especificada en la cartelera diaria de EnJuego.",
+          a: "Por cable y satélite, los juegos de la LVBP suelen transmitirse por canales como IVC, ByM Sport y 1Baseball Network, según la jornada. Los canales exactos de cada partido aparecen en la cartelera diaria de EnJuego.",
         },
         {
-          q: "¿Cómo escuchar los juegos de la LVBP por radio en vivo gratis?",
-          a: "Todos los equipos cuentan con circuitos radiales oficiales gratuitos que transmiten en vivo por radio FM/AM y streaming online: Leones del Caracas (Unión Radio 90.3 FM), Navegantes del Magallanes (La Mega 107.3 FM / Unión Radio), Tiburones de La Guaira (Onda 107.9 FM), Cardenales de Lara (Fiesta 89.1 FM), Águilas del Zulia (Urbe 96.3 FM), Tigres de Aragua (Aragüeña 99.5 FM), Caribes de Anzoátegui (Éxitos 95.3 FM) y Bravos de Margarita (Caribe 93.5 FM).",
+          q: "¿Cómo escuchar los juegos de la LVBP por radio gratis?",
+          a: "Cada equipo tiene su circuito radial oficial, que transmite gratis por FM/AM en su región y, en la mayoría de los casos, también por streaming en la web de la emisora. En la ficha de cada juego en EnJuego.online encontrarás la emisora de cada equipo.",
         },
         {
           q: "¿A qué hora se juegan los partidos de la LVBP en España e Italia?",
-          a: "En España e Italia (zona horaria CET/CEST) hay 6 horas de diferencia respecto al horario de Venezuela (5 horas en las Islas Canarias). Los juegos habituales de las 7:00 PM de Caracas inician a la 1:00 AM (madrugada) en Madrid, Barcelona, Roma y Milán. Los partidos diurnos de las 4:00 PM o 5:00 PM VET inician a las 10:00 PM o 11:00 PM en Europa. En EnJuego.online puedes seguir la pizarra minuto a minuto y consultar los resultados finales y boxscores completos de ayer al despertar.",
+          a: "En horario de invierno (de finales de octubre a finales de marzo) España peninsular e Italia van 5 horas por delante de Venezuela, y 6 horas en horario de verano. Un juego de las 7:00 PM de Caracas empieza a la medianoche en Madrid o Roma en invierno (1:00 AM en verano). En Canarias es una hora menos. En EnJuego.online puedes seguir la pizarra en vivo o revisar los resultados y boxscores completos al despertar.",
         },
         {
-          q: "¿Dónde ver o escuchar la LVBP en vivo desde España, Italia y el exterior?",
-          a: "Para la comunidad venezolana en España, Italia y el resto de Europa, la transmisión en streaming oficial está disponible a través de BeisbolPlay con cobertura internacional. Además, los circuitos radiales oficiales de cada equipo (Unión Radio 90.3 FM para Caracas, La Mega 107.3 FM para Magallanes, Onda para Tiburones, Fiesta para Cardenales) transmiten gratis por internet sin bloqueo geográfico. En EnJuego.online sigues la pizarra interactiva jugada a jugada gratis.",
+          q: "¿Cómo seguir la LVBP desde España, Italia y el exterior?",
+          a: "Fuera de Venezuela la vía oficial para ver los juegos por internet es BeisbolPlay, que tiene cobertura internacional. Muchas emisoras de los equipos también transmiten por streaming, aunque la disponibilidad puede variar. Y en EnJuego.online puedes seguir gratis la pizarra jugada a jugada desde cualquier país.",
         },
         {
           q: "¿Dónde ver los juegos de Grandes Ligas (MLB) hoy?",
-          a: "En Venezuela y Latinoamérica, la MLB (Grandes Ligas) se transmite a través de ESPN, Disney+, IVC y MLB.TV. En EnJuego.online sigues cada jugada, cuadrangulares y estadísticas de bateadores venezolanos en las Mayores al instante.",
+          a: "La MLB se transmite por los canales con derechos en cada país (en Latinoamérica, principalmente ESPN y Disney+) y por la plataforma oficial MLB.TV. En EnJuego.online sigues cada jugada, los resultados y la postemporada al instante.",
         },
       ];
 
@@ -102,7 +108,7 @@ export function StreamingTvGuide({ sport = "baseball", leagueId = "lvbp" }: Stre
             <h2 className="text-base sm:text-lg font-black text-slate-950 tracking-tight">
               {isSoccer
                 ? "¿Dónde ver la Champions League, FUTVE y Fútbol Europeo Hoy en Vivo?"
-                : "¿Dónde ver la LVBP y Juegos de Hoy Gratis por Internet y TV en Venezuela?"}
+                : "¿Dónde ver la LVBP hoy? Canales de TV, streaming oficial y radio"}
             </h2>
             <p className="text-xs text-slate-600 mt-0.5">
               {isSoccer
@@ -132,11 +138,12 @@ export function StreamingTvGuide({ sport = "baseball", leagueId = "lvbp" }: Stre
                 </>
               ) : (
                 <>
-                  Puedes ver los juegos sin suscripción por <strong>Televen</strong> (Canal 10),{" "}
-                  <strong>Venevisión</strong> (Canal 4) y <strong>TVES</strong> (Canal 2). Por
-                  cable y satélite transmiten <strong>IVC</strong>,{" "}
-                  <strong>ByM Sport</strong> (Inter/SimpleTV) y <strong>1Baseball Network</strong>.
-                  La plataforma oficial de streaming en vivo es <strong>BeisbolPlay</strong>.
+                  Algunos juegos se ven sin suscripción por señal abierta (por ejemplo{" "}
+                  <strong>Televen</strong> o <strong>Venevisión</strong>), según la programación del
+                  día. Por cable y satélite suelen transmitir <strong>IVC</strong>,{" "}
+                  <strong>ByM Sport</strong> y <strong>1Baseball Network</strong>. La plataforma
+                  oficial de streaming es <strong>BeisbolPlay</strong>. Los canales de cada juego
+                  aparecen en su ficha.
                 </>
               )}
             </p>
@@ -153,9 +160,9 @@ export function StreamingTvGuide({ sport = "baseball", leagueId = "lvbp" }: Stre
             <p className="text-xs text-slate-600 leading-relaxed">
               {isSoccer ? (
                 <>
-                  Si no cuentas con señal de TV, en <strong>EnJuego.online</strong> dispones de la
-                  pizarra en vivo minuto a minuto con relatos, estadísticas avanzadas de tiros,
-                  posesión y formaciones en cancha 100% gratis en tu teléfono o computadora.
+                  Si no tienes la señal de TV, en <strong>EnJuego.online</strong> puedes seguir gratis
+                  el marcador minuto a minuto con goles, tarjetas, cambios, estadísticas y
+                  alineaciones desde tu teléfono o computadora (sin video).
                 </>
               ) : (
                 <>
@@ -172,10 +179,10 @@ export function StreamingTvGuide({ sport = "baseball", leagueId = "lvbp" }: Stre
             <div className="sm:col-span-2 rounded-xl border border-amber-200/80 bg-amber-50/50 p-3.5 sm:p-4 space-y-1.5">
               <div className="flex items-center gap-2 text-slate-950 font-black text-xs sm:text-sm">
                 <span className="text-base">🌍</span>
-                <span>Horarios en España, Italia y Europa (CET · +6 Horas respecto a Venezuela)</span>
+                <span>Horarios en España, Italia y Europa (+5 horas en invierno · +6 en verano)</span>
               </div>
               <p className="text-xs text-slate-700 leading-relaxed">
-                Si te encuentras en <strong>España</strong> (Madrid, Barcelona, Valencia, Tenerife) o en <strong>Italia</strong> (Roma, Milán, Nápoles), los partidos de las <strong>7:00 PM (VET)</strong> inician a la <strong>1:00 AM de la madrugada</strong> (12:00 AM en Canarias). Puedes seguir el relato y boxscore pitcheo a pitcheo en vivo durante la noche o revisar la pizarra con resultados finales completos al despertar en <strong>EnJuego.online</strong>.
+                Si estás en <strong>España</strong> (Madrid, Barcelona, Valencia) o en <strong>Italia</strong> (Roma, Milán, Nápoles), un juego de las <strong>7:00 PM (Venezuela)</strong> empieza a la <strong>medianoche</strong> en horario de invierno y a la <strong>1:00 AM</strong> en horario de verano (una hora menos en Canarias). Puedes seguir la pizarra en vivo durante la noche o revisar los resultados finales y boxscores al despertar en <strong>EnJuego.online</strong>.
               </p>
             </div>
           )}

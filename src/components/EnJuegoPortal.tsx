@@ -967,12 +967,18 @@ export function EnJuegoPortal({
 
   const cleanSchedule = useMemo(() => {
     return schedule.filter(
-      (g) => Boolean(currentLeagueTeams[g.homeTeam?.code] || currentLeagueTeams[g.awayTeam?.code])
+      (g) =>
+        Boolean(
+          g &&
+            g.homeTeam?.code &&
+            g.awayTeam?.code &&
+            (currentLeagueTeams[g.homeTeam.code] || currentLeagueTeams[g.awayTeam.code])
+        )
     );
   }, [schedule, currentLeagueTeams]);
 
   const cleanStandings = useMemo(() => {
-    return standings.filter((r) => Boolean(currentLeagueTeams[r.team?.code]));
+    return standings.filter((r) => Boolean(r && r.team?.code && currentLeagueTeams[r.team.code]));
   }, [standings, currentLeagueTeams]);
 
   const dates = useMemo(
@@ -1010,9 +1016,9 @@ export function EnJuegoPortal({
     if (!favoriteTeamCode) return list;
     return [...list].sort((a, b) => {
       const aFav =
-        a.awayTeam.code === favoriteTeamCode || a.homeTeam.code === favoriteTeamCode ? 1 : 0;
+        a?.awayTeam?.code === favoriteTeamCode || a?.homeTeam?.code === favoriteTeamCode ? 1 : 0;
       const bFav =
-        b.awayTeam.code === favoriteTeamCode || b.homeTeam.code === favoriteTeamCode ? 1 : 0;
+        b?.awayTeam?.code === favoriteTeamCode || b?.homeTeam?.code === favoriteTeamCode ? 1 : 0;
       return bFav - aFav;
     });
   }, [cleanSchedule, activeDate, favoriteTeamCode]);
@@ -1050,43 +1056,45 @@ export function EnJuegoPortal({
 
   // Generate real game recaps / crónicas directly from LVBP games
   const realRecaps = useMemo(() => {
-    const finished = schedule.filter((g) => g.status === "FINISHED");
-    const source = finished.length > 0 ? finished.slice(-4).reverse() : schedule.slice(0, 4);
-    return source.map((g) => {
-      const awayWon = g.awayScore > g.homeScore;
-      const winner = awayWon ? g.awayTeam : g.homeTeam;
-      const loser = awayWon ? g.homeTeam : g.awayTeam;
-      const winScore = awayWon ? g.awayScore : g.homeScore;
-      const loseScore = awayWon ? g.homeScore : g.awayScore;
-      const winHits = awayWon ? g.awayHits : g.homeHits;
-      const loseHits = awayWon ? g.homeHits : g.awayHits;
+    const finished = cleanSchedule.filter((g) => g.status === "FINISHED");
+    const source = finished.length > 0 ? finished.slice(-4).reverse() : cleanSchedule.slice(0, 4);
+    return source
+      .filter((g) => g && g.awayTeam && g.homeTeam)
+      .map((g) => {
+        const awayWon = (g.awayScore || 0) > (g.homeScore || 0);
+        const winner = awayWon ? g.awayTeam : g.homeTeam;
+        const loser = awayWon ? g.homeTeam : g.awayTeam;
+        const winScore = awayWon ? g.awayScore : g.homeScore;
+        const loseScore = awayWon ? g.homeScore : g.awayScore;
+        const winHits = awayWon ? g.awayHits : g.homeHits;
+        const loseHits = awayWon ? g.homeHits : g.awayHits;
 
-      if (g.status === "FINISHED") {
-        const decisionText = g.decisions?.winner
-          ? `Victoria para ${g.decisions.winner}${g.decisions.loser ? ` y revés para ${g.decisions.loser}` : ""}${g.decisions.save ? `, con salvado de ${g.decisions.save}` : ""}.`
-          : `Juego disputado en ${g.venue}.`;
+        if (g.status === "FINISHED") {
+          const decisionText = g.decisions?.winner
+            ? `Victoria para ${g.decisions.winner}${g.decisions.loser ? ` y revés para ${g.decisions.loser}` : ""}${g.decisions.save ? `, con salvado de ${g.decisions.save}` : ""}.`
+            : `Juego disputado en ${g.venue || "el estadio"}.`;
+          return {
+            id: g.id,
+            category: `${winner?.nick || "LVBP"} · Final`,
+            title: `${winner?.name || "Equipo"} se impuso ${winScore}-${loseScore} ante ${loser?.name || "Rival"} en ${g.venueCity || "Venezuela"}`,
+            summary: `La ofensiva de ${winner?.nick || "ganador"} conectó ${winHits} imparables frente a ${loseHits} de ${loser?.nick || "perdedor"} en el ${g.venue || "estadio"}. ${decisionText}`,
+            dateLabel: g.date,
+            venue: g.venue,
+            winnerLogo: winner?.logoUrl || "",
+          };
+        }
+
         return {
           id: g.id,
-          category: `${winner.nick} · Final`,
-          title: `${winner.name} se impuso ${winScore}-${loseScore} ante ${loser.name} en ${g.venueCity}`,
-          summary: `La ofensiva de ${winner.nick} conectó ${winHits} imparables frente a ${loseHits} de ${loser.nick} en el ${g.venue}. ${decisionText}`,
+          category: `Previa · ${g.time}`,
+          title: `${g.awayTeam?.name || "Visitante"} visita a ${g.homeTeam?.name || "Local"} en el ${g.venue || "estadio"}`,
+          summary: `Duelo programado en ${g.venueCity || "Venezuela"} a las ${g.time} (Hora de Venezuela). Señal de TV: ${getGameTvChannels(g).join(", ")}.`,
           dateLabel: g.date,
           venue: g.venue,
-          winnerLogo: winner.logoUrl,
+          winnerLogo: g.homeTeam?.logoUrl || "",
         };
-      }
-
-      return {
-        id: g.id,
-        category: `Previa · ${g.time}`,
-        title: `${g.awayTeam.name} visita a ${g.homeTeam.name} en el ${g.venue}`,
-        summary: `Duelo programado en ${g.venueCity} a las ${g.time} (Hora de Venezuela). Señal de TV: ${getGameTvChannels(g).join(", ")}.`,
-        dateLabel: g.date,
-        venue: g.venue,
-        winnerLogo: g.homeTeam.logoUrl,
-      };
-    });
-  }, [schedule]);
+      });
+  }, [cleanSchedule]);
 
   const handleReactPost = async (
     postId: string | number,
@@ -1204,11 +1212,11 @@ export function EnJuegoPortal({
   // Filtered calendar games (strictly scoped to active league)
   const filteredCalendarGames = useMemo(() => {
     return cleanSchedule.filter((g) => {
-      if (teamFilter && g.awayTeam.code !== teamFilter && g.homeTeam.code !== teamFilter) {
+      if (teamFilter && g?.awayTeam?.code !== teamFilter && g?.homeTeam?.code !== teamFilter) {
         return false;
       }
-      if (calendarStateFilter === "UPCOMING" && g.status === "FINISHED") return false;
-      if (calendarStateFilter === "FINISHED" && g.status !== "FINISHED") return false;
+      if (calendarStateFilter === "UPCOMING" && g?.status === "FINISHED") return false;
+      if (calendarStateFilter === "FINISHED" && g?.status !== "FINISHED") return false;
       return true;
     });
   }, [cleanSchedule, teamFilter, calendarStateFilter]);
@@ -1351,8 +1359,8 @@ export function EnJuegoPortal({
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2.5 min-w-0">
                 <img
-                  src={game.awayTeam.logoUrl}
-                  alt={game.awayTeam.name}
+                  src={game.awayTeam?.logoUrl}
+                  alt={game.awayTeam?.name || "Visitante"}
                   width={28}
                   height={28}
                   decoding="async"
@@ -1364,10 +1372,10 @@ export function EnJuegoPortal({
                       awayWon ? "font-black text-slate-950" : "font-bold text-slate-700"
                     }`}
                   >
-                    {game.awayTeam.nick}
+                    {game.awayTeam?.nick || "Visitante"}
                   </span>
                   <span className="text-[10px] font-semibold text-slate-400 shrink-0 tabular-nums">
-                    ({game.awayTeam.wins}-{game.awayTeam.losses})
+                    ({game.awayTeam?.wins ?? 0}-{game.awayTeam?.losses ?? 0})
                   </span>
                 </div>
               </div>
@@ -1389,8 +1397,8 @@ export function EnJuegoPortal({
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2.5 min-w-0">
                 <img
-                  src={game.homeTeam.logoUrl}
-                  alt={game.homeTeam.name}
+                  src={game.homeTeam?.logoUrl}
+                  alt={game.homeTeam?.name || "Local"}
                   width={28}
                   height={28}
                   decoding="async"
@@ -1402,10 +1410,10 @@ export function EnJuegoPortal({
                       homeWon ? "font-black text-slate-950" : "font-bold text-slate-700"
                     }`}
                   >
-                    {game.homeTeam.nick}
+                    {game.homeTeam?.nick || "Local"}
                   </span>
                   <span className="text-[10px] font-semibold text-slate-400 shrink-0 tabular-nums">
-                    ({game.homeTeam.wins}-{game.homeTeam.losses})
+                    ({game.homeTeam?.wins ?? 0}-{game.homeTeam?.losses ?? 0})
                   </span>
                 </div>
               </div>
@@ -2812,10 +2820,10 @@ export function EnJuegoPortal({
                 {(() => {
                   const club = anyTeamsCatalog[teamFilter];
                   const homeCount = filteredCalendarGames.filter(
-                    (g) => g.homeTeam.code === teamFilter
+                    (g) => g?.homeTeam?.code === teamFilter
                   ).length;
                   const awayCount = filteredCalendarGames.filter(
-                    (g) => g.awayTeam.code === teamFilter
+                    (g) => g?.awayTeam?.code === teamFilter
                   ).length;
 
                   return (
@@ -2866,7 +2874,7 @@ export function EnJuegoPortal({
                     </div>
                   ) : null}
                   {calendarDayGames.map((game) => {
-                    const isHome = game.homeTeam.code === teamFilter;
+                    const isHome = game?.homeTeam?.code === teamFilter;
                     const myTeam = isHome ? game.homeTeam : game.awayTeam;
                     const opponent = isHome ? game.awayTeam : game.homeTeam;
                     const myScore = isHome ? game.homeScore : game.awayScore;
@@ -2996,12 +3004,12 @@ export function EnJuegoPortal({
                             <div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0">
                               <div className="flex items-center gap-2">
                                 <img
-                                  src={game.awayTeam.logoUrl}
-                                  alt={game.awayTeam.name || game.awayTeam.nick || "Equipo visitante"}
+                                  src={game.awayTeam?.logoUrl}
+                                  alt={game.awayTeam?.name || game.awayTeam?.nick || "Equipo visitante"}
                                   className="w-7 h-7 object-contain shrink-0"
                                 />
                                 <span className="text-xs sm:text-sm font-black text-slate-900">
-                                  {game.awayTeam.nick}
+                                  {game.awayTeam?.nick}
                                 </span>
                                 {game.status !== "SCHEDULED" && (
                                   <b className="text-sm sm:text-base font-black text-slate-950 tabular-nums">
@@ -3016,12 +3024,12 @@ export function EnJuegoPortal({
 
                               <div className="flex items-center gap-2">
                                 <img
-                                  src={game.homeTeam.logoUrl}
-                                  alt={game.homeTeam.name || game.homeTeam.nick || "Equipo local"}
+                                  src={game.homeTeam?.logoUrl}
+                                  alt={game.homeTeam?.name || game.homeTeam?.nick || "Equipo local"}
                                   className="w-7 h-7 object-contain shrink-0"
                                 />
                                 <span className="text-xs sm:text-sm font-black text-slate-900">
-                                  {game.homeTeam.nick}
+                                  {game.homeTeam?.nick}
                                 </span>
                                 {game.status !== "SCHEDULED" && (
                                   <b className="text-sm sm:text-base font-black text-slate-950 tabular-nums">
@@ -3052,7 +3060,7 @@ export function EnJuegoPortal({
 
                             <BroadcastChannelsRow
                               channels={tvList}
-                              gameTitle={`${game.awayTeam.nick} vs ${game.homeTeam.nick}`}
+                              gameTitle={`${game.awayTeam?.nick || 'Visitante'} vs ${game.homeTeam?.nick || 'Local'}`}
                               youtubeVideoId={game.youtubeVideoId}
                             />
                           </div>

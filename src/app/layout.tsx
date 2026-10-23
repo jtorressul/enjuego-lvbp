@@ -156,6 +156,37 @@ export default function RootLayout({
         <link rel="preconnect" href="https://a.espncdn.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://a.espncdn.com" />
         <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function(){
+                function autoRecover(reason) {
+                  var str = String(reason || '');
+                  if (
+                    str.indexOf('Loading chunk') !== -1 ||
+                    str.indexOf('ChunkLoadError') !== -1 ||
+                    str.indexOf('failed to fetch') !== -1 ||
+                    str.indexOf('Load chunk failed') !== -1
+                  ) {
+                    var key = '_enjuego_chunk_reload';
+                    var last = sessionStorage.getItem(key);
+                    var now = Date.now();
+                    if (!last || now - parseInt(last, 10) > 8000) {
+                      sessionStorage.setItem(key, String(now));
+                      window.location.reload();
+                    }
+                  }
+                }
+                window.addEventListener('error', function(e){
+                  autoRecover((e && (e.message || (e.error && e.error.message))) || '');
+                });
+                window.addEventListener('unhandledrejection', function(e){
+                  autoRecover((e && e.reason && (e.reason.message || e.reason.name || e.reason)) || '');
+                });
+              })();
+            `,
+          }}
+        />
+        <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />

@@ -259,8 +259,6 @@ export function EnJuegoPortal({
     initialStandings.length > 0 ||
     initialLeaders.hitting.length > 0;
   const [schedule, setSchedule] = useState<ScheduleGame[]>(initialSchedule);
-  const [mlbJornadaGames, setMlbJornadaGames] = useState<ScheduleGame[]>([]);
-  const [jornadaLeague, setJornadaLeague] = useState<LeagueId>("lvbp");
   const [leagueMenuOpen, setLeagueMenuOpen] = useState(false);
   const leagueMenuRef = useRef<HTMLDivElement>(null);
   const [leagueGameCounts, setLeagueGameCounts] = useState<Record<LeagueId, number | null>>({
@@ -269,8 +267,6 @@ export function EnJuegoPortal({
     lidom: null,
     lmp: null,
   });
-  const [mlbDateIndex, setMlbDateIndex] = useState(0);
-  const manualMlbDateRef = useRef(false);
   const [standings, setStandings] = useState<StandingRow[]>(initialStandings);
   const [leaders, setLeaders] = useState<{ hitting: LeaderCategory[]; pitching: LeaderCategory[] }>(
     initialLeaders
@@ -278,6 +274,34 @@ export function EnJuegoPortal({
   const [loading, setLoading] = useState(!hasSeed);
   const [selectedDateIndex, setSelectedDateIndex] = useState(initialDateIndex);
   const manualDateRef = useRef(false);
+
+  // Per-league in-memory cache to guarantee 0ms instant switches with zero state mixing
+  const leagueDataCache = useRef<
+    Partial<
+      Record<
+        LeagueId,
+        {
+          schedule: ScheduleGame[];
+          standings: StandingRow[];
+          leaders: { hitting: LeaderCategory[]; pitching: LeaderCategory[] };
+          selectedDateIndex: number;
+          hasLive: boolean;
+        }
+      >
+    >
+  >({
+    lvbp: hasSeed
+      ? {
+          schedule: initialSchedule,
+          standings: initialStandings,
+          leaders: initialLeaders,
+          selectedDateIndex: initialDateIndex,
+          hasLive: initialSchedule.some(
+            (g) => g.status === "IN_PROGRESS" || g.status === "WARMUP" || g.status === "DELAYED"
+          ),
+        }
+      : undefined,
+  });
   const [selectedGameId, setSelectedGameId] = useState<string>(
     initialGameId || searchParams?.get("id") || searchParams?.get("game") || "870098"
   );
@@ -412,14 +436,27 @@ export function EnJuegoPortal({
 
   const switchLeague = (nextLeague: LeagueId) => {
     startTransition(() => {
-      setActiveLeague((prev) => {
-        if (prev !== nextLeague) {
-          setLoading(true);
-        }
-        return nextLeague;
-      });
-      setTeamFilter("");
       manualDateRef.current = false;
+      setActiveLeague(nextLeague);
+      setTeamFilter("");
+
+      // Restore cached league data immediately for 0ms transitions without cross-league bleeding
+      const cached = leagueDataCache.current[nextLeague];
+      if (cached && cached.schedule.length > 0) {
+        setSchedule(cached.schedule);
+        setStandings(cached.standings);
+        setLeaders(cached.leaders);
+        setSelectedDateIndex(cached.selectedDateIndex);
+        setLoading(cached.standings.length === 0);
+      } else {
+        // Immediate clean wipe so previous league data never leaks into nextLeague
+        setSchedule([]);
+        setStandings([]);
+        setLeaders({ hitting: [], pitching: [] });
+        setSelectedDateIndex(0);
+        setLoading(true);
+      }
+
       setSelectedTeamCode((prev) => {
         const targetCatalog =
           nextLeague === "lidom"
@@ -442,9 +479,8 @@ export function EnJuegoPortal({
       if (rawLeague) {
         const parsed = parseLeague(rawLeague);
         switchLeague(parsed);
-        setJornadaLeague(parsed);
       } else {
-        switchLeague("lvbp");
+        switchLeague(initialLeague || "lvbp");
       }
     } else if (rawLeague) {
       switchLeague(parseLeague(rawLeague));
@@ -528,12 +564,43 @@ export function EnJuegoPortal({
           lmp: getCount(results[3]),
         });
 
-        if (results[1].status === "fulfilled" && Array.isArray(results[1].value?.games)) {
-          const cleanMlbGames = (results[1].value.games as ScheduleGame[]).filter((g) =>
-            Boolean(MLB_TEAMS[g.homeTeam?.code] || MLB_TEAMS[g.awayTeam?.code])
-          );
-          setMlbJornadaGames((prev) => (prev.length > 0 ? prev : cleanMlbGames));
-        }
+        // Pre-populate leagueDataCache for instant 0ms switching across all leagues
+        const leaguesList: LeagueId[] = ["lvbp", "mlb", "lidom", "lmp"];
+        results.forEach((res, index) => {
+          if (res.status === "fulfilled" && Array.isArray(res.value?.games)) {
+            const lid = leaguesList[index];
+            const teamsMap =
+              lid === "mlb"
+                ? MLB_TEAMS
+                : lid === "lidom"
+                ? LIDOM_TEAMS
+                : lid === "lmp"
+                ? LMP_TEAMS
+                : LVBP_TEAMS;
+            const validGames: ScheduleGame[] = (res.value.games as ScheduleGame[]).filter((g) =>
+              Boolean(teamsMap[g.homeTeam?.code] || teamsMap[g.awayTeam?.code])
+            );
+            const uDates = [...new Set(validGames.map((g) => g.date))].sort();
+            let dIdx = uDates.indexOf(todayIso);
+            if (dIdx === -1) dIdx = uDates.findIndex((d) => d >= todayIso);
+            if (dIdx === -1) dIdx = Math.max(0, uDates.length - 1);
+
+            if (!leagueDataCache.current[lid]) {
+              leagueDataCache.current[lid] = {
+                schedule: validGames,
+                standings: [],
+                leaders: { hitting: [], pitching: [] },
+                selectedDateIndex: dIdx,
+                hasLive: validGames.some(
+                  (g) => g.status === "IN_PROGRESS" || g.status === "WARMUP" || g.status === "DELAYED"
+                ),
+              };
+            } else if (leagueDataCache.current[lid]!.schedule.length === 0) {
+              leagueDataCache.current[lid]!.schedule = validGames;
+              leagueDataCache.current[lid]!.selectedDateIndex = dIdx;
+            }
+          }
+        });
       } catch {}
     }
 
@@ -727,24 +794,24 @@ export function EnJuegoPortal({
 
     const loadAllData = async (isInitial: boolean) => {
       lastLoadAt = Date.now();
-      if (isInitial) setLoading(true);
+      if (
+        isInitial &&
+        (!leagueDataCache.current[targetLeague] ||
+          leagueDataCache.current[targetLeague]!.schedule.length === 0)
+      ) {
+        setLoading(true);
+      }
       try {
-        const [schRes, stdRes, mlbRes] = await Promise.all([
+        const [schRes, stdRes] = await Promise.all([
           fetch(`/api/lvbp/schedule?season=${seasonParam}&league=${targetLeague}`, {
             signal: controller.signal,
           }),
           fetch(`/api/lvbp/standings?season=${seasonParam}&league=${targetLeague}`, {
             signal: controller.signal,
           }),
-          section === "home" && targetLeague === "lvbp"
-            ? fetch(`/api/lvbp/schedule?season=2026&league=mlb`, {
-                signal: controller.signal,
-              }).catch(() => null)
-            : Promise.resolve(null),
         ]);
         const schData = await schRes.json();
         const stdData = await stdRes.json();
-        const mlbData = mlbRes ? await mlbRes.json().catch(() => ({})) : null;
 
         if (controller.signal.aborted) return;
 
@@ -764,34 +831,14 @@ export function EnJuegoPortal({
         );
 
         const rawStandings: StandingRow[] = stdData.standings || [];
-        const cleanStandings = rawStandings.filter((r) =>
+        const cleanLoadedStandings = rawStandings.filter((r) =>
           Boolean(leagueTeamsMap[r.team?.code])
         );
 
-        setSchedule(loadedGames);
-        setStandings(cleanStandings);
-        setLeaders(stdData.leaders || { hitting: [], pitching: [] });
-
-        if (targetLeague === "mlb") {
-          setMlbJornadaGames(loadedGames);
-        } else if (Array.isArray(mlbData?.games)) {
-          const cleanMlbGames = (mlbData.games as ScheduleGame[]).filter((g) =>
-            Boolean(MLB_TEAMS[g.homeTeam?.code] || MLB_TEAMS[g.awayTeam?.code])
-          );
-          setMlbJornadaGames(cleanMlbGames);
-          const uniqueMlbDates = [...new Set(cleanMlbGames.map((g) => g.date))].sort();
-          if (uniqueMlbDates.length > 0) {
-            const todayIso = getTodayCaracasIso();
-            const liveMlb = cleanMlbGames.find((g) => g.status === "IN_PROGRESS");
-            const targetMlbIso = liveMlb ? liveMlb.date : todayIso;
-            let mIdx = uniqueMlbDates.indexOf(targetMlbIso);
-            if (mIdx === -1) mIdx = uniqueMlbDates.findIndex((d) => d >= targetMlbIso);
-            if (mIdx === -1) mIdx = Math.max(0, uniqueMlbDates.length - 1);
-            setMlbDateIndex((prev) => (manualMlbDateRef.current ? prev : mIdx));
-          }
-        }
+        const loadedLeaders = stdData.leaders || { hitting: [], pitching: [] };
 
         const uniqueDates = [...new Set(loadedGames.map((g) => g.date))].sort();
+        let targetIdx = 0;
         if (uniqueDates.length > 0) {
           const paramDate = searchParams?.get("fecha") || searchParams?.get("date");
           const todayIso = getTodayCaracasIso();
@@ -805,12 +852,27 @@ export function EnJuegoPortal({
           if (idx === -1) {
             idx = Math.max(0, uniqueDates.length - 1);
           }
+          targetIdx = idx;
           setSelectedDateIndex((prev) => (manualDateRef.current ? prev : idx));
         }
 
         const hasLiveGame = loadedGames.some(
           (g) => g.status === "IN_PROGRESS" || g.status === "WARMUP" || g.status === "DELAYED"
         );
+
+        // Update cache for this league
+        leagueDataCache.current[targetLeague] = {
+          schedule: loadedGames,
+          standings: cleanLoadedStandings,
+          leaders: loadedLeaders,
+          selectedDateIndex: targetIdx,
+          hasLive: hasLiveGame,
+        };
+
+        setSchedule(loadedGames);
+        setStandings(cleanLoadedStandings);
+        setLeaders(loadedLeaders);
+
         scheduleNextPoll(hasLiveGame);
       } catch {
         scheduleNextPoll(false);
@@ -893,70 +955,58 @@ export function EnJuegoPortal({
     };
   }, [section]);
 
+  const currentLeagueTeams = useMemo(() => {
+    return activeLeague === "mlb"
+      ? MLB_TEAMS
+      : activeLeague === "lidom"
+      ? LIDOM_TEAMS
+      : activeLeague === "lmp"
+      ? LMP_TEAMS
+      : LVBP_TEAMS;
+  }, [activeLeague]);
+
+  const cleanSchedule = useMemo(() => {
+    return schedule.filter(
+      (g) => Boolean(currentLeagueTeams[g.homeTeam?.code] || currentLeagueTeams[g.awayTeam?.code])
+    );
+  }, [schedule, currentLeagueTeams]);
+
+  const cleanStandings = useMemo(() => {
+    return standings.filter((r) => Boolean(currentLeagueTeams[r.team?.code]));
+  }, [standings, currentLeagueTeams]);
+
   const dates = useMemo(
-    () => [...new Set(schedule.map((g) => g.date))].sort(),
-    [schedule]
+    () => [...new Set(cleanSchedule.map((g) => g.date))].sort(),
+    [cleanSchedule]
   );
   const latestRecaps = useMemo(
-    () => (activeLeague === "lvbp" ? buildGameRecaps(schedule, standings).slice(0, 3) : []),
-    [activeLeague, schedule, standings]
+    () => (activeLeague === "lvbp" ? buildGameRecaps(cleanSchedule, cleanStandings).slice(0, 3) : []),
+    [activeLeague, cleanSchedule, cleanStandings]
   );
 
   const activeDate = dates[selectedDateIndex] || getTodayCaracasIso();
 
-  // Independent Jornada state for /inicio
-  const currentJornadaLeague: LeagueId =
-    section === "home" ? jornadaLeague : activeLeague;
-
-  const jornadaSchedule = useMemo(
-    () =>
-      section === "home" && jornadaLeague === "mlb" ? mlbJornadaGames : schedule,
-    [section, jornadaLeague, mlbJornadaGames, schedule]
-  );
-
-  const jornadaDates = useMemo(
-    () => [...new Set(jornadaSchedule.map((g) => g.date))].sort(),
-    [jornadaSchedule]
-  );
-
-  const currentJornadaDateIdx =
-    section === "home" && jornadaLeague === "mlb" ? mlbDateIndex : selectedDateIndex;
-
-  const activeJornadaDate = jornadaDates[currentJornadaDateIdx] || getTodayCaracasIso();
-
-  const stepJornadaDate = (delta: number) => {
+  const stepDate = (delta: number) => {
     startTransition(() => {
-      if (section === "home" && jornadaLeague === "mlb") {
-        manualMlbDateRef.current = true;
-        setMlbDateIndex((i) =>
-          Math.min(jornadaDates.length - 1, Math.max(0, i + delta))
-        );
-      } else {
-        manualDateRef.current = true;
-        setSelectedDateIndex((i) =>
-          Math.min(jornadaDates.length - 1, Math.max(0, i + delta))
-        );
-      }
+      manualDateRef.current = true;
+      setSelectedDateIndex((i) =>
+        Math.min(dates.length - 1, Math.max(0, i + delta))
+      );
     });
   };
 
-  const resetJornadaToToday = () => {
-    const todayIdx = jornadaDates.indexOf(getTodayCaracasIso());
+  const resetToToday = () => {
+    const todayIdx = dates.indexOf(getTodayCaracasIso());
     if (todayIdx === -1) return;
     startTransition(() => {
-      if (section === "home" && jornadaLeague === "mlb") {
-        setMlbDateIndex(todayIdx);
-        manualMlbDateRef.current = false;
-      } else {
-        setSelectedDateIndex(todayIdx);
-        manualDateRef.current = false;
-      }
+      setSelectedDateIndex(todayIdx);
+      manualDateRef.current = false;
     });
   };
 
   // Sort gamesOfDay so Favorite Team game is always first!
   const gamesOfDay = useMemo(() => {
-    const list = schedule.filter((g) => g.date === activeDate);
+    const list = cleanSchedule.filter((g) => g.date === activeDate);
     if (!favoriteTeamCode) return list;
     return [...list].sort((a, b) => {
       const aFav =
@@ -965,23 +1015,11 @@ export function EnJuegoPortal({
         b.awayTeam.code === favoriteTeamCode || b.homeTeam.code === favoriteTeamCode ? 1 : 0;
       return bFav - aFav;
     });
-  }, [schedule, activeDate, favoriteTeamCode]);
-
-  const jornadaGamesOfDay = useMemo(() => {
-    const list = jornadaSchedule.filter((g) => g.date === activeJornadaDate);
-    if (!favoriteTeamCode) return list;
-    return [...list].sort((a, b) => {
-      const aFav =
-        a.awayTeam.code === favoriteTeamCode || a.homeTeam.code === favoriteTeamCode ? 1 : 0;
-      const bFav =
-        b.awayTeam.code === favoriteTeamCode || b.homeTeam.code === favoriteTeamCode ? 1 : 0;
-      return bFav - aFav;
-    });
-  }, [jornadaSchedule, activeJornadaDate, favoriteTeamCode]);
+  }, [cleanSchedule, activeDate, favoriteTeamCode]);
 
   const liveGames = useMemo(
-    () => schedule.filter((g) => g.status === "IN_PROGRESS"),
-    [schedule]
+    () => cleanSchedule.filter((g) => g.status === "IN_PROGRESS"),
+    [cleanSchedule]
   );
 
   const openGameGameday = (gameId: string) => {
@@ -1141,7 +1179,7 @@ export function EnJuegoPortal({
   };
 
   const dayFormatted = formatCompactDay(activeDate);
-  const jornadaDayFormatted = formatCompactDay(activeJornadaDate);
+  const jornadaDayFormatted = dayFormatted;
 
   // Sync user profile state for global visitor analytics
   useEffect(() => {
@@ -1163,9 +1201,9 @@ export function EnJuegoPortal({
     }
   }, [currentUser, favoriteTeamCode, selectedTeamCode]);
 
-  // Filtered calendar games
+  // Filtered calendar games (strictly scoped to active league)
   const filteredCalendarGames = useMemo(() => {
-    return schedule.filter((g) => {
+    return cleanSchedule.filter((g) => {
       if (teamFilter && g.awayTeam.code !== teamFilter && g.homeTeam.code !== teamFilter) {
         return false;
       }
@@ -1173,7 +1211,7 @@ export function EnJuegoPortal({
       if (calendarStateFilter === "FINISHED" && g.status !== "FINISHED") return false;
       return true;
     });
-  }, [schedule, teamFilter, calendarStateFilter]);
+  }, [cleanSchedule, teamFilter, calendarStateFilter]);
 
   const calendarAvailableDates = useMemo(
     () => [...new Set(filteredCalendarGames.map((g) => g.date))].sort(),
@@ -1647,7 +1685,6 @@ export function EnJuegoPortal({
                         type="button"
                         onClick={() => {
                           switchLeague(lg.id);
-                          setJornadaLeague(lg.id);
                           const targetPath =
                             section === "equipos"
                               ? `/teams/${
@@ -1914,11 +1951,11 @@ export function EnJuegoPortal({
                 Ligas:
               </span>
               {LEAGUES_LIST.map((lg) => {
-                const isSelected = currentJornadaLeague === lg.id;
+                const isSelected = activeLeague === lg.id;
                 const count =
                   leagueGameCounts[lg.id] ??
-                  (lg.id === currentJornadaLeague
-                    ? jornadaSchedule.filter((g) => g.date === getTodayCaracasIso()).length
+                  (lg.id === activeLeague
+                    ? cleanSchedule.filter((g) => g.date === getTodayCaracasIso()).length
                     : null);
 
                 return (
@@ -1926,34 +1963,25 @@ export function EnJuegoPortal({
                     key={lg.id}
                     type="button"
                     onClick={() => {
-                      if (section === "home") {
-                        setJornadaLeague(lg.id);
-                        switchLeague(lg.id);
-                      } else {
-                        switchLeague(lg.id);
-                        let nextUrl: string;
-                        if (section === "equipos") {
-                          const defaultSlug =
-                            lg.id === "lidom"
-                              ? "licey"
-                              : lg.id === "lmp"
-                              ? "tomateros"
-                              : lg.id === "mlb"
-                              ? "yankees"
-                              : "leones";
-                          nextUrl = `/teams/${defaultSlug}`;
-                        } else if (
-                          section === "resultados" ||
-                          section === "posiciones" ||
-                          section === "calendario"
-                        ) {
-                          nextUrl = lg.id === "lvbp" ? `/${section}` : `/${section}/${lg.id}`;
-                        } else {
-                          nextUrl = lg.id === "lvbp" ? `/${section}` : `/${section}?liga=${lg.id}`;
-                        }
-                        if (typeof window !== "undefined") {
-                          window.history.replaceState(window.history.state, "", nextUrl);
-                        }
+                      switchLeague(lg.id);
+                      if (typeof window !== "undefined") {
+                        const nextUrl =
+                          section === "home"
+                            ? (lg.id === "lvbp" ? "/inicio" : `/inicio?liga=${lg.id}`)
+                            : section === "equipos"
+                            ? `/teams/${
+                                lg.id === "lidom"
+                                  ? "licey"
+                                  : lg.id === "lmp"
+                                  ? "tomateros"
+                                  : lg.id === "mlb"
+                                  ? "yankees"
+                                  : "leones"
+                              }`
+                            : section === "resultados" || section === "posiciones" || section === "calendario"
+                            ? (lg.id === "lvbp" ? `/${section}` : `/${section}/${lg.id}`)
+                            : (lg.id === "lvbp" ? `/${section}` : `/${section}?liga=${lg.id}`);
+                        window.history.replaceState(window.history.state, "", nextUrl);
                       }
                     }}
                     className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-black transition flex items-center gap-1.5 cursor-pointer shrink-0 select-none ${
@@ -1993,8 +2021,8 @@ export function EnJuegoPortal({
             <div className="flex items-center gap-1 shrink-0 ml-auto">
               <button
                 type="button"
-                disabled={currentJornadaDateIdx <= 0}
-                onClick={() => stepJornadaDate(-1)}
+                disabled={selectedDateIndex <= 0}
+                onClick={() => stepDate(-1)}
                 className="p-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 disabled:opacity-30 text-slate-600 transition cursor-pointer"
                 aria-label="Día anterior"
               >
@@ -2002,28 +2030,28 @@ export function EnJuegoPortal({
               </button>
               <div className="px-2 py-1 rounded-lg bg-slate-50 border border-slate-200/80 text-center min-w-[60px] sm:min-w-[76px]">
                 <strong className="text-[11px] sm:text-xs font-black text-slate-900 tabular-nums">
-                  {jornadaDayFormatted.dayNum}{" "}
+                  {dayFormatted.dayNum}{" "}
                   <span className="text-[10px] text-slate-500 font-bold uppercase">
-                    {jornadaDayFormatted.monthShort}
+                    {dayFormatted.monthShort}
                   </span>
                 </strong>
               </div>
               <button
                 type="button"
-                disabled={currentJornadaDateIdx >= jornadaDates.length - 1}
-                onClick={() => stepJornadaDate(1)}
+                disabled={selectedDateIndex >= dates.length - 1}
+                onClick={() => stepDate(1)}
                 className="p-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 disabled:opacity-30 text-slate-600 transition cursor-pointer"
                 aria-label="Día siguiente"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
 
-              {jornadaDates.length > 0 &&
-                jornadaDates[currentJornadaDateIdx] !== getTodayCaracasIso() &&
-                jornadaDates.includes(getTodayCaracasIso()) && (
+              {dates.length > 0 &&
+                dates[selectedDateIndex] !== getTodayCaracasIso() &&
+                dates.includes(getTodayCaracasIso()) && (
                   <button
                     type="button"
-                    onClick={resetJornadaToToday}
+                    onClick={resetToToday}
                     className="hidden sm:inline-block ml-0.5 px-2 py-1 rounded-lg dark-pill text-[10px] font-black uppercase transition cursor-pointer"
                   >
                     Hoy
@@ -2068,8 +2096,8 @@ export function EnJuegoPortal({
                     </div>
                     <div className="min-w-0 flex-1">
                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block truncate capitalize">
-                        {jornadaDayFormatted.fullLabel} ·{" "}
-                        {jornadaLeague === "mlb"
+                        {dayFormatted.fullLabel} ·{" "}
+                        {activeLeague === "mlb"
                           ? "Grandes Ligas"
                           : `Temporada ${currentLeague.shortName}`}
                       </span>
@@ -2080,7 +2108,7 @@ export function EnJuegoPortal({
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0">
-                    {jornadaLeague === "mlb" && (
+                    {activeLeague === "mlb" && (
                       <button
                         type="button"
                         onClick={() => setShowHomeMlbBracket((v) => !v)}
@@ -2095,12 +2123,12 @@ export function EnJuegoPortal({
                       </button>
                     )}
                     <Link
-                      href={jornadaLeague === "lvbp" ? "/posiciones" : `/posiciones/${jornadaLeague}`}
+                      href={activeLeague === "lvbp" ? "/posiciones" : `/posiciones/${activeLeague}`}
                       onClick={(e) =>
                         handleInstantSectionNav(
                           e,
                           "posiciones",
-                          jornadaLeague === "lvbp" ? "/posiciones" : `/posiciones/${jornadaLeague}`
+                          activeLeague === "lvbp" ? "/posiciones" : `/posiciones/${activeLeague}`
                         )
                       }
                       className="dark-pill inline-flex items-center gap-1 rounded-xl px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-black transition cursor-pointer shadow-2xs"
@@ -2109,12 +2137,12 @@ export function EnJuegoPortal({
                       <span>Tabla</span>
                     </Link>
                     <Link
-                      href={jornadaLeague === "lvbp" ? "/calendario" : `/calendario/${jornadaLeague}`}
+                      href={activeLeague === "lvbp" ? "/calendario" : `/calendario/${activeLeague}`}
                       onClick={(e) =>
                         handleInstantSectionNav(
                           e,
                           "calendario",
-                          jornadaLeague === "lvbp" ? "/calendario" : `/calendario/${jornadaLeague}`
+                          activeLeague === "lvbp" ? "/calendario" : `/calendario/${activeLeague}`
                         )
                       }
                       className="inline-flex items-center gap-1 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-extrabold transition cursor-pointer"
@@ -2124,7 +2152,7 @@ export function EnJuegoPortal({
                   </div>
                 </div>
 
-                {loading && jornadaGamesOfDay.length === 0 ? (
+                {loading && gamesOfDay.length === 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     {[1, 2, 3, 4].map((n) => (
                       <div
@@ -2133,13 +2161,17 @@ export function EnJuegoPortal({
                       />
                     ))}
                   </div>
+                ) : gamesOfDay.length === 0 ? (
+                  <div className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-6 text-center text-slate-500 text-xs font-semibold">
+                    No hay juegos programados para este día en {currentLeague.name}.
+                  </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    {jornadaGamesOfDay.map((game) => renderScoreboardCard(game))}
+                    {gamesOfDay.map((game) => renderScoreboardCard(game))}
                   </div>
                 )}
 
-                {jornadaLeague === "mlb" && showHomeMlbBracket && (
+                {activeLeague === "mlb" && showHomeMlbBracket && (
                   <div className="pt-3 space-y-2 border-t border-slate-100">
                     <h2 className="text-sm font-black text-slate-950 flex items-center gap-2">
                       <Trophy className="w-4 h-4 text-amber-600" />
@@ -2267,50 +2299,65 @@ export function EnJuegoPortal({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {standings.slice(0, 8).map((row, idx) => {
-                      const zoneDot =
-                        activeLeague === "mlb"
-                          ? "bg-sky-500"
-                          : activeLeague === "lidom"
-                          ? idx < 4
-                            ? "bg-emerald-500"
-                            : "bg-slate-300"
-                          : activeLeague === "lmp"
-                          ? idx < 8
-                            ? "bg-emerald-500"
-                            : "bg-slate-300"
-                          : idx < 4
-                            ? "bg-emerald-500"
-                            : idx < 6
-                              ? "bg-amber-400"
-                              : "bg-slate-300";
-                      return (
-                        <tr
-                          key={row.team.code}
-                          onClick={() => openTeamPage(row.team.code)}
-                          className="hover:bg-slate-50 cursor-pointer transition text-right tabular-nums"
-                        >
-                          <td className="py-2 text-left font-bold text-slate-500">
-                            <span className="inline-flex items-center gap-1.5">
-                              <i className={`w-1.5 h-1.5 rounded-full ${zoneDot}`} />
-                              {idx + 1}
-                            </span>
+                    {cleanStandings.length === 0 ? (
+                      [...Array(6)].map((_, i) => (
+                        <tr key={i} className="animate-pulse">
+                          <td className="py-2.5 text-left text-slate-300">...</td>
+                          <td className="py-2.5 text-left">
+                            <div className="h-4 w-24 bg-slate-100 rounded-md" />
                           </td>
-                          <td className="py-2 text-left font-bold text-slate-900 flex items-center gap-2">
-                            <img
-                              src={row.team.logoUrl}
-                              alt={row.team.name || row.team.nick || "Logo equipo"}
-                              className="w-5 h-5 object-contain shrink-0"
-                            />
-                            <span className="truncate">{row.team.nick}</span>
-                          </td>
-                          <td className="py-2 px-1.5 font-bold text-slate-900">{row.wins}</td>
-                          <td className="py-2 px-1.5 text-slate-500">{row.losses}</td>
-                          <td className="py-2 px-1.5 text-slate-900 font-black">{row.pct}</td>
-                          <td className="py-2 pl-1.5 text-slate-400">{row.gamesBehind}</td>
+                          <td className="py-2 px-1.5"><div className="h-4 w-5 bg-slate-100 rounded ml-auto" /></td>
+                          <td className="py-2 px-1.5"><div className="h-4 w-5 bg-slate-100 rounded ml-auto" /></td>
+                          <td className="py-2 px-1.5"><div className="h-4 w-7 bg-slate-100 rounded ml-auto" /></td>
+                          <td className="py-2 pl-1.5"><div className="h-4 w-5 bg-slate-100 rounded ml-auto" /></td>
                         </tr>
-                      );
-                    })}
+                      ))
+                    ) : (
+                      cleanStandings.slice(0, 8).map((row, idx) => {
+                        const zoneDot =
+                          activeLeague === "mlb"
+                            ? "bg-sky-500"
+                            : activeLeague === "lidom"
+                            ? idx < 4
+                              ? "bg-emerald-500"
+                              : "bg-slate-300"
+                            : activeLeague === "lmp"
+                            ? idx < 8
+                              ? "bg-emerald-500"
+                              : "bg-slate-300"
+                            : idx < 4
+                              ? "bg-emerald-500"
+                              : idx < 6
+                                ? "bg-amber-400"
+                                : "bg-slate-300";
+                        return (
+                          <tr
+                            key={row.team.code}
+                            onClick={() => openTeamPage(row.team.code)}
+                            className="hover:bg-slate-50 cursor-pointer transition text-right tabular-nums"
+                          >
+                            <td className="py-2 text-left font-bold text-slate-500">
+                              <span className="inline-flex items-center gap-1.5">
+                                <i className={`w-1.5 h-1.5 rounded-full ${zoneDot}`} />
+                                {idx + 1}
+                              </span>
+                            </td>
+                            <td className="py-2 text-left font-bold text-slate-900 flex items-center gap-2">
+                              <img
+                                src={row.team.logoUrl}
+                                alt={row.team.name || row.team.nick || "Logo equipo"}
+                                className="w-5 h-5 object-contain shrink-0"
+                              />
+                              <span className="truncate">{row.team.nick}</span>
+                            </td>
+                            <td className="py-2 px-1.5 font-bold text-slate-900">{row.wins}</td>
+                            <td className="py-2 px-1.5 text-slate-500">{row.losses}</td>
+                            <td className="py-2 px-1.5 text-slate-900 font-black">{row.pct}</td>
+                            <td className="py-2 pl-1.5 text-slate-400">{row.gamesBehind}</td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
 
@@ -3147,7 +3194,7 @@ export function EnJuegoPortal({
               </div>
             </div>
 
-            {loading && standings.length === 0 ? (
+            {loading && cleanStandings.length === 0 ? (
               <div className="space-y-4">
                 {[1, 2].map((n) => (
                   <div
@@ -3217,7 +3264,7 @@ export function EnJuegoPortal({
                         mlbStandingsFilter === "ALL" ? true : div.league === mlbStandingsFilter
                       )
                       .map((div) => {
-                        const divRows = standings
+                        const divRows = cleanStandings
                           .filter((r) => (r.division || MLB_TEAMS[r.team.code]?.division) === div.divCode)
                           .sort((a, b) => Number(b.pct) - Number(a.pct) || b.wins - a.wins);
 
@@ -3377,9 +3424,7 @@ export function EnJuegoPortal({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 tabular-nums">
-                      {standings
-                        .filter((r) => Boolean(activeTeamsCatalog[r.team.code]))
-                        .map((row, idx) => {
+                      {cleanStandings.map((row, idx) => {
                           const isFav = favoriteTeamCode === row.team.code;
                           const zoneDotClass =
                             activeLeague === "lidom"

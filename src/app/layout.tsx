@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { PwaManager } from "@/components/pwa/PwaManager";
 import { GlobalVisitorPresence } from "@/components/analytics/GlobalVisitorPresence";
+import { DomainLock } from "@/components/security/DomainLock";
 
 export const viewport: Viewport = {
   themeColor: "#060a12",
@@ -155,6 +156,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen antialiased selection:bg-amber-400 selection:text-slate-950 transition-colors duration-300">
+        <DomainLock />
         <GlobalVisitorPresence />
         {children}
         <PwaManager />

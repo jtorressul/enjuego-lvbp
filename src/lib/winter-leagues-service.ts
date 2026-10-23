@@ -9,6 +9,8 @@ export { isWinterLeague };
 interface CacheEntry<T> {
   data: T;
   expiresAt: number;
+  freshUntil?: number;
+  staleUntil?: number;
 }
 
 const gScope = globalThis as unknown as {
@@ -25,17 +27,14 @@ const winterSchCache = gScope.__ENJUEGO_WINTER_SCH_CACHE__;
 const winterStdCache = gScope.__ENJUEGO_WINTER_STD_CACHE__;
 const winterRosterCache = gScope.__ENJUEGO_WINTER_ROSTER_CACHE__;
 
-export async function fetchWinterSchedule(
+const winterSchInFlight = new Map<string, Promise<ScheduleGame[]>>();
+
+async function doFetchWinterSchedule(
   league: "lidom" | "lmp",
   season = "2026"
 ): Promise<ScheduleGame[]> {
   const cacheKey = `${league}_${season}`;
   const now = Date.now();
-  const cached = winterSchCache.get(cacheKey);
-  if (cached && now < cached.expiresAt) {
-    return cached.data;
-  }
-
   const leagueConfig = LEAGUES[league];
   const leagueId = leagueConfig?.mlbLeagueId || (league === "lidom" ? 131 : 132);
 
@@ -47,7 +46,7 @@ export async function fetchWinterSchedule(
     });
 
     if (!res.ok) {
-      return cached?.data || [];
+      return winterSchCache.get(cacheKey)?.data || [];
     }
 
     const json = await res.json();
@@ -131,14 +130,51 @@ export async function fetchWinterSchedule(
     }
 
     const hasLive = games.some((g) => g.status === "IN_PROGRESS" || g.status === "WARMUP");
-    const ttlMs = hasLive ? 15_000 : 300_000;
-    winterSchCache.set(cacheKey, { data: games, expiresAt: now + ttlMs });
+    const freshMs = hasLive ? 15_000 : 180_000;
+    const staleMs = 1800_000;
+    winterSchCache.set(cacheKey, {
+      data: games,
+      freshUntil: now + freshMs,
+      staleUntil: now + staleMs,
+      expiresAt: now + freshMs,
+    });
 
     return games;
   } catch (err) {
     console.warn(`[WinterService] Error fetching schedule for ${league}:`, err);
-    return cached?.data || [];
+    return winterSchCache.get(cacheKey)?.data || [];
   }
+}
+
+export async function fetchWinterSchedule(
+  league: "lidom" | "lmp",
+  season = "2026"
+): Promise<ScheduleGame[]> {
+  const cacheKey = `${league}_${season}`;
+  const now = Date.now();
+  const cached = winterSchCache.get(cacheKey);
+  if (cached) {
+    if (now < (cached.freshUntil || cached.expiresAt)) {
+      return cached.data;
+    }
+    if (now < (cached.staleUntil || cached.expiresAt + 1800_000)) {
+      if (!winterSchInFlight.has(cacheKey)) {
+        const p = doFetchWinterSchedule(league, season).finally(() => {
+          winterSchInFlight.delete(cacheKey);
+        });
+        winterSchInFlight.set(cacheKey, p);
+      }
+      return cached.data;
+    }
+  }
+
+  if (!winterSchInFlight.has(cacheKey)) {
+    const p = doFetchWinterSchedule(league, season).finally(() => {
+      winterSchInFlight.delete(cacheKey);
+    });
+    winterSchInFlight.set(cacheKey, p);
+  }
+  return winterSchInFlight.get(cacheKey)!;
 }
 
 export async function fetchWinterStandingsAndLeaders(

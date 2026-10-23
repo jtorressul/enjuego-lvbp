@@ -411,9 +411,6 @@ export function EnJuegoPortal({
     setActiveLeague((prev) => {
       if (prev !== nextLeague) {
         setLoading(true);
-        setSchedule([]);
-        setStandings([]);
-        setLeaders({ hitting: [], pitching: [] });
       }
       return nextLeague;
     });
@@ -728,14 +725,14 @@ export function EnJuegoPortal({
       if (isInitial) setLoading(true);
       try {
         const [schRes, stdRes, mlbRes] = await Promise.all([
-          fetch(`/api/lvbp/schedule?season=${seasonParam}&league=${targetLeague}&_t=${Date.now()}`, {
+          fetch(`/api/lvbp/schedule?season=${seasonParam}&league=${targetLeague}`, {
             signal: controller.signal,
           }),
-          fetch(`/api/lvbp/standings?season=${seasonParam}&league=${targetLeague}&_t=${Date.now()}`, {
+          fetch(`/api/lvbp/standings?season=${seasonParam}&league=${targetLeague}`, {
             signal: controller.signal,
           }),
-          targetLeague === "lvbp"
-            ? fetch(`/api/lvbp/schedule?season=2026&league=mlb&_t=${Date.now()}`, {
+          section === "home" && targetLeague === "lvbp"
+            ? fetch(`/api/lvbp/schedule?season=2026&league=mlb`, {
                 signal: controller.signal,
               }).catch(() => null)
             : Promise.resolve(null),
@@ -1233,9 +1230,10 @@ export function EnJuegoPortal({
     setUserPickedCalendarDate(true);
     setCalendarPickDate(iso);
     const club = teamFilter ? anyTeamsCatalog[teamFilter] : null;
-    const q = new URLSearchParams({ liga: activeLeague, fecha: iso });
+    const calBase = activeLeague === "lvbp" ? "/calendario" : `/calendario/${activeLeague}`;
+    const q = new URLSearchParams({ fecha: iso });
     if (club?.slug) q.set("equipo", club.slug);
-    const nextUrl = `/calendario?${q.toString()}`;
+    const nextUrl = `${calBase}?${q.toString()}`;
     if (typeof window !== "undefined" && window.location.pathname + window.location.search !== nextUrl) {
       window.history.replaceState(window.history.state, "", nextUrl);
     }
@@ -2491,7 +2489,13 @@ export function EnJuegoPortal({
                       <button
                         key={lid}
                         type="button"
-                        onClick={() => switchLeague(lid)}
+                        onClick={() => {
+                          switchLeague(lid);
+                          const nextUrl = lid === "lvbp" ? "/resultados" : `/resultados/${lid}`;
+                          if (typeof window !== "undefined") {
+                            window.history.replaceState(window.history.state, "", nextUrl);
+                          }
+                        }}
                         className={`px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition cursor-pointer shrink-0 ${
                           active
                             ? "dark-pill bg-slate-950 text-white shadow-2xs"
@@ -2610,7 +2614,13 @@ export function EnJuegoPortal({
                         <button
                           key={lid}
                           type="button"
-                          onClick={() => switchLeague(lid)}
+                          onClick={() => {
+                            switchLeague(lid);
+                            const nextUrl = lid === "lvbp" ? "/calendario" : `/calendario/${lid}`;
+                            if (typeof window !== "undefined") {
+                              window.history.replaceState(window.history.state, "", nextUrl);
+                            }
+                          }}
                           className={`px-2.5 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition cursor-pointer shrink-0 ${
                             active
                               ? "dark-pill bg-slate-950 text-white shadow-2xs"
@@ -3029,7 +3039,13 @@ export function EnJuegoPortal({
                       <button
                         key={lid}
                         type="button"
-                        onClick={() => switchLeague(lid)}
+                        onClick={() => {
+                          switchLeague(lid);
+                          const nextUrl = lid === "lvbp" ? "/resultados" : `/resultados/${lid}`;
+                          if (typeof window !== "undefined") {
+                            window.history.replaceState(window.history.state, "", nextUrl);
+                          }
+                        }}
                         className={`px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition cursor-pointer shrink-0 ${
                           active
                             ? "dark-pill bg-slate-950 text-white shadow-2xs"
@@ -3536,7 +3552,13 @@ export function EnJuegoPortal({
                       <button
                         key={lid}
                         type="button"
-                        onClick={() => switchLeague(lid)}
+                        onClick={() => {
+                          switchLeague(lid);
+                          const nextUrl = lid === "lvbp" ? "/lideres" : `/lideres?liga=${lid}`;
+                          if (typeof window !== "undefined") {
+                            window.history.replaceState(window.history.state, "", nextUrl);
+                          }
+                        }}
                         className={`px-2.5 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition cursor-pointer ${
                           active
                             ? "dark-pill bg-slate-950 text-white shadow-2xs"

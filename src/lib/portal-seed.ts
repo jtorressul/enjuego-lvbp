@@ -38,14 +38,11 @@ function dateIndexFor(games: ScheduleGame[]): number {
   return index;
 }
 
-let cachedSeed: { data: PortalSeed; expiresAt: number } | null = null;
+let cachedSeed: { data: PortalSeed; freshUntil: number; staleUntil: number } | null = null;
+let seedInFlight: Promise<PortalSeed> | null = null;
 
-/** Season tables and the day's card, ready before the browser runs (cached 30s in memory for instant SSR). */
-export async function loadLvbpPortalSeed(): Promise<PortalSeed> {
+async function doLoadLvbpPortalSeed(): Promise<PortalSeed> {
   const now = Date.now();
-  if (cachedSeed && now < cachedSeed.expiresAt && cachedSeed.data.schedule.length > 0) {
-    return cachedSeed.data;
-  }
   try {
     const [schedule, table, soccerMatches] = await Promise.all([
       fetchLvbpSchedule("2026"),
@@ -59,7 +56,11 @@ export async function loadLvbpPortalSeed(): Promise<PortalSeed> {
       dateIndex: dateIndexFor(schedule),
       soccerMatches: soccerMatches || [],
     };
-    cachedSeed = { data, expiresAt: now + 10_000 };
+    cachedSeed = {
+      data,
+      freshUntil: now + 45_000, // 45 seconds fresh
+      staleUntil: now + 1800_000, // 30 minutes stale-while-revalidate
+    };
     return data;
   } catch {
     if (cachedSeed) return cachedSeed.data;
@@ -71,4 +72,29 @@ export async function loadLvbpPortalSeed(): Promise<PortalSeed> {
       soccerMatches: [],
     };
   }
+}
+
+/** Season tables and the day's card, ready before the browser runs (cached in memory with instant SWR). */
+export async function loadLvbpPortalSeed(): Promise<PortalSeed> {
+  const now = Date.now();
+  if (cachedSeed && cachedSeed.data.schedule.length > 0) {
+    if (now < cachedSeed.freshUntil) {
+      return cachedSeed.data;
+    }
+    if (now < cachedSeed.staleUntil) {
+      if (!seedInFlight) {
+        seedInFlight = doLoadLvbpPortalSeed().finally(() => {
+          seedInFlight = null;
+        });
+      }
+      return cachedSeed.data;
+    }
+  }
+
+  if (!seedInFlight) {
+    seedInFlight = doLoadLvbpPortalSeed().finally(() => {
+      seedInFlight = null;
+    });
+  }
+  return seedInFlight;
 }

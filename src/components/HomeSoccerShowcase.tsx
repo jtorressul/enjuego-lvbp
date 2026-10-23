@@ -71,7 +71,8 @@ export function HomeSoccerShowcase({
   return (
     <section
       id="bloque-futbol-europeo"
-      className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-5 shadow-2xs space-y-3.5 sm:space-y-4"
+      className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-5 shadow-2xs space-y-3.5 sm:space-y-4 min-h-[200px]"
+      style={{ contain: "layout" }}
     >
       {/* Editorial Section Header */}
       <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">

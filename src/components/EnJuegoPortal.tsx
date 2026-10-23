@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { startTransition, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -244,7 +244,9 @@ export function EnJuegoPortal({
     ) {
       e.preventDefault();
       setMobileDrawerOpen(false);
-      setSection(targetKey as NavSection);
+      startTransition(() => {
+        setSection(targetKey as NavSection);
+      });
       if (typeof window !== "undefined") {
         window.history.pushState(window.history.state, "", targetHref);
         window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
@@ -409,25 +411,27 @@ export function EnJuegoPortal({
   const [pwaOnboardingOpen, setPwaOnboardingOpen] = useState(false);
 
   const switchLeague = (nextLeague: LeagueId) => {
-    setActiveLeague((prev) => {
-      if (prev !== nextLeague) {
-        setLoading(true);
-      }
-      return nextLeague;
-    });
-    setTeamFilter("");
-    manualDateRef.current = false;
-    setSelectedTeamCode((prev) => {
-      const targetCatalog =
-        nextLeague === "lidom"
-          ? LIDOM_TEAMS
-          : nextLeague === "lmp"
-          ? LMP_TEAMS
-          : nextLeague === "mlb"
-          ? MLB_TEAMS
-          : LVBP_TEAMS;
-      if (targetCatalog && targetCatalog[prev]) return prev;
-      return (LEAGUES[nextLeague] || LEAGUES.lvbp).defaultTeamCode;
+    startTransition(() => {
+      setActiveLeague((prev) => {
+        if (prev !== nextLeague) {
+          setLoading(true);
+        }
+        return nextLeague;
+      });
+      setTeamFilter("");
+      manualDateRef.current = false;
+      setSelectedTeamCode((prev) => {
+        const targetCatalog =
+          nextLeague === "lidom"
+            ? LIDOM_TEAMS
+            : nextLeague === "lmp"
+            ? LMP_TEAMS
+            : nextLeague === "mlb"
+            ? MLB_TEAMS
+            : LVBP_TEAMS;
+        if (targetCatalog && targetCatalog[prev]) return prev;
+        return (LEAGUES[nextLeague] || LEAGUES.lvbp).defaultTeamCode;
+      });
     });
   };
 
@@ -921,29 +925,33 @@ export function EnJuegoPortal({
   const activeJornadaDate = jornadaDates[currentJornadaDateIdx] || getTodayCaracasIso();
 
   const stepJornadaDate = (delta: number) => {
-    if (section === "home" && jornadaLeague === "mlb") {
-      manualMlbDateRef.current = true;
-      setMlbDateIndex((i) =>
-        Math.min(jornadaDates.length - 1, Math.max(0, i + delta))
-      );
-    } else {
-      manualDateRef.current = true;
-      setSelectedDateIndex((i) =>
-        Math.min(jornadaDates.length - 1, Math.max(0, i + delta))
-      );
-    }
+    startTransition(() => {
+      if (section === "home" && jornadaLeague === "mlb") {
+        manualMlbDateRef.current = true;
+        setMlbDateIndex((i) =>
+          Math.min(jornadaDates.length - 1, Math.max(0, i + delta))
+        );
+      } else {
+        manualDateRef.current = true;
+        setSelectedDateIndex((i) =>
+          Math.min(jornadaDates.length - 1, Math.max(0, i + delta))
+        );
+      }
+    });
   };
 
   const resetJornadaToToday = () => {
     const todayIdx = jornadaDates.indexOf(getTodayCaracasIso());
     if (todayIdx === -1) return;
-    if (section === "home" && jornadaLeague === "mlb") {
-      setMlbDateIndex(todayIdx);
-      manualMlbDateRef.current = false;
-    } else {
-      setSelectedDateIndex(todayIdx);
-      manualDateRef.current = false;
-    }
+    startTransition(() => {
+      if (section === "home" && jornadaLeague === "mlb") {
+        setMlbDateIndex(todayIdx);
+        manualMlbDateRef.current = false;
+      } else {
+        setSelectedDateIndex(todayIdx);
+        manualDateRef.current = false;
+      }
+    });
   };
 
   // Sort gamesOfDay so Favorite Team game is always first!
@@ -3692,7 +3700,10 @@ export function EnJuegoPortal({
       </nav>
 
       {/* FOOTER (Flush to Bottom · Zero Empty Gap Above or Below on Mobile & Desktop) */}
-      <footer className="mt-auto border-t border-slate-200 bg-white pt-6 pb-[calc(5.25rem+env(safe-area-inset-bottom,0px))] md:pb-6">
+      <footer
+        className="mt-auto border-t border-slate-200 bg-white pt-6 pb-[calc(5.25rem+env(safe-area-inset-bottom,0px))] md:pb-6"
+        style={{ contentVisibility: "auto", containIntrinsicSize: "0 180px" }}
+      >
         <div className="max-w-7xl mx-auto px-4 space-y-4 text-xs text-slate-500">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">

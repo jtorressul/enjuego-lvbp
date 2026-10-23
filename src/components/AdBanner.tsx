@@ -143,6 +143,7 @@ export function AdBanner({
     <div
       className={`w-full my-2.5 ${className}`}
       data-ad-slot={slot}
+      style={{ contain: "layout" }}
     >
       <div
         className="ad-box w-full flex flex-col items-center gap-1 pt-2 px-2 pb-1.5 rounded-[14px] border border-[#e4e8ee] bg-white shadow-2xs"

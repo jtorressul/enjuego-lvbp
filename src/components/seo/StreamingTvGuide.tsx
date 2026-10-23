@@ -76,6 +76,7 @@ export function StreamingTvGuide({ sport = "baseball", leagueId = "lvbp" }: Stre
       <section
         aria-label="Guía Oficial de Transmisión y Canales de TV"
         className="mt-6 rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-6 shadow-2xs space-y-5"
+        style={{ contentVisibility: "auto", containIntrinsicSize: "0 400px" }}
       >
         {/* Encabezado Principal */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">

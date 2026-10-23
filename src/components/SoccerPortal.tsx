@@ -12,6 +12,7 @@ import {
 } from "@/lib/soccer-leagues";
 import type { SoccerMatch, SoccerStandingRow } from "@/lib/soccer-service";
 import { UserProfile } from "@/lib/user-auth";
+import { StreamingTvGuide } from "@/components/seo/StreamingTvGuide";
 
 const AuthModal = dynamic(
   () => import("@/components/AuthModal").then((m) => m.AuthModal),
@@ -1267,6 +1268,11 @@ export function SoccerPortal({
               </section>
             )}
           </>
+        )}
+
+        {/* GUÍA DE TRANSMISIÓN Y CANALES DE FÚTBOL (CHAMPIONS, FUTVE, LIGAS EUROPEAS) */}
+        {!activeMatchId && (
+          <StreamingTvGuide sport="soccer" leagueId={activeLeague} />
         )}
       </main>
 

@@ -18,6 +18,7 @@ import { CalendarMonthPicker } from "@/components/CalendarMonthPicker";
 import { UserProfile } from "@/lib/user-auth";
 import { getFallbackSchedule } from "@/lib/lvbp-fallback-data";
 import { buildGameRecaps } from "@/lib/game-recaps";
+import { StreamingTvGuide } from "@/components/seo/StreamingTvGuide";
 
 const GamedayView = dynamic(
   () => import("@/components/gameday/GamedayView").then((m) => m.GamedayView),
@@ -3642,6 +3643,11 @@ export function EnJuegoPortal({
               .
             </p>
           </section>
+        )}
+
+        {/* GUÍA DE TRANSMISIÓN Y CANALES DE BÉISBOL (LVBP, MLB, CARIBE) */}
+        {section !== "juego" && section !== "equipos" && (
+          <StreamingTvGuide sport="baseball" leagueId={activeLeague} />
         )}
       </main>
 

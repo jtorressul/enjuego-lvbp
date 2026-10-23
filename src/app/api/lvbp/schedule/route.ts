@@ -61,7 +61,14 @@ export async function GET(request: Request) {
         games.some((g) => g.status === "IN_PROGRESS" || g.status === "WARMUP" || g.status === "DELAYED");
       return NextResponse.json(
         { games: Array.isArray(games) ? games.map(toScheduleListItem) : [], league },
-        { headers: publicCacheHeaders(hasLive ? 6 : 15) }
+        {
+          headers: hasLive
+            ? {
+                "Cache-Control": "public, max-age=2, s-maxage=2, must-revalidate",
+                "CDN-Cache-Control": "max-age=2",
+              }
+            : publicCacheHeaders(15),
+        }
       );
     } catch (error: any) {
       return NextResponse.json(

@@ -696,8 +696,8 @@ export function EnJuegoPortal({
         return;
       }
 
-      // 15s if a game is live, 35s if all games are scheduled or finished
-      const delay = hasLive ? 15000 : 35000;
+      // 6s if a game is live, 25s if all games are scheduled or finished
+      const delay = hasLive ? 6000 : 25000;
       timerId = setTimeout(() => {
         if (
           typeof document !== "undefined" &&
@@ -721,11 +721,11 @@ export function EnJuegoPortal({
           fetch(`/api/lvbp/schedule?season=${seasonParam}&league=${targetLeague}&_t=${Date.now()}`, {
             signal: controller.signal,
           }),
-          fetch(`/api/lvbp/standings?season=${seasonParam}&league=${targetLeague}`, {
+          fetch(`/api/lvbp/standings?season=${seasonParam}&league=${targetLeague}&_t=${Date.now()}`, {
             signal: controller.signal,
           }),
           targetLeague === "lvbp"
-            ? fetch(`/api/lvbp/schedule?season=2026&league=mlb`, {
+            ? fetch(`/api/lvbp/schedule?season=2026&league=mlb&_t=${Date.now()}`, {
                 signal: controller.signal,
               }).catch(() => null)
             : Promise.resolve(null),

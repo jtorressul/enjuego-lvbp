@@ -405,7 +405,7 @@ export async function fetchLvbpSchedule(season = "2026"): Promise<ScheduleGame[]
     );
     lvbpScheduleCache?.set(season, {
       data: result,
-      expiresAt: now + (hasLive ? 10_000 : 25_000),
+      expiresAt: now + (hasLive ? 4_000 : 25_000),
     });
     return result;
   } catch {
@@ -422,13 +422,17 @@ export async function fetchLvbpGameday(gamePk: string): Promise<GamedayData> {
 
   try {
     const url = `${MLB_BASE}/v1.1/game/${gamePk}/feed/live`;
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetch(url, { cache: "no-store", next: { revalidate: 0 } });
     if (!res.ok) {
       return getFallbackGameday(gamePk);
     }
     const raw = await res.json();
     const result = transformMlbLiveFeedToGameday(raw);
-    const ttl = result.status === "FINISHED" ? 3600_000 : 8_000;
+    const isLive =
+      result.status === "IN_PROGRESS" ||
+      result.status === "WARMUP" ||
+      result.status === "DELAYED";
+    const ttl = result.status === "FINISHED" ? 3600_000 : isLive ? 3_000 : 15_000;
     gamedayCache?.set(gamePk, { data: result, expiresAt: now + ttl });
     return result;
   } catch {

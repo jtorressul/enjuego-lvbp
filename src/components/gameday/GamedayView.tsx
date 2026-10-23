@@ -267,12 +267,13 @@ export function GamedayView({
   useEffect(() => {
     let active = true;
     let latestStatus: string | undefined;
+    let pollTimeout: NodeJS.Timeout | null = null;
     setLoading(true);
     setGame(null);
 
     const loadGame = async () => {
       try {
-        const res = await fetch(`/api/lvbp/game/${gameId}`);
+        const res = await fetch(`/api/lvbp/game/${gameId}?_t=${Date.now()}`);
         const data = await res.json();
         if (active && !data.error) {
           latestStatus = data.status;
@@ -285,25 +286,39 @@ export function GamedayView({
       }
     };
 
-    loadGame();
+    const scheduleNextPoll = () => {
+      if (pollTimeout) clearTimeout(pollTimeout);
+      if (!active || latestStatus === "FINISHED") return;
 
-    const timer = setInterval(() => {
-      if (latestStatus === "FINISHED") {
-        clearInterval(timer);
-        return;
-      }
-      if (
-        typeof document !== "undefined" &&
-        document.visibilityState === "visible" &&
-        !document.hidden
-      ) {
-        loadGame();
-      }
-    }, 25000);
+      const isLive =
+        latestStatus === "IN_PROGRESS" ||
+        latestStatus === "WARMUP" ||
+        latestStatus === "DELAYED";
+      const intervalMs = isLive ? 4000 : 15000;
+
+      pollTimeout = setTimeout(async () => {
+        if (
+          typeof document !== "undefined" &&
+          document.visibilityState === "visible" &&
+          !document.hidden
+        ) {
+          await loadGame();
+        }
+        if (active && latestStatus !== "FINISHED") {
+          scheduleNextPoll();
+        }
+      }, intervalMs);
+    };
+
+    loadGame().then(() => {
+      if (active) scheduleNextPoll();
+    });
 
     const handleVisibilityOrFocus = () => {
       if (document.visibilityState === "visible" && latestStatus !== "FINISHED") {
-        loadGame();
+        loadGame().then(() => {
+          if (active) scheduleNextPoll();
+        });
       }
     };
     document.addEventListener("visibilitychange", handleVisibilityOrFocus);
@@ -311,7 +326,7 @@ export function GamedayView({
 
     return () => {
       active = false;
-      clearInterval(timer);
+      if (pollTimeout) clearTimeout(pollTimeout);
       document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
       window.removeEventListener("focus", handleVisibilityOrFocus);
     };

@@ -41,8 +41,20 @@ export async function GET(
     }
 
     const isFinal = gameday?.status === "FINISHED";
+    const isLive =
+      gameday?.status === "IN_PROGRESS" ||
+      gameday?.status === "WARMUP" ||
+      gameday?.status === "DELAYED";
+
     return NextResponse.json(gameday, {
-      headers: isFinal ? publicCacheHeaders(300, 3600, 7200) : publicCacheHeaders(6),
+      headers: isFinal
+        ? publicCacheHeaders(300, 3600, 7200)
+        : isLive
+          ? {
+              "Cache-Control": "public, max-age=1, s-maxage=1, must-revalidate",
+              "CDN-Cache-Control": "max-age=1",
+            }
+          : publicCacheHeaders(15),
     });
   } catch (error: any) {
     return NextResponse.json(

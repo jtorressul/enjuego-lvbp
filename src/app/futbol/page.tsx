@@ -69,16 +69,21 @@ export async function generateMetadata({
   const title = `${cfg.name} en Vivo · Marcadores, Calendario y Posiciones | En Juego`;
   const description = `Cobertura oficial de ${cfg.name} (${cfg.country}): resultados en directo minuto a minuto, tabla de clasificación actualizada, calendario por jornada y estadísticas en En Juego.`;
 
+  const canonical =
+    sp?.liga || sp?.league
+      ? `https://enjuego.online/futbol/${cfg.slug}`
+      : "https://enjuego.online/futbol";
+
   return {
     title,
     description,
     alternates: {
-      canonical: `https://enjuego.online/futbol?liga=${leagueId}`,
+      canonical,
     },
     openGraph: {
       title,
       description,
-      url: `https://enjuego.online/futbol?liga=${leagueId}`,
+      url: canonical,
       siteName: "En Juego · Deportes en Vivo",
     },
     keywords: [

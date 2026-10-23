@@ -158,6 +158,14 @@ export const SOCCER_LEAGUES: Record<SoccerLeagueId, SoccerLeagueConfig> = {
 
 export const SOCCER_LEAGUES_LIST = Object.values(SOCCER_LEAGUES);
 
+export function getSoccerLeagueBySlug(slug?: string | null): SoccerLeagueConfig | undefined {
+  if (!slug) return undefined;
+  const lower = slug.trim().toLowerCase();
+  return Object.values(SOCCER_LEAGUES).find(
+    (l) => l.slug.toLowerCase() === lower || l.id.toLowerCase() === lower
+  );
+}
+
 export function parseSoccerLeague(val?: string | null): SoccerLeagueId {
   if (!val) return "uefa.champions";
   const lower = val.trim().toLowerCase();

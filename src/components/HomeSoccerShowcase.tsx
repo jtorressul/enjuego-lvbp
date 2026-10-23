@@ -107,17 +107,17 @@ export function HomeSoccerShowcase({
 
         <div className="flex items-center gap-1.5 shrink-0">
           <Link
-            href={`/futbol?liga=${selectedLeague}#tabla-clasificacion`}
+            href={`/futbol/${currentLeague.slug}#tabla-clasificacion`}
             className="dark-pill inline-flex items-center gap-1 rounded-xl px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-black transition cursor-pointer shadow-2xs"
           >
             <Trophy className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             <span>Tabla</span>
           </Link>
           <Link
-            href={`/futbol?liga=${selectedLeague}`}
+            href={`/futbol/${currentLeague.slug}`}
             className="inline-flex items-center gap-1 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-extrabold transition cursor-pointer"
           >
-            <span>Todos ›</span>
+            <span>Ver Todos ›</span>
           </Link>
         </div>
       </div>
@@ -170,7 +170,7 @@ export function HomeSoccerShowcase({
             No hay partidos programados hoy en {currentLeague.name}.
           </p>
           <Link
-            href={`/futbol?liga=${selectedLeague}`}
+            href={`/futbol/${currentLeague.slug}`}
             className="inline-block mt-1.5 text-xs font-black text-amber-600 hover:underline"
           >
             Ver clasificación y jornada completa de {currentLeague.shortName} ›
@@ -195,7 +195,7 @@ export function HomeSoccerShowcase({
             return (
               <article
                 key={m.id}
-                onClick={() => router.push(`/futbol?liga=${selectedLeague}&partido=${m.id}`)}
+                onClick={() => router.push(`/futbol/${currentLeague.slug}?partido=${m.id}`)}
                 className="rounded-xl border border-slate-200/90 bg-slate-50/40 hover:bg-white p-3.5 hover:border-slate-300 hover:shadow-xs transition flex flex-col justify-between text-slate-900 cursor-pointer group select-none"
               >
                 {/* Top Bar: Status & Venue */}

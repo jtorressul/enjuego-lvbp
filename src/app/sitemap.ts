@@ -91,7 +91,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.95,
     })),
     ...SOCCER_LEAGUES_LIST.map((lg) => ({
-      url: `${baseUrl}/futbol?liga=${lg.id}`,
+      url: `${baseUrl}/futbol/${lg.slug}`,
       lastModified: now,
       changeFrequency: "always" as const,
       priority: 0.95,
